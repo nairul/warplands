@@ -3,7 +3,6 @@
 A tactical card game across four eras (Hamlet, Township, City, Empire), played in the browser.
 
 - **Play the computer** — runs entirely in your browser.
-- **Two players, one screen** — pass the device between turns.
 - **Online** — one player creates a game and shares the 5-letter room code; the other joins with it.
 
 ## How it's built

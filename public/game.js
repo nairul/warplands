@@ -1643,7 +1643,7 @@ function menuHTML(){
     <h1>Warplands</h1>
     <p>Lead your followers from the medieval age to the far future. Wipe out your opponent's followers, or hold more of them when three draw stacks run dry.</p>
     <p class="fine">Each game deals a fresh random draw stack for every level: 20 Level I cards, 15 Level II, 10 Level III and 5 Level IV.</p>
-    <div class="choices"><button class="btn primary" data-new="ai">Play the computer</button><button class="btn" data-new="hot">Two players, one screen</button>${G&&!G.over?'<button class="btn" data-resume="1">Resume game</button>':''}</div>
+    <div class="choices"><button class="btn primary" data-new="ai">Play the computer</button>${G&&!G.over?'<button class="btn" data-resume="1">Resume game</button>':''}</div>
     ${onlineMenuHTML()}
     <details><summary>How to play</summary><ul>
       <li>Each turn you get 3 actions (the first player gets 2 on turn one).</li>
