@@ -70,13 +70,13 @@ const minNeed=s=>{const ab=(s.card.def.abilities||[]);return ab.length?Math.min(
 const startSite=p=>p.sites.find(s=>s.card.def.start);
 const ofId=(p,id)=>p.sites.filter(s=>s.card.def.id===id);
 
-/* Abilities: Sabotage and Loss of Faith block them; University lowers requirements */
-function abilBlocked(site){const p=G.players[site.owner];return hasAtt(site,'sabotage')||p.lofTurn===G.turnCount}
+/* Abilities: Hex blocks them; Academy lowers requirements */
+function abilBlocked(site){return hasAtt(site,'sabotage')}
 function univBonus(site){const p=G.players[site.owner];return p.sites.some(u=>u!==site&&u.card.def.id==='university'&&u.followers>=1&&!abilBlocked(u))?1:0}
 const effNeed=(site,ab)=>hasAtt(site,'compnet')?0:Math.max(0,ab.need-univBonus(site));
 function needOf(s){const ab=(s.card.def.abilities||[]);return ab.length?Math.min(...ab.map(a=>effNeed(s,a))):0}
 
-/* Force Field shields its owner's other sites from opponents' damage */
+/* Aegis shields its owner's other sites from opponents' damage */
 function ffProtects(site){return G.players[site.owner].sites.some(f=>f!==site&&f.card.def.id==='forcefield'&&!abilBlocked(f)&&f.followers>=effNeed(f,f.card.def.abilities[0]))}
 /* AI valuation helpers */
 function dmgValue(site,n){
@@ -533,108 +533,108 @@ const CARDS=[
      run:async c=>{c.pay();marketGain(c)},ai:c=>adjacent(c.site).filter(canGain).length}]},
 
   /* ---------- LEVEL II · CORE SET ---------- */
-  {id:'milbase',name:'Military Base',set:'core',level:2,type:'site',cost:2,integrity:3,count:2,worth:2.5,
-   abilities:[{need:0,actions:1,text:'Sacrifice any number of followers on Military Base. Then do 1 damage for each follower sacrificed, all to a single site.',can:c=>c.site.followers>0,
+  {id:'milbase',name:'Mustering Hall',set:'core',level:2,type:'site',cost:2,integrity:4,count:2,worth:2.5,
+   abilities:[{need:0,actions:1,text:'Sacrifice any number of followers on Mustering Hall. Then do 1 damage for each follower sacrificed, all to a single site.',can:c=>c.site.followers>0,
      run:async c=>{
        const max=c.site.followers;
-       const k=c.me.ai?mbK(c).k:await pickOption(c.pi,{prompt:`Military Base: sacrifice how many of its ${max} followers?`,options:Array.from({length:max},(_,i)=>({label:String(i+1),value:i+1})),cancellable:true});
+       const k=c.me.ai?mbK(c).k:await pickOption(c.pi,{prompt:`Mustering Hall: sacrifice how many of its ${max} followers?`,options:Array.from({length:max},(_,i)=>({label:String(i+1),value:i+1})),cancellable:true});
        if(!k)return;
-       const t=await pickSite(c.pi,{prompt:`Military Base: choose a site to take ${k} damage.`,filter:s=>!c.me.ai||s.owner!==c.pi,aiScore:s=>dmgValue(s,k)});
-       if(!t)return;c.pay();killOn(c.site,k);log(`${c.me.name} sacrifice${s_(c.me)} ${k} follower${k>1?'s':''} at the Military Base.`);await damage(c.pi,t,k)},
+       const t=await pickSite(c.pi,{prompt:`Mustering Hall: choose a site to take ${k} damage.`,filter:s=>!c.me.ai||s.owner!==c.pi,aiScore:s=>dmgValue(s,k)});
+       if(!t)return;c.pay();killOn(c.site,k);log(`${c.me.name} sacrifice${s_(c.me)} ${k} follower${k>1?'s':''} at the Mustering Hall.`);await damage(c.pi,t,k)},
      ai:c=>c.site.followers?mbK(c).v:-1}]},
-  {id:'library',name:'Library',set:'core',level:2,type:'site',cost:2,integrity:3,count:2,worth:2.5,
+  {id:'library',name:'Lorehall',set:'core',level:2,type:'site',cost:1,integrity:3,count:2,worth:2.5,
    abilities:[
     {need:3,actions:0,text:'Draw 1 card.',can:c=>drawableLevels(c.pi).length>0,
-     run:async c=>{const l=await pickDrawLevel(c.pi,true,'Library: draw from which level?');if(!l)return;c.pay();drawCard(c.pi,l)},ai:c=>2},
+     run:async c=>{const l=await pickDrawLevel(c.pi,true,'Lorehall: draw from which level?');if(!l)return;c.pay();drawCard(c.pi,l)},ai:c=>2},
     {need:5,actions:1,text:'Put 1 discarded card of your level or lower into your hand. Then discard 1 card from your hand.',can:c=>G.discard.some(k=>k.def.level<=c.me.level),
      run:async c=>{
        const seen=new Set(),cands=G.discard.filter(k=>k.def.level<=c.me.level&&!seen.has(k.def.id)&&seen.add(k.def.id));
-       const k=await pickOption(c.pi,{prompt:'Library: choose a discarded card to put into your hand.',options:cands.map(k=>({label:`${k.def.name} (Level ${ROMAN[k.def.level]})`,value:k})),
+       const k=await pickOption(c.pi,{prompt:'Lorehall: choose a discarded card to put into your hand.',options:cands.map(k=>({label:`${k.def.name} (Level ${ROMAN[k.def.level]})`,value:k})),
          aiChoose:()=>[...cands].sort((a,b)=>keepValue(b)-keepValue(a))[0],cancellable:true});
        if(!k)return;c.pay();G.discard.splice(G.discard.indexOf(k),1);c.me.hand.push(k);log(`${c.me.name} take${s_(c.me)} ${k.def.name} from the discard pile.`);
-       const d=await pickHandCard(c.pi,{prompt:'Library: now discard 1 card from your hand.',cancellable:false});
+       const d=await pickHandCard(c.pi,{prompt:'Lorehall: now discard 1 card from your hand.',cancellable:false});
        if(d){discardFromHand(c.pi,d);log(`${c.me.name} discard${s_(c.me)} ${d.def.name}.`)}},
      ai:c=>{const best=Math.max(...G.discard.filter(k=>k.def.level<=c.me.level).map(keepValue));const worst=c.me.hand.length?Math.min(...c.me.hand.map(keepValue)):0;return best-worst>0.9?best-worst:-1}}]},
-  {id:'hospital',name:'Hospital',set:'core',level:2,type:'site',cost:2,integrity:3,count:1,worth:2.2,
+  {id:'hospital',name:'Infirmary',set:'core',level:2,type:'site',cost:2,integrity:4,count:1,worth:2.2,
    abilities:[
-    {need:0,actions:0,infinite:true,passive:true,text:'After your followers are killed, gain followers on Hospital equal to half the number killed (rounded down).'},
+    {need:0,actions:0,infinite:true,passive:true,text:'After your followers are killed, gain followers on Infirmary equal to half the number killed (rounded down).'},
     {need:3,actions:0,infinite:true,passive:true,text:'Round up instead.'}]},
-  {id:'sniper',name:'Sniper Nest',set:'core',level:2,type:'site',cost:1,integrity:3,count:1,worth:2.5,
+  {id:'sniper',name:'Ranger\'s Perch',set:'core',level:2,type:'site',cost:1,integrity:3,count:1,worth:2.5,
    abilities:[
     {need:1,actions:0,infinite:true,passive:true,text:'After an opponent relocates, kill 1 of their followers.'},
     {need:3,actions:0,infinite:true,passive:true,text:'Kill 2 of their followers instead.'}]},
-  {id:'railroad',name:'Railroad',set:'core',level:2,type:'site',cost:1,integrity:3,count:1,worth:1.6,
+  {id:'railroad',name:'Waystone',set:'core',level:2,type:'site',cost:1,integrity:3,count:1,worth:1.6,
    abilities:[{need:1,actions:0,text:'Relocate.',can:c=>c.me.sites.length>1,
-     run:async c=>{const counts=await relocateBy(c,'Railroad: relocate followers','Free');if(!counts)return;c.pay();applyCounts(c.me,counts);log(`${c.me.name} relocate${s_(c.me)} followers by Railroad.`)},
+     run:async c=>{const counts=await relocateBy(c,'Waystone: relocate followers','Free');if(!counts)return;c.pay();applyCounts(c.me,counts);log(`${c.me.name} relocate${s_(c.me)} followers by Waystone.`)},
      ai:c=>{const rv=relocateValue(c.me,relocatePlan(c.me));return rv>=1.5?rv:-1}}]},
-  {id:'conversion',name:'Conversion',set:'core',level:2,type:'event',cost:1,count:2,text:'Gain a total of 3 followers on any combination of sites you own.',
+  {id:'conversion',name:'Pilgrimage',set:'core',level:2,type:'event',cost:1,count:2,text:'Gain a total of 3 followers on any combination of sites you own.',
    play:async c=>{
      const picks=[];
      for(let i=0;i<3;i++){
-       const s=await pickSite(c.pi,{prompt:`Conversion: choose a site for follower ${i+1} of 3.`,filter:s=>s.owner===c.pi&&canGain(s),
+       const s=await pickSite(c.pi,{prompt:`Pilgrimage: choose a site for follower ${i+1} of 3.`,filter:s=>s.owner===c.pi&&canGain(s),
          aiScore:s=>placeScore(s)-picks.filter(x=>x===s).length*0.5,auto:true,cancellable:i===0});
        if(!s){if(i===0)return;break}
        picks.push(s);
      }
      c.pay();for(const s of picks)gainF(s,1);log(`${c.me.name} gain${s_(c.me)} 3 followers.`)},
    ai:c=>c.me.sites.some(canGain)?3:-1},
-  {id:'fortify',name:'Fortify',set:'core',level:2,type:'attachment',cost:1,count:1,fortify:true,
+  {id:'fortify',name:'Bulwark',set:'core',level:2,type:'attachment',cost:1,count:1,fortify:true,
    text:'Upon attachment, remove all damage counters from this site. This site is now fortified.',
    onAttach:async s=>{if(s.damage){log(`${s.card.def.name} is repaired.`);s.damage=0}},
    aiAttach:(c,s)=>s.owner===c.pi?s.damage*1.5+(isFort(s)?0:s.followers*0.35):-99,
    ai:c=>{const m=Math.max(-1,...c.me.sites.map(s=>s.damage*1.5+(isFort(s)?0:s.followers*0.35)));return m>=2.5?m:-1}},
-  {id:'shelling',name:'Shelling',set:'core',level:2,type:'event',cost:3,count:1,text:'Do 3 damage divided among up to 3 sites.',
-   play:async c=>{const a=await divideDamage(c,3,3,'Shelling',()=>true);if(!a)return;c.pay();for(const [s,k] of a)await damage(c.pi,s,k)},
-   ai:c=>bestAlloc(c.opp.sites,3,3,dmgValue).v},
-  {id:'blockade',name:'Blockade',set:'core',level:2,type:'event',cost:2,count:1,text:"Kill 1 follower on each of an opponent's sites.",
-   play:async c=>{c.pay();let n=0;for(const s of [...c.opp.sites])n+=killOn(s,1);log(`Blockade kills ${n} of ${poss(c.opp)} followers.`)},
+  {id:'shelling',name:'Barrage',set:'core',level:2,type:'event',cost:2,count:1,text:'Do 3 damage divided among up to 2 sites.',
+   play:async c=>{const a=await divideDamage(c,3,2,'Barrage',()=>true);if(!a)return;c.pay();for(const [s,k] of a)await damage(c.pi,s,k)},
+   ai:c=>bestAlloc(c.opp.sites,3,2,dmgValue).v},
+  {id:'blockade',name:'Embargo',set:'core',level:2,type:'event',cost:2,count:1,text:"Kill 1 follower on each of an opponent's sites.",
+   play:async c=>{c.pay();let n=0;for(const s of [...c.opp.sites])n+=killOn(s,1);log(`Embargo kills ${n} of ${poss(c.opp)} followers.`)},
    ai:c=>c.opp.sites.filter(s=>s.followers>0).reduce((a,s)=>a+killValue(s),0)},
-  {id:'sabotage',name:'Sabotage',set:'core',level:2,type:'attachment',cost:2,count:1,text:'This site cannot activate abilities.',
+  {id:'sabotage',name:'Hex',set:'core',level:2,type:'attachment',cost:2,count:1,text:'This site cannot activate abilities.',
    aiAttach:(c,s)=>s.owner!==c.pi&&!hasAtt(s,'sabotage')&&(s.card.def.abilities||[]).length?(s.card.def.worth||1)*(s.followers>=minNeed(s)?2:1):-99,
    ai:c=>{const t=c.opp.sites.filter(s=>!hasAtt(s,'sabotage')&&(s.card.def.abilities||[]).length&&s.followers>=minNeed(s));return t.length?Math.max(...t.map(s=>s.card.def.worth||1))*1.3:-1}},
-  {id:'lossfaith',name:'Loss of Faith',set:'core',level:2,type:'event',cost:1,count:1,text:'An opponent starts their next turn with 1 fewer action and may not activate site abilities for that turn.',
-   play:async c=>{c.pay();c.opp.lof=(c.opp.lof||0)+1;log(`${c.opp.name} will start ${isYou(c.opp)?'your':'their'} next turn with 1 fewer action and no site abilities.`)},
+  {id:'lossfaith',name:'Interdict',set:'core',level:2,type:'event',cost:1,count:1,text:'An opponent starts their next turn with 1 fewer action.',
+   play:async c=>{c.pay();c.opp.lof=(c.opp.lof||0)+1;log(`${c.opp.name} will start ${isYou(c.opp)?'your':'their'} next turn with 1 fewer action.`)},
    ai:c=>1.7},
-  {id:'martyr',name:'Martyr',set:'core',level:2,type:'reaction',cost:0,count:1,trigger:'kill',
+  {id:'martyr',name:'Blessed Sacrifice',set:'core',level:2,type:'reaction',cost:0,count:1,trigger:'kill',
    text:'When any number of your followers are killed, draw 1 card for each killed follower.'},
 
   /* ---------- LEVEL II · EXPANSION SET ---------- */
-  {id:'mortar',name:'Mortar',set:'exp',level:2,type:'site',cost:2,integrity:3,count:2,worth:2.5,
+  {id:'mortar',name:'Siege Tower',set:'exp',level:2,type:'site',cost:2,integrity:3,count:2,worth:2.5,
    abilities:[
-    {need:4,actions:0,text:'Do 1 damage.',run:c=>hit(c,1,'Mortar'),ai:c=>bestOpp(c,1)},
+    {need:4,actions:0,text:'Do 1 damage.',run:c=>hit(c,1,'Siege Tower'),ai:c=>bestOpp(c,1)},
     {need:5,actions:1,text:'Do 1 damage each to 2 different sites.',can:()=>allSites().length>=2,
      run:async c=>{
-       const a=await pickSite(c.pi,{prompt:'Mortar: choose the first site (1 damage).',filter:s=>!c.me.ai||s.owner!==c.pi,aiScore:s=>dmgValue(s,1)});if(!a)return;
-       const b=await pickSite(c.pi,{prompt:'Mortar: choose a second, different site (1 damage).',filter:s=>s!==a&&(!c.me.ai||s.owner!==c.pi),aiScore:s=>dmgValue(s,1)});if(!b)return;
+       const a=await pickSite(c.pi,{prompt:'Siege Tower: choose the first site (1 damage).',filter:s=>!c.me.ai||s.owner!==c.pi,aiScore:s=>dmgValue(s,1)});if(!a)return;
+       const b=await pickSite(c.pi,{prompt:'Siege Tower: choose a second, different site (1 damage).',filter:s=>s!==a&&(!c.me.ai||s.owner!==c.pi),aiScore:s=>dmgValue(s,1)});if(!b)return;
        c.pay();await damage(c.pi,a,1);await damage(c.pi,b,1)},
      ai:c=>{if(c.opp.sites.length<2)return -1;const v=c.opp.sites.map(s=>dmgValue(s,1)).sort((x,y)=>y-x);return v[0]+v[1]}}]},
-  {id:'port',name:'Port',set:'exp',level:2,type:'site',cost:1,integrity:3,count:2,worth:1.8,
+  {id:'port',name:'Harbor',set:'exp',level:2,type:'site',cost:1,integrity:3,count:2,worth:1.8,
    abilities:[
-    {need:0,actions:0,text:'Tuck 1 card under Port to relocate.',can:c=>c.me.hand.length>0&&c.me.sites.length>1,
-     run:async c=>{const k=await pickHandCard(c.pi,{prompt:'Port: choose a card to tuck under Port.'});if(!k)return;
-       const counts=await relocateBy(c,'Port: relocate followers','Free · tucks '+k.def.name);if(!counts)return;
-       c.pay();c.me.hand.splice(c.me.hand.indexOf(k),1);c.site.tucked.push(k);applyCounts(c.me,counts);log(`${c.me.name} tuck${s_(c.me)} a card under Port and relocate${s_(c.me)}.`)},
+    {need:0,actions:0,text:'Tuck 1 card under Harbor to relocate.',can:c=>c.me.hand.length>0&&c.me.sites.length>1,
+     run:async c=>{const k=await pickHandCard(c.pi,{prompt:'Harbor: choose a card to tuck under Harbor.'});if(!k)return;
+       const counts=await relocateBy(c,'Harbor: relocate followers','Free · tucks '+k.def.name);if(!counts)return;
+       c.pay();c.me.hand.splice(c.me.hand.indexOf(k),1);c.site.tucked.push(k);applyCounts(c.me,counts);log(`${c.me.name} tuck${s_(c.me)} a card under Harbor and relocate${s_(c.me)}.`)},
      ai:c=>{if(c.me.hand.length<4)return -1;const rv=relocateValue(c.me,relocatePlan(c.me));return rv>=2?rv-0.8:-1}},
-    {need:3,actions:0,text:'Draw 1 card for each card tucked under Port.',can:c=>c.site.tucked.length>0&&drawableLevels(c.pi).length>0,
-     run:async c=>{c.pay();await drawN(c.pi,c.site.tucked.length,'Port')},ai:c=>c.site.tucked.length*1.1}]},
-  {id:'university',name:'University',set:'exp',level:2,type:'site',cost:1,integrity:3,count:1,worth:2.5,
+    {need:3,actions:0,text:'Draw 1 card for each card tucked under Harbor.',can:c=>c.site.tucked.length>0&&drawableLevels(c.pi).length>0,
+     run:async c=>{c.pay();await drawN(c.pi,c.site.tucked.length,'Harbor')},ai:c=>c.site.tucked.length*1.1}]},
+  {id:'university',name:'Academy',set:'exp',level:2,type:'site',cost:1,integrity:3,count:1,worth:2.5,
    abilities:[
     {need:1,actions:0,infinite:true,passive:true,text:"When activating another site's ability, you may do so with 1 fewer follower than that ability currently requires."},
     {need:3,actions:2,text:'Upgrade.',can:c=>c.me.level<4,run:async c=>{c.pay();upgradeLevel(c.pi)},ai:c=>(UPGRADE_COST[c.me.level]||0)*0.9}]},
-  {id:'depot',name:'Supply Depot',set:'exp',level:2,type:'site',cost:1,integrity:3,count:1,worth:1.8,
+  {id:'depot',name:'Quartermaster',set:'exp',level:2,type:'site',cost:1,integrity:3,count:1,worth:1.8,
    abilities:[
     {need:2,actions:0,text:'Remove 1 damage counter from any other site.',can:c=>allSites().some(s=>s!==c.site&&s.damage>0),
-     run:async c=>{const s=await pickSite(c.pi,{prompt:'Supply Depot: choose another site to remove 1 damage counter from.',filter:s=>s!==c.site&&s.damage>0&&(!c.me.ai||s.owner===c.pi),aiScore:s=>s.followers+(integ(s)-s.damage<=1?3:0),auto:true});
+     run:async c=>{const s=await pickSite(c.pi,{prompt:'Quartermaster: choose another site to remove 1 damage counter from.',filter:s=>s!==c.site&&s.damage>0&&(!c.me.ai||s.owner===c.pi),aiScore:s=>s.followers+(integ(s)-s.damage<=1?3:0),auto:true});
        if(!s)return;c.pay();s.damage--;log(`${c.me.name} repair${s_(c.me)} 1 damage on ${poss(G.players[s.owner])} ${s.card.def.name}.`)},
      ai:c=>{const d=c.me.sites.filter(s=>s!==c.site&&s.damage>0);return d.length?Math.max(...d.map(s=>0.5+(integ(s)-s.damage<=1?1.5:0.3))):-1}},
     {need:2,actions:1,text:'Remove an attachment from any site and then attach it to another site owned by the same player.',
      can:c=>allSites().some(s=>s.attachments.length&&G.players[s.owner].sites.length>1),
      run:async c=>{
        const list=allSites().filter(s=>G.players[s.owner].sites.length>1).flatMap(s=>s.attachments.map(a=>({a,s})));
-       const pick=await pickOption(c.pi,{prompt:'Supply Depot: choose an attachment to move.',options:list.map(x=>({label:`${x.a.def.name} on ${poss(G.players[x.s.owner])} ${x.s.card.def.name}`,value:x})),
+       const pick=await pickOption(c.pi,{prompt:'Quartermaster: choose an attachment to move.',options:list.map(x=>({label:`${x.a.def.name} on ${poss(G.players[x.s.owner])} ${x.s.card.def.name}`,value:x})),
          aiChoose:()=>list.find(x=>x.s.owner===c.pi&&HARMFUL.includes(x.a.def.id))||list[0],cancellable:true});
        if(!pick)return;
-       const dst=await pickSite(c.pi,{prompt:`Supply Depot: move ${pick.a.def.name} to which of ${poss(G.players[pick.s.owner])} other sites?`,filter:s=>s.owner===pick.s.owner&&s!==pick.s,
+       const dst=await pickSite(c.pi,{prompt:`Quartermaster: move ${pick.a.def.name} to which of ${poss(G.players[pick.s.owner])} other sites?`,filter:s=>s.owner===pick.s.owner&&s!==pick.s,
          aiScore:s=>-(s.followers+(s.card.def.worth||1)),auto:true});
        if(!dst)return;
        c.pay();pick.s.attachments.splice(pick.s.attachments.indexOf(pick.a),1);
@@ -642,118 +642,118 @@ const CARDS=[
        if(pick.s.damage>=integ(pick.s))destroySite(pick.s);
        await attach(pick.a,dst,pick.a.attachedBy,true)},
      ai:c=>{const bad=c.me.sites.some(s=>s.attachments.some(a=>HARMFUL.includes(a.def.id)));return bad&&c.me.sites.length>1?1.6:-1}}]},
-  {id:'spy',name:'Spy Agency',set:'exp',level:2,type:'site',cost:1,integrity:3,count:1,worth:2.2,
+  {id:'spy',name:'Thieves\' Guild',set:'exp',level:2,type:'site',cost:1,integrity:3,count:1,worth:2.2,
    abilities:[
     {need:2,actions:0,infinite:true,passive:true,text:'After an opponent relocates, draw 1 card of their level or lower.'},
     {need:3,actions:0,text:'Kill 1 follower.',can:()=>allSites().some(s=>s.followers>0),
-     run:async c=>{const s=await pickSite(c.pi,{prompt:'Spy Agency: choose a site to kill 1 follower on.',filter:s=>s.followers>0&&(!c.me.ai||s.owner!==c.pi),aiScore:killValue});
+     run:async c=>{const s=await pickSite(c.pi,{prompt:'Thieves\' Guild: choose a site to kill 1 follower on.',filter:s=>s.followers>0&&(!c.me.ai||s.owner!==c.pi),aiScore:killValue});
        if(!s)return;c.pay();killOn(s,1);log(`A spy kills a follower on ${poss(G.players[s.owner])} ${s.card.def.name}.`)},
      ai:c=>c.opp.sites.some(s=>s.followers>0)?Math.max(...c.opp.sites.filter(s=>s.followers>0).map(killValue)):-1}]},
-  {id:'conscription',name:'Conscription',set:'exp',level:2,type:'attachment',cost:1,count:2,
+  {id:'conscription',name:'Muster',set:'exp',level:2,type:'attachment',cost:1,count:2,
    text:"Upon attachment, gain 2 followers on this site. At the start of site owner's turn, gain 1 follower on this site.",
    onAttach:async s=>{const n=gainF(s,2);if(n)log(`${n} conscripts arrive at ${s.card.def.name}.`)},
    aiAttach:(c,s)=>s.owner===c.pi&&canGain(s)?placeScore(s)+(hasAtt(s,'plague')?-3:0):-99,
    ai:c=>c.me.sites.some(canGain)?2.6:-1},
-  {id:'research',name:'Research',set:'exp',level:2,type:'event',cost:1,count:1,
+  {id:'research',name:'Arcane Study',set:'exp',level:2,type:'event',cost:1,count:1,
    text:'Draw 1 card. You may play 1 card from your hand for no actions. OR Tuck 1 card from your hand under any site to draw cards equal to your level.',
    play:async c=>{
      const others=c.me.hand.filter(k=>k!==c.card);
      const opts=[{label:'Draw 1, then play a card for free',value:'a'}];
      if(others.length)opts.push({label:`Tuck a card to draw ${c.me.level}`,value:'b'});
-     const mode=await pickOption(c.pi,{prompt:'Research: choose one.',options:opts,aiChoose:()=>{const b=aiBestFree(c.pi,c.card);return b&&b.v>=2?'a':(others.length&&c.me.level>=2?'b':'a')},cancellable:true});
+     const mode=await pickOption(c.pi,{prompt:'Arcane Study: choose one.',options:opts,aiChoose:()=>{const b=aiBestFree(c.pi,c.card);return b&&b.v>=2?'a':(others.length&&c.me.level>=2?'b':'a')},cancellable:true});
      if(!mode)return;
      if(mode==='a'){
-       c.pay();await drawN(c.pi,1,'Research');
+       c.pay();await drawN(c.pi,1,'Arcane Study');
        let k;
        if(c.me.ai){const b=aiBestFree(c.pi);k=b&&b.v>0.5?b.k:null}
-       else k=await pickHandCard(c.pi,{prompt:'Research: choose a card to play for no actions.',filter:k=>k.def.type!=='reaction',cancellable:true,cancelLabel:'Skip'});
+       else k=await pickHandCard(c.pi,{prompt:'Arcane Study: choose a card to play for no actions.',filter:k=>k.def.type!=='reaction',cancellable:true,cancelLabel:'Skip'});
        if(k){log(`${c.me.name} play${s_(c.me)} a card for free.`);await playCard(c.pi,k,{free:true})}
      } else {
-       const k=await pickHandCard(c.pi,{prompt:'Research: choose a card to tuck.',filter:k=>k!==c.card});if(!k)return;
-       const s=await pickSite(c.pi,{prompt:'Research: tuck it under which site?',filter:()=>true,aiScore:s=>s.owner===c.pi?1+integ(s)-s.damage:0});if(!s)return;
+       const k=await pickHandCard(c.pi,{prompt:'Arcane Study: choose a card to tuck.',filter:k=>k!==c.card});if(!k)return;
+       const s=await pickSite(c.pi,{prompt:'Arcane Study: tuck it under which site?',filter:()=>true,aiScore:s=>s.owner===c.pi?1+integ(s)-s.damage:0});if(!s)return;
        c.pay();c.me.hand.splice(c.me.hand.indexOf(k),1);s.tucked.push(k);log(`${c.me.name} tuck${s_(c.me)} a card under ${s.card.def.name}.`);
-       await drawN(c.pi,c.me.level,'Research');
+       await drawN(c.pi,c.me.level,'Arcane Study');
      }},
    ai:c=>1.3},
-  {id:'outrage',name:'Outrage',set:'exp',level:2,type:'reaction',cost:0,count:1,trigger:'destroyed',
+  {id:'outrage',name:'Blood Feud',set:'exp',level:2,type:'reaction',cost:0,count:1,trigger:'destroyed',
    text:"When one of your sites is destroyed, draw cards equal to that site's level. Draw 1 additional card for each card tucked under that site and for each attachment on that site."},
-  {id:'retrofit',name:'Retrofitting',set:'exp',level:2,type:'attachment',cost:1,count:1,text:'Site gains +3 integrity.',
+  {id:'retrofit',name:'Reinforcement',set:'exp',level:2,type:'attachment',cost:1,count:1,text:'Site gains +3 integrity.',
    aiAttach:(c,s)=>s.owner===c.pi?s.followers*0.3+(integ(s)-s.damage<=2?2:0)+(s.card.def.worth||1)*0.3:-99,
    ai:c=>c.me.sites.some(s=>s.followers>=4||integ(s)-s.damage<=2)?1.3:-1},
-  {id:'demolition',name:'Demolition',set:'exp',level:2,type:'event',cost:2,count:1,text:'Do 4 damage to a site with at least 1 damage counter on it.',
-   play:c=>hit(c,4,'Demolition',{filter:s=>s.damage>0}),
+  {id:'demolition',name:'Collapse',set:'exp',level:2,type:'event',cost:2,count:1,text:'Do 4 damage to a site with at least 1 damage counter on it.',
+   play:c=>hit(c,4,'Collapse',{filter:s=>s.damage>0}),
    ai:c=>{const d=c.opp.sites.filter(s=>s.damage>0);return d.length?Math.max(...d.map(s=>dmgValue(s,4))):-1}},
-  {id:'threat',name:'Threat',set:'exp',level:2,type:'attachment',cost:1,count:1,
-   text:"Upon attachment, site owner must immediately relocate all followers off this site, if able. Followers cannot be gained or relocated onto this site. At the end of site owner's turn, discard Threat.",
+  {id:'threat',name:'Death Mark',set:'exp',level:2,type:'attachment',cost:1,count:1,
+   text:"Upon attachment, site owner must immediately relocate all followers off this site, if able. Followers cannot be gained or relocated onto this site. At the end of site owner's turn, discard Death Mark.",
    onAttach:async s=>{
      const owner=G.players[s.owner];
      if(!s.followers||!canLeave(s)||!owner.sites.some(x=>x!==s&&canGain(x))){log(`${Poss(owner)} followers cannot leave ${s.card.def.name}.`);return}
-     const counts=owner.ai?threatPlan(owner,s):await relocatePrompt(owner.i,{mode:'threat',site:s,forced:true,title:`${hotPfx(owner)}Threat: move every follower off ${s.card.def.name}`,cost:'Required, no action cost'});
+     const counts=owner.ai?threatPlan(owner,s):await relocatePrompt(owner.i,{mode:'threat',site:s,forced:true,title:`${hotPfx(owner)}Death Mark: move every follower off ${s.card.def.name}`,cost:'Required, no action cost'});
      applyCounts(owner,counts);log(`${owner.name} relocate${s_(owner)} every follower off ${s.card.def.name}.`)},
    aiAttach:(c,s)=>{if(s.owner===c.pi||hasAtt(s,'threat'))return -99;const o=G.players[s.owner];const can=o.sites.some(x=>x!==s&&canGain(x));return (can?s.followers:0)+((s.card.def.abilities||[]).length?1.5:0)+(ofId(c.me,'sniper').length?2:0)},
    ai:c=>{const m=Math.max(0,...c.opp.sites.map(s=>s.followers));return m>=4&&c.opp.sites.length>1?1.2+(ofId(c.me,'sniper').some(s=>s.followers>=1)?1:0):-1}},
-  {id:'revolt',name:'Revolt',set:'exp',level:2,type:'event',cost:2,count:1,text:'Do 1 damage for each occupied site an opponent owns, divided among up to 2 of their sites.',
+  {id:'revolt',name:'Uprising',set:'exp',level:2,type:'event',cost:2,count:1,text:'Do 1 damage for each occupied site an opponent owns, divided among up to 2 of their sites.',
    play:async c=>{const n=c.opp.sites.filter(s=>s.followers>0).length;
-     if(!n){c.pay();log('Revolt finds no occupied sites.');return}
-     const a=await divideDamage(c,n,2,`Revolt (${n} damage)`,s=>s.owner!==c.pi);if(!a)return;c.pay();for(const [s,k] of a)await damage(c.pi,s,k)},
+     if(!n){c.pay();log('Uprising finds no occupied sites.');return}
+     const a=await divideDamage(c,n,2,`Uprising (${n} damage)`,s=>s.owner!==c.pi);if(!a)return;c.pay();for(const [s,k] of a)await damage(c.pi,s,k)},
    ai:c=>{const n=c.opp.sites.filter(s=>s.followers>0).length;return n?bestAlloc(c.opp.sites,n,2,dmgValue).v:-1}},
 
   /* ---------- LEVEL III · CORE SET ---------- */
-  {id:'silo',name:'Missile Silo',set:'core',level:3,type:'site',cost:1,integrity:3,count:2,worth:4,
+  {id:'silo',name:'Ballista Tower',set:'core',level:3,type:'site',cost:1,integrity:5,count:2,worth:4,
    abilities:[
-    {need:2,actions:2,text:'Do 2 damage to a single site.',run:c=>hit(c,2,'Missile Silo'),ai:c=>bestOpp(c,2)},
+    {need:2,actions:2,text:'Do 2 damage to a single site.',run:c=>hit(c,2,'Ballista Tower'),ai:c=>bestOpp(c,2)},
     {need:2,actions:2,text:'Do 1 damage each to 2 different sites.',can:()=>allSites().length>=2,
      run:async c=>{
-       const a=await pickSite(c.pi,{prompt:'Missile Silo: choose the first site (1 damage).',filter:s=>!c.me.ai||s.owner!==c.pi,aiScore:s=>dmgValue(s,1)});if(!a)return;
-       const b=await pickSite(c.pi,{prompt:'Missile Silo: choose a second, different site (1 damage).',filter:s=>s!==a&&(!c.me.ai||s.owner!==c.pi),aiScore:s=>dmgValue(s,1)});if(!b)return;
+       const a=await pickSite(c.pi,{prompt:'Ballista Tower: choose the first site (1 damage).',filter:s=>!c.me.ai||s.owner!==c.pi,aiScore:s=>dmgValue(s,1)});if(!a)return;
+       const b=await pickSite(c.pi,{prompt:'Ballista Tower: choose a second, different site (1 damage).',filter:s=>s!==a&&(!c.me.ai||s.owner!==c.pi),aiScore:s=>dmgValue(s,1)});if(!b)return;
        c.pay();await damage(c.pi,a,1);await damage(c.pi,b,1)},
      ai:c=>{if(c.opp.sites.length<2)return -1;const v=c.opp.sites.map(s=>dmgValue(s,1)).sort((x,y)=>y-x);return v[0]+v[1]}}]},
-  {id:'robotics',name:'Robotics Lab',set:'core',level:3,type:'site',cost:2,integrity:3,count:2,worth:3,
-   abilities:[{need:2,actions:0,text:'Gain 1 action.',run:async c=>{c.pay();c.me.actions++;log(`${c.me.name} gain${s_(c.me)} an action from the Robotics Lab.`)},ai:c=>1.6}]},
-  {id:'radio',name:'Radio Station',set:'core',level:3,type:'site',cost:1,integrity:3,count:1,worth:3,
+  {id:'robotics',name:'Mana Well',set:'core',level:3,type:'site',cost:1,integrity:3,count:2,worth:3,
+   abilities:[{need:2,actions:0,text:'Gain 1 action.',run:async c=>{c.pay();c.me.actions++;log(`${c.me.name} gain${s_(c.me)} an action from the Mana Well.`)},ai:c=>1.6}]},
+  {id:'radio',name:'Herald\'s Tower',set:'core',level:3,type:'site',cost:1,integrity:3,count:1,worth:3,
    abilities:[
-    {need:2,actions:1,text:'Steal 1 follower and place it on any site you own.',can:canSteal,run:c=>steal(c,'Radio Station'),ai:c=>2},
-    {need:4,actions:0,text:'Steal 1 follower and place it on any site you own.',can:canSteal,run:c=>steal(c,'Radio Station'),ai:c=>2}]},
-  {id:'compnet',name:'Computer Network',set:'core',level:3,type:'attachment',cost:1,count:1,text:"This site's abilities require no followers to activate.",
+    {need:2,actions:1,text:'Steal 1 follower and place it on any site you own.',can:canSteal,run:c=>steal(c,'Herald\'s Tower'),ai:c=>2},
+    {need:4,actions:0,text:'Steal 1 follower and place it on any site you own.',can:canSteal,run:c=>steal(c,'Herald\'s Tower'),ai:c=>2}]},
+  {id:'compnet',name:'Animated Tools',set:'core',level:3,type:'attachment',cost:1,count:1,text:"This site's abilities require no followers to activate.",
    aiAttach:(c,s)=>{if(s.owner!==c.pi||hasAtt(s,'compnet')||hasAtt(s,'sabotage'))return -99;const ab=(s.card.def.abilities||[]);if(!ab.length)return -50;return ab.reduce((a,x)=>a+Math.max(0,x.need-s.followers),0)*0.5+(s.card.def.worth||1)},
    ai:c=>{const t=c.me.sites.filter(s=>!hasAtt(s,'compnet')&&!hasAtt(s,'sabotage')&&(s.card.def.abilities||[]).some(ab=>ab.need>s.followers));return t.length?Math.max(...t.map(s=>s.card.def.worth||1))*0.8:-1}},
-  {id:'airstrike',name:'Air Strike',set:'core',level:3,type:'event',cost:2,count:1,
+  {id:'airstrike',name:'Warp Storms',set:'core',level:3,type:'event',cost:2,count:1,
    text:"Do 2 damage to each of an opponent's Level I sites and 1 damage to each of their Level II sites. (Starting sites count as Level I.)",
    play:async c=>{c.pay();for(const s of [...c.opp.sites]){const n=airN(s);if(n)await damage(c.pi,s,n)}},
    ai:c=>c.opp.sites.reduce((a,s)=>a+(airN(s)?dmgValue(s,airN(s)):0),0)},
-  {id:'bioweapon',name:'Bioweapon',set:'core',level:3,type:'event',cost:2,count:1,
+  {id:'bioweapon',name:'Pestilence',set:'core',level:3,type:'event',cost:2,count:1,
    text:"Kill 1 of an opponent's followers for each card in their hand. Divide these kills among up to 2 sites.",
    play:async c=>{const n=c.opp.hand.length;
-     if(!n||!totalF(c.opp)){c.pay();log('Bioweapon finds no one to kill.');return}
-     const a=await divideKills(c,n,2,`Bioweapon (${n} kill${n>1?'s':''})`,s=>s.owner!==c.pi,false);if(!a)return;
-     c.pay();let k=0;for(const [s,x] of a)k+=killOn(s,x);log(`Bioweapon kills ${k} of ${poss(c.opp)} followers.`)},
+     if(!n||!totalF(c.opp)){c.pay();log('Pestilence finds no one to kill.');return}
+     const a=await divideKills(c,n,2,`Pestilence (${n} kill${n>1?'s':''})`,s=>s.owner!==c.pi,false);if(!a)return;
+     c.pay();let k=0;for(const [s,x] of a)k+=killOn(s,x);log(`Pestilence kills ${k} of ${poss(c.opp)} followers.`)},
    ai:c=>{const n=c.opp.hand.length;if(!n)return -1;const top=c.opp.sites.map(s=>s.followers).sort((a,b)=>b-a);return Math.min(n,(top[0]||0)+(top[1]||0))*1.1}},
-  {id:'archaeology',name:'Archaeology',set:'core',level:3,type:'event',cost:1,count:1,
+  {id:'archaeology',name:'Excavation',set:'core',level:3,type:'event',cost:1,count:1,
    text:'Draw a total of 3 cards from levels lower than your current level. OR Put any 1 discarded card into your hand.',
    play:async c=>{
      const low=[];for(let l=1;l<c.me.level;l++)if(G.stacks[l].length)low.push(l);
      const opts=[];
      if(low.length)opts.push({label:'Draw 3 from lower levels',value:'a'});
      if(G.discard.length)opts.push({label:'Take any discarded card',value:'b'});
-     if(!opts.length){c.pay();log('Archaeology finds nothing.');return}
-     const mode=opts.length===1?opts[0].value:await pickOption(c.pi,{prompt:'Archaeology: choose one.',options:opts,aiChoose:()=>Math.max(...G.discard.map(keepValue))>=3.5?'b':'a',cancellable:true});
+     if(!opts.length){c.pay();log('Excavation finds nothing.');return}
+     const mode=opts.length===1?opts[0].value:await pickOption(c.pi,{prompt:'Excavation: choose one.',options:opts,aiChoose:()=>Math.max(...G.discard.map(keepValue))>=3.5?'b':'a',cancellable:true});
      if(!mode)return;
-     if(mode==='a'){c.pay();await drawN(c.pi,3,'Archaeology',c.me.level-1)}
-     else{const k=await pickDiscard(c,'Archaeology: choose a discarded card to put into your hand.',()=>true,keepValue);if(!k)return;
+     if(mode==='a'){c.pay();await drawN(c.pi,3,'Excavation',c.me.level-1)}
+     else{const k=await pickDiscard(c,'Excavation: choose a discarded card to put into your hand.',()=>true,keepValue);if(!k)return;
        c.pay();G.discard.splice(G.discard.indexOf(k),1);c.me.hand.push(k);log(`${c.me.name} take${s_(c.me)} ${k.def.name} from the discard pile.`)}},
    ai:c=>c.me.level>=2?2.4:(G.discard.length?1:-1)},
-  {id:'ruthless',name:'Ruthless Efficiency',set:'core',level:3,type:'event',cost:1,count:1,
+  {id:'ruthless',name:'Blood Tithe',set:'core',level:3,type:'event',cost:1,count:1,
    text:'Sacrifice any number of followers and discard any number of cards from your hand. Gain 1 action for each follower sacrificed and 1 action for each card discarded. You may not gain more than 6 actions in this way.',
    play:async c=>{
      let picks=new Map(),cards=[];
      if(c.me.ai){const pl=ruthlessPlan(c);picks=pl.sites;cards=pl.cards}
      else{
        const maxF=Math.min(6,totalF(c.me));
-       const kf=await pickOption(c.pi,{prompt:'Ruthless Efficiency: how many followers will you sacrifice? Each one gives 1 action.',options:Array.from({length:maxF+1},(_,i)=>({label:String(i),value:i})),cancellable:true});
+       const kf=await pickOption(c.pi,{prompt:'Blood Tithe: how many followers will you sacrifice? Each one gives 1 action.',options:Array.from({length:maxF+1},(_,i)=>({label:String(i),value:i})),cancellable:true});
        if(kf===null||kf===undefined)return;
-       for(let i=0;i<kf;i++){const s=await pickSite(c.pi,{prompt:`Ruthless Efficiency: sacrifice follower ${i+1} of ${kf} from which site?`,filter:s=>s.owner===c.pi&&s.followers-(picks.get(s)||0)>0,aiScore:()=>0,auto:true,cancellable:false});if(s)picks.set(s,(picks.get(s)||0)+1)}
+       for(let i=0;i<kf;i++){const s=await pickSite(c.pi,{prompt:`Blood Tithe: sacrifice follower ${i+1} of ${kf} from which site?`,filter:s=>s.owner===c.pi&&s.followers-(picks.get(s)||0)>0,aiScore:()=>0,auto:true,cancellable:false});if(s)picks.set(s,(picks.get(s)||0)+1)}
        while(kf+cards.length<6&&c.me.hand.some(k=>k!==c.card&&!cards.includes(k))){
-         const k=await pickHandCard(c.pi,{prompt:`Ruthless Efficiency: discard a card for 1 more action (${kf+cards.length} so far), or finish.`,filter:k=>k!==c.card&&!cards.includes(k),cancellable:true,cancelLabel:'Finish'});
+         const k=await pickHandCard(c.pi,{prompt:`Blood Tithe: discard a card for 1 more action (${kf+cards.length} so far), or finish.`,filter:k=>k!==c.card&&!cards.includes(k),cancellable:true,cancelLabel:'Finish'});
          if(!k)break;cards.push(k);
        }
      }
@@ -762,40 +762,40 @@ const CARDS=[
    ai:c=>{const p=ruthlessPlan(c);return p.ok?1.6:-1}},
 
   /* ---------- LEVEL III · EXPANSION SET ---------- */
-  {id:'arms',name:'Arms Factory',set:'exp',level:3,type:'site',cost:2,integrity:3,count:2,worth:3,
+  {id:'arms',name:'Armory',set:'exp',level:3,type:'site',cost:2,integrity:3,count:2,worth:3,
    abilities:[
     {need:3,actions:0,text:"Do 1 damage to a single site and 1 additional damage to that site for each level you are higher than that site's owner.",
-     run:async c=>{const s=await pickSite(c.pi,{prompt:'Arms Factory: choose a site to damage.',filter:s=>!c.me.ai||s.owner!==c.pi,aiScore:s=>dmgValue(s,armsN(c,s))});if(!s)return;c.pay();await damage(c.pi,s,armsN(c,s))},
+     run:async c=>{const s=await pickSite(c.pi,{prompt:'Armory: choose a site to damage.',filter:s=>!c.me.ai||s.owner!==c.pi,aiScore:s=>dmgValue(s,armsN(c,s))});if(!s)return;c.pay();await damage(c.pi,s,armsN(c,s))},
      ai:c=>bestOpp(c,1+Math.max(0,c.me.level-c.opp.level))},
     {need:3,actions:2,text:'Do 1 damage each to a number of sites. That number cannot exceed your level.',
-     run:async c=>{const picked=await pickUpTo(c,c.me.level,{prompt:i=>`Arms Factory: choose site ${i+1} of up to ${c.me.level} (1 damage each).`,filter:s=>!c.me.ai||s.owner!==c.pi,aiScore:s=>dmgValue(s,1)});
+     run:async c=>{const picked=await pickUpTo(c,c.me.level,{prompt:i=>`Armory: choose site ${i+1} of up to ${c.me.level} (1 damage each).`,filter:s=>!c.me.ai||s.owner!==c.pi,aiScore:s=>dmgValue(s,1)});
        if(!picked||!picked.length)return;c.pay();for(const s of picked)await damage(c.pi,s,1)},
      ai:c=>c.opp.sites.map(s=>dmgValue(s,1)).sort((a,b)=>b-a).slice(0,c.me.level).reduce((a,b)=>a+b,0)}]},
-  {id:'bank',name:'Bank',set:'exp',level:3,type:'site',cost:1,integrity:3,count:2,worth:2.5,
+  {id:'bank',name:'Treasury',set:'exp',level:3,type:'site',cost:1,integrity:3,count:2,worth:2.5,
    abilities:[
-    {need:0,actions:0,text:'Tuck 1 card under Bank to allow another site to activate abilities again, even if that site already activated an ability this turn.',
+    {need:0,actions:0,text:'Tuck 1 card under Treasury to allow another site to activate abilities again, even if that site already activated an ability this turn.',
      can:c=>c.me.hand.length>0&&c.me.sites.some(s=>s!==c.site&&s.usedTurn===G.turnCount),
      run:async c=>{
-       const s=await pickSite(c.pi,{prompt:'Bank: choose another of your sites that has already used an ability this turn.',filter:s=>s.owner===c.pi&&s!==c.site&&s.usedTurn===G.turnCount,aiScore:s=>bankValue(c,s),auto:true});if(!s)return;
-       const k=await pickHandCard(c.pi,{prompt:'Bank: choose a card to tuck under Bank.'});if(!k)return;
-       c.pay();c.me.hand.splice(c.me.hand.indexOf(k),1);c.site.tucked.push(k);s.usedTurn=-1;log(`${c.me.name} tuck${s_(c.me)} a card under the Bank so ${s.card.def.name} can act again.`)},
+       const s=await pickSite(c.pi,{prompt:'Treasury: choose another of your sites that has already used an ability this turn.',filter:s=>s.owner===c.pi&&s!==c.site&&s.usedTurn===G.turnCount,aiScore:s=>bankValue(c,s),auto:true});if(!s)return;
+       const k=await pickHandCard(c.pi,{prompt:'Treasury: choose a card to tuck under Treasury.'});if(!k)return;
+       c.pay();c.me.hand.splice(c.me.hand.indexOf(k),1);c.site.tucked.push(k);s.usedTurn=-1;log(`${c.me.name} tuck${s_(c.me)} a card under the Treasury so ${s.card.def.name} can act again.`)},
      ai:c=>{if(c.me.hand.length<3)return -1;const v=Math.max(-1,...c.me.sites.filter(s=>s!==c.site&&s.usedTurn===G.turnCount).map(s=>bankValue(c,s)));return v-0.8}},
-    {need:3,actions:0,text:'Gain 1 action for each card tucked under Bank.',can:c=>c.site.tucked.length>0,
-     run:async c=>{c.pay();const n=c.site.tucked.length;c.me.actions+=n;log(`${c.me.name} gain${s_(c.me)} ${n} action${n>1?'s':''} from the Bank.`)},
+    {need:3,actions:0,text:'Gain 1 action for each card tucked under Treasury.',can:c=>c.site.tucked.length>0,
+     run:async c=>{c.pay();const n=c.site.tucked.length;c.me.actions+=n;log(`${c.me.name} gain${s_(c.me)} ${n} action${n>1?'s':''} from the Treasury.`)},
      ai:c=>c.site.tucked.length*1.2}]},
-  {id:'pplant',name:'Power Plant',set:'exp',level:3,type:'site',cost:1,integrity:3,count:1,worth:2.4,
-   text:"When Power Plant is destroyed, Power Plant's owner chooses 2 sites they own. Both sites take 1 structural damage for each card tucked under Power Plant.",
-   abilities:[{need:2,actions:2,text:'Play a discarded event for no actions. Then tuck that event under Power Plant.',can:c=>G.discard.some(k=>k.def.type==='event'),
+  {id:'pplant',name:'Arcane Furnace',set:'exp',level:3,type:'site',cost:1,integrity:3,count:1,worth:2.4,
+   text:"When Arcane Furnace is destroyed, Arcane Furnace's owner chooses 2 sites they own. Both sites take 1 structural damage for each card tucked under Arcane Furnace.",
+   abilities:[{need:2,actions:2,text:'Play a discarded event for no actions. Then tuck that event under Arcane Furnace.',can:c=>G.discard.some(k=>k.def.type==='event'),
      run:async c=>{
-       const k=await pickDiscard(c,'Power Plant: choose a discarded event to play.',k=>k.def.type==='event',k=>cardValue(c.pi,k));if(!k)return;
+       const k=await pickDiscard(c,'Arcane Furnace: choose a discarded event to play.',k=>k.def.type==='event',k=>cardValue(c.pi,k));if(!k)return;
        G.discard.splice(G.discard.indexOf(k),1);c.me.hand.push(k);
        const ok=await playCard(c.pi,k,{free:true});
        if(!ok){if(c.me.hand.includes(k)){c.me.hand.splice(c.me.hand.indexOf(k),1);G.discard.push(k)}return}
        c.pay();
        const i=G.discard.indexOf(k);
-       if(i>=0&&inPlay(c.site)){G.discard.splice(i,1);c.site.tucked.push(k);log(`${k.def.name} is tucked under the Power Plant.`)}},
+       if(i>=0&&inPlay(c.site)){G.discard.splice(i,1);c.site.tucked.push(k);log(`${k.def.name} is tucked under the Arcane Furnace.`)}},
      ai:c=>{const ev=G.discard.filter(k=>k.def.type==='event');return ev.length?Math.max(...ev.map(k=>cardValue(c.pi,k))):-1}}]},
-  {id:'oil',name:'Oil Drilling',set:'exp',level:3,type:'event',cost:1,count:1,
+  {id:'oil',name:'Strip the Land',set:'exp',level:3,type:'event',cost:1,count:1,
    text:'Do any amount of structural damage to sites you own, but not more than is required to destroy them. Gain 1 action for every 2 damage you do to a starting site and 1 action for every 1 damage you do to a non-starting site. You cannot gain more than 6 actions in this way.',
    play:async c=>{
      let plan;
@@ -804,7 +804,7 @@ const CARDS=[
        plan=new Map();
        for(let guard=0;guard<40;guard++){
          const g=oilGain(plan);if(g>=6)break;
-         const s=await pickSite(c.pi,{prompt:`Oil Drilling: choose one of your sites to take 1 structural damage (${g} action${g===1?'':'s'} so far).`,
+         const s=await pickSite(c.pi,{prompt:`Strip the Land: choose one of your sites to take 1 structural damage (${g} action${g===1?'':'s'} so far).`,
            filter:s=>s.owner===c.pi&&(plan.get(s)||0)<integ(s)-s.damage,aiScore:()=>0,extra:plan.size?[{label:'Finish',value:'done'}]:[],cancellable:!plan.size});
          if(!s){if(!plan.size)return;break}
          if(s==='done')break;
@@ -814,81 +814,81 @@ const CARDS=[
      if(!plan.size)return;
      c.pay();const g=Math.min(6,oilGain(plan));
      for(const [s,n] of plan)await damage(c.pi,s,n,{structural:true});
-     c.me.actions+=g;log(`${c.me.name} gain${s_(c.me)} ${g} action${g===1?'':'s'} from Oil Drilling.`)},
+     c.me.actions+=g;log(`${c.me.name} gain${s_(c.me)} ${g} action${g===1?'':'s'} from Strip the Land.`)},
    ai:c=>oilPlan(c).ok?1.5:-1},
-  {id:'dilemma',name:'Dilemma',set:'exp',level:3,type:'event',cost:2,count:1,
-   text:'Choose 2 sites owned by an opponent. They choose 1 of those sites to save. Do 5 damage to the other site. If an opponent has only 1 site, Dilemma has no effect on them.',
+  {id:'dilemma',name:'Cruel Bargain',set:'exp',level:3,type:'event',cost:2,count:1,
+   text:'Choose 2 sites owned by an opponent. They choose 1 of those sites to save. Do 5 damage to the other site. If an opponent has only 1 site, Cruel Bargain has no effect on them.',
    play:async c=>{
-     if(c.opp.sites.length<2){c.pay();log(`Dilemma has no effect: ${c.opp.name} ${isYou(c.opp)?'have':'has'} only 1 site.`);return}
+     if(c.opp.sites.length<2){c.pay();log(`Cruel Bargain has no effect: ${c.opp.name} ${isYou(c.opp)?'have':'has'} only 1 site.`);return}
      const pair=c.me.ai?dilemmaPair(c).pair:null;
-     const a=await pickSite(c.pi,{prompt:"Dilemma: choose the first of 2 opponent's sites.",filter:s=>s.owner!==c.pi,aiScore:s=>s===pair[0]?1:0});if(!a)return;
-     const b=await pickSite(c.pi,{prompt:"Dilemma: choose the second opponent's site.",filter:s=>s.owner!==c.pi&&s!==a,aiScore:s=>s===pair[1]?1:0});if(!b)return;
+     const a=await pickSite(c.pi,{prompt:"Cruel Bargain: choose the first of 2 opponent's sites.",filter:s=>s.owner!==c.pi,aiScore:s=>s===pair[0]?1:0});if(!a)return;
+     const b=await pickSite(c.pi,{prompt:"Cruel Bargain: choose the second opponent's site.",filter:s=>s.owner!==c.pi&&s!==a,aiScore:s=>s===pair[1]?1:0});if(!b)return;
      c.pay();
-     const save=await pickSite(c.oppi,{prompt:`${hotPfx(c.opp)}Dilemma: choose which of these 2 sites to save. The other takes 5 damage.`,filter:s=>s===a||s===b,aiScore:s=>dmgValue(s,5),cancellable:false});
+     const save=await pickSite(c.oppi,{prompt:`${hotPfx(c.opp)}Cruel Bargain: choose which of these 2 sites to save. The other takes 5 damage.`,filter:s=>s===a||s===b,aiScore:s=>dmgValue(s,5),cancellable:false});
      const t=save===a?b:a;log(`${c.opp.name} save${s_(c.opp)} ${save.card.def.name}.`);await damage(c.pi,t,5)},
    ai:c=>c.opp.sites.length<2?-1:dilemmaPair(c).v},
-  {id:'sanctions',name:'Sanctions',set:'exp',level:3,type:'attachment',cost:1,count:1,
+  {id:'sanctions',name:'Quarantine',set:'exp',level:3,type:'attachment',cost:1,count:1,
    text:"At the start of site owner's turn, do 1 structural damage to this site. Followers cannot be relocated off this site.",
    aiAttach:(c,s)=>s.owner!==c.pi&&!hasAtt(s,'sanctions')?s.followers*0.6+(integ(s)-s.damage<=3?2:0):-99,
    ai:c=>c.opp.sites.some(s=>s.followers>=3)?1.4:-1},
-  {id:'surgical',name:'Surgical Strike',set:'exp',level:3,type:'event',cost:1,count:1,text:'Kill up to 3 followers, divided among up to 2 sites.',
-   play:async c=>{const a=await divideKills(c,3,2,'Surgical Strike',s=>!c.me.ai||s.owner!==c.pi,true);if(!a||!a.size)return;
-     c.pay();let k=0;for(const [s,x] of a)k+=killOn(s,x);log(`Surgical Strike kills ${k} follower${k===1?'':'s'}.`)},
+  {id:'surgical',name:'Assassinate',set:'exp',level:3,type:'event',cost:1,count:1,text:'Kill up to 3 followers, divided among up to 2 sites.',
+   play:async c=>{const a=await divideKills(c,3,2,'Assassinate',s=>!c.me.ai||s.owner!==c.pi,true);if(!a||!a.size)return;
+     c.pay();let k=0;for(const [s,x] of a)k+=killOn(s,x);log(`Assassinate kills ${k} follower${k===1?'':'s'}.`)},
    ai:c=>{const top=c.opp.sites.map(s=>s.followers).sort((a,b)=>b-a);return Math.min(3,(top[0]||0)+(top[1]||0))*1.2}},
-  {id:'trade',name:'Trade Agreement',set:'exp',level:3,type:'reaction',cost:0,count:1,trigger:'play',
+  {id:'trade',name:'Get Fucked',set:'exp',level:3,type:'reaction',cost:0,count:1,trigger:'play',
    text:'When an opponent plays a card, discard that card with no effect. They still lose the actions required to play that card, but they also draw 1 card of your level or lower.'},
 
   /* ---------- LEVEL IV · CORE SET ---------- */
-  {id:'ark',name:'Ark',set:'core',level:4,type:'site',cost:3,integrity:3,count:1,worth:2.5,enterValue:10,
-   text:'When Ark enters play, gain 10 followers on Ark.',abilities:[],
-   onEnter:(c,s)=>{s.followers+=10;sfx('place',4);log('10 followers board the Ark.')}},
-  {id:'doomsday',name:'Doomsday Laser',set:'core',level:4,type:'site',cost:1,integrity:3,count:1,worth:4.5,fortified:true,text:'Fortified.',
-   abilities:[{need:3,actions:2,text:'Do 8 damage to a single site.',run:c=>hit(c,8,'Doomsday Laser'),ai:c=>bestOpp(c,8)}]},
-  {id:'forcefield',name:'Force Field',set:'core',level:4,type:'site',cost:1,integrity:3,count:1,worth:3.5,fortified:true,text:'Fortified.',
+  {id:'ark',name:'Promised Citadel',set:'core',level:4,type:'site',cost:2,integrity:6,count:1,worth:2.5,enterValue:6,
+   text:'When Promised Citadel enters play, gain 6 followers on Promised Citadel.',abilities:[],
+   onEnter:(c,s)=>{s.followers+=6;sfx('place',4);log('6 followers gather at the Promised Citadel.')}},
+  {id:'doomsday',name:'Dragon\'s Maw',set:'core',level:4,type:'site',cost:1,integrity:5,count:1,worth:4.5,fortified:true,text:'Fortified.',
+   abilities:[{need:3,actions:2,text:'Do 8 damage to a single site.',run:c=>hit(c,8,'Dragon\'s Maw'),ai:c=>bestOpp(c,8)}]},
+  {id:'forcefield',name:'Aegis',set:'core',level:4,type:'site',cost:1,integrity:3,count:1,worth:3.5,fortified:true,text:'Fortified.',
    abilities:[{need:1,actions:0,infinite:true,passive:true,text:'When one of your other sites is damaged, prevent that damage.'}]},
-  {id:'mindcontrol',name:'Mind Control',set:'core',level:4,type:'event',cost:2,count:1,text:'Steal all the followers on a single site and place them on any combination of sites you own.',
+  {id:'mindcontrol',name:'Dominate',set:'core',level:4,type:'event',cost:2,count:1,text:'Steal all the followers on a single site and place them on any combination of sites you own.',
    play:async c=>{
-     const src=await pickSite(c.pi,{prompt:'Mind Control: choose a site to steal every follower from.',filter:s=>s.owner!==c.pi&&s.followers>0,aiScore:s=>s.followers});if(!src)return;
+     const src=await pickSite(c.pi,{prompt:'Dominate: choose a site to steal every follower from.',filter:s=>s.owner!==c.pi&&s.followers>0,aiScore:s=>s.followers});if(!src)return;
      const n=src.followers, own=c.me.sites.filter(canGain);if(!own.length)return;
      let counts;
      if(c.me.ai) counts=placePlan(c.me,n);
      else if(own.length===1){counts=Object.fromEntries(c.me.sites.map(s=>[s.uid,s.followers]));counts[own[0].uid]+=n}
-     else counts=await relocatePrompt(c.pi,{mode:'place',pool:n,title:`Mind Control: place ${n} stolen follower${n>1?'s':''}`,cost:'Part of Mind Control'});
+     else counts=await relocatePrompt(c.pi,{mode:'place',pool:n,title:`Dominate: place ${n} stolen follower${n>1?'s':''}`,cost:'Part of Dominate'});
      if(!counts)return;
      c.pay();src.followers=0;for(const s of c.me.sites)if(counts[s.uid]!==undefined)s.followers=counts[s.uid];sfx('place',n);sweep();
      log(`${c.me.name} seize${s_(c.me)} ${n} follower${n>1?'s':''} from ${poss(c.opp)} ${src.card.def.name}.`)},
    ai:c=>c.me.sites.some(canGain)?Math.max(-1,...c.opp.sites.map(s=>s.followers*1.6)):-1},
-  {id:'sentient',name:'Sentient AI',set:'core',level:4,type:'attachment',cost:1,count:1,
+  {id:'sentient',name:'Awakened Grimoire',set:'core',level:4,type:'attachment',cost:1,count:1,
    text:'After this site activates an ability, site owner may immediately activate the same ability again for no actions.',
    aiAttach:(c,s)=>s.owner===c.pi&&!hasAtt(s,'sabotage')&&(s.card.def.abilities||[]).some(a=>!a.passive)?(s.card.def.worth||1)+(s.followers>=minNeed(s)?1:0):-99,
    ai:c=>c.me.sites.some(s=>!hasAtt(s,'sabotage')&&(s.card.def.abilities||[]).some(a=>!a.passive))?2:-1},
 
   /* ---------- LEVEL IV · EXPANSION SET ---------- */
-  {id:'alienweapon',name:'Alien Weapon',set:'exp',level:4,type:'site',cost:1,integrity:3,count:1,worth:3,fortified:true,text:'Fortified.',
+  {id:'alienweapon',name:'Doom Engine',set:'exp',level:4,type:'site',cost:1,integrity:3,count:1,worth:3,fortified:true,text:'Fortified.',
    abilities:[
-    {need:0,actions:0,text:'Tuck 1 card under Alien Weapon to discard up to 4 cards from the top of any draw stack.',can:c=>c.me.hand.length>0&&[1,2,3,4].some(l=>G.stacks[l].length),
+    {need:0,actions:0,text:'Tuck 1 card under Doom Engine to discard up to 2 cards from the top of any draw stack.',can:c=>c.me.hand.length>0&&[1,2,3,4].some(l=>G.stacks[l].length),
      run:async c=>{
        const lv=[1,2,3,4].filter(l=>G.stacks[l].length);
-       const k=await pickHandCard(c.pi,{prompt:'Alien Weapon: choose a card to tuck under Alien Weapon.'});if(!k)return;
-       const l=await pickOption(c.pi,{prompt:'Alien Weapon: discard cards from the top of which draw stack?',options:lv.map(x=>({label:`Level ${ROMAN[x]} (${G.stacks[x].length} left)`,value:x})),aiChoose:()=>awStack(c,lv),cancellable:true});if(!l)return;
-       const max=Math.min(4,G.stacks[l].length);
-       const n=c.me.ai?max:await pickOption(c.pi,{prompt:`Alien Weapon: discard how many cards from Level ${ROMAN[l]}?`,options:Array.from({length:max},(_,i)=>({label:String(i+1),value:i+1})),cancellable:true});if(!n)return;
+       const k=await pickHandCard(c.pi,{prompt:'Doom Engine: choose a card to tuck under Doom Engine.'});if(!k)return;
+       const l=await pickOption(c.pi,{prompt:'Doom Engine: discard cards from the top of which draw stack?',options:lv.map(x=>({label:`Level ${ROMAN[x]} (${G.stacks[x].length} left)`,value:x})),aiChoose:()=>awStack(c,lv),cancellable:true});if(!l)return;
+       const max=Math.min(2,G.stacks[l].length);
+       const n=c.me.ai?max:await pickOption(c.pi,{prompt:`Doom Engine: discard how many cards from Level ${ROMAN[l]}?`,options:Array.from({length:max},(_,i)=>({label:String(i+1),value:i+1})),cancellable:true});if(!n)return;
        c.pay();c.me.hand.splice(c.me.hand.indexOf(k),1);c.site.tucked.push(k);
        for(let i=0;i<n;i++)G.discard.push(G.stacks[l].pop());
-       log(`${c.me.name} tuck${s_(c.me)} a card under Alien Weapon and discard${s_(c.me)} ${n} card${n>1?'s':''} from the Level ${ROMAN[l]} stack.`);
+       log(`${c.me.name} tuck${s_(c.me)} a card under Doom Engine and discard${s_(c.me)} ${n} card${n>1?'s':''} from the Level ${ROMAN[l]} stack.`);
        if(!G.stacks[l].length){log(`The Level ${ROMAN[l]} stack has run out.`);G.pending.push({t:'stackout'})}},
      ai:c=>c.me.hand.length>=3?(totalF(c.me)>totalF(c.opp)+3?1.6:0.8):-1},
-    {need:2,actions:0,text:'Do 2 damage for each card tucked under Alien Weapon, divided among up to 2 sites.',can:c=>c.site.tucked.length>0,
-     run:async c=>{const n=2*c.site.tucked.length;const a=await divideDamage(c,n,2,`Alien Weapon (${n} damage)`,()=>true);if(!a)return;c.pay();for(const [s,k] of a)await damage(c.pi,s,k)},
+    {need:2,actions:0,text:'Do 2 damage for each card tucked under Doom Engine, divided among up to 2 sites.',can:c=>c.site.tucked.length>0,
+     run:async c=>{const n=2*c.site.tucked.length;const a=await divideDamage(c,n,2,`Doom Engine (${n} damage)`,()=>true);if(!a)return;c.pay();for(const [s,k] of a)await damage(c.pi,s,k)},
      ai:c=>c.site.tucked.length?bestAlloc(c.opp.sites,2*c.site.tucked.length,2,dmgValue).v:-1}]},
-  {id:'assimilation',name:'Assimilation',set:'exp',level:4,type:'event',cost:2,count:1,
+  {id:'assimilation',name:'Conquest',set:'exp',level:4,type:'event',cost:2,count:1,
    text:'Choose a site owned by an opponent. They must relocate followers off that site, if able. Then gain ownership of that site.',
    play:async c=>{
-     const s=await pickSite(c.pi,{prompt:"Assimilation: choose an opponent's site to take over.",filter:s=>s.owner!==c.pi,aiScore:s=>assimValue(c,s)});if(!s)return;
+     const s=await pickSite(c.pi,{prompt:"Conquest: choose an opponent's site to take over.",filter:s=>s.owner!==c.pi,aiScore:s=>assimValue(c,s)});if(!s)return;
      c.pay();
      const owner=G.players[s.owner];
      if(s.followers&&canLeave(s)&&owner.sites.some(x=>x!==s&&canGain(x))){
-       const counts=owner.ai?threatPlan(owner,s):await relocatePrompt(owner.i,{mode:'threat',site:s,forced:true,title:`${hotPfx(owner)}Assimilation: move every follower off ${s.card.def.name}`,cost:'Required, no action cost'});
+       const counts=owner.ai?threatPlan(owner,s):await relocatePrompt(owner.i,{mode:'threat',site:s,forced:true,title:`${hotPfx(owner)}Conquest: move every follower off ${s.card.def.name}`,cost:'Required, no action cost'});
        applyCounts(owner,counts);log(`${owner.name} evacuate${s_(owner)} ${s.card.def.name}.`);
      }
      if(!inPlay(s))return;
@@ -896,39 +896,39 @@ const CARDS=[
      const pos=await pickSlot(c.pi,s.card.def,true);c.me.sites.splice(pos??c.me.sites.length,0,s);sweep();
      log(`${c.me.name} take${s_(c.me)} over ${poss(owner)} ${s.card.def.name}${s.followers?`, along with ${s.followers} follower${s.followers>1?'s':''}`:''}.`)},
    ai:c=>Math.max(-1,...c.opp.sites.map(s=>assimValue(c,s)))},
-  {id:'brainemu',name:'Brain Emulation',set:'exp',level:4,type:'event',cost:2,count:1,text:'Gain 2 followers on each site you own. OR Gain 7 followers on a single site.',
+  {id:'brainemu',name:'Golden Age',set:'exp',level:4,type:'event',cost:1,count:1,text:'Gain 2 followers on each site you own. OR Gain 7 followers on a single site.',
    play:async c=>{
      const own=c.me.sites.filter(canGain);if(!own.length)return;
-     const mode=await pickOption(c.pi,{prompt:'Brain Emulation: choose one.',options:[{label:`2 followers on each of your ${own.length} site${own.length>1?'s':''}`,value:'a'},{label:'7 followers on one site',value:'b'}],aiChoose:()=>own.length*2>7?'a':'b',cancellable:true});
+     const mode=await pickOption(c.pi,{prompt:'Golden Age: choose one.',options:[{label:`2 followers on each of your ${own.length} site${own.length>1?'s':''}`,value:'a'},{label:'7 followers on one site',value:'b'}],aiChoose:()=>own.length*2>7?'a':'b',cancellable:true});
      if(!mode)return;
      if(mode==='a'){c.pay();for(const s of own)gainF(s,2);log(`${c.me.name} gain${s_(c.me)} ${own.length*2} followers.`)}
-     else await gainOnOwn(c,7,'Brain Emulation')},
+     else await gainOnOwn(c,7,'Golden Age')},
    ai:c=>{const n=c.me.sites.filter(canGain).length;return n?Math.max(n*2,7):-1}},
-  {id:'nanobots',name:'Nanobots',set:'exp',level:4,type:'event',cost:2,count:1,
+  {id:'nanobots',name:'Unmaking',set:'exp',level:4,type:'event',cost:2,count:1,
    text:'Remove a total of up to 4 damage counters from any combination of sites. Then do 1 damage for each counter removed, divided among any number of sites.',
    play:async c=>{
-     if(!allSites().some(s=>s.damage>0)){c.pay();log('Nanobots find nothing to take apart.');return}
+     if(!allSites().some(s=>s.damage>0)){c.pay();log('Unmaking finds nothing to take apart.');return}
      let rem;
      if(c.me.ai) rem=nanoPlan(c);
      else{
        rem=new Map();
        for(let i=0;i<4;i++){
-         const s=await pickSite(c.pi,{prompt:`Nanobots: choose a site to remove damage counter ${i+1} of up to 4 from.`,filter:s=>s.damage-(rem.get(s)||0)>0,aiScore:()=>0,extra:i>0?[{label:'Finish',value:'done'}]:[],cancellable:i===0});
+         const s=await pickSite(c.pi,{prompt:`Unmaking: choose a site to remove damage counter ${i+1} of up to 4 from.`,filter:s=>s.damage-(rem.get(s)||0)>0,aiScore:()=>0,extra:i>0?[{label:'Finish',value:'done'}]:[],cancellable:i===0});
          if(!s){if(i===0)return;break}
          if(s==='done')break;
          rem.set(s,(rem.get(s)||0)+1);
        }
      }
      const n=[...rem.values()].reduce((a,b)=>a+b,0);if(!n)return;
-     c.pay();for(const [s,k] of rem)s.damage-=k;log(`Nanobots remove ${n} damage counter${n>1?'s':''}.`);
-     const a=await divideDamage(c,n,n,`Nanobots (${n} damage)`,()=>true,true);
+     c.pay();for(const [s,k] of rem)s.damage-=k;log(`Unmaking remove ${n} damage counter${n>1?'s':''}.`);
+     const a=await divideDamage(c,n,n,`Unmaking (${n} damage)`,()=>true,true);
      if(a)for(const [s,k] of a)await damage(c.pi,s,k)},
    ai:c=>{const rem=nanoPlan(c);const n=[...rem.values()].reduce((a,b)=>a+b,0);if(!n)return -1;
      let own=0;for(const [s,k] of rem)if(s.owner===c.pi)own+=k;return own*0.8+Math.max(0,bestAlloc(c.opp.sites,n,n,dmgValue).v)}},
-  {id:'replicator',name:'Replicator',set:'exp',level:4,type:'site',cost:1,integrity:3,count:1,worth:2.5,
-   abilities:[{need:0,actions:1,text:'Take 1 site out of the discard pile and play it for no actions. Then do 1 structural damage to Replicator.',can:c=>G.discard.some(k=>k.def.type==='site'),
+  {id:'replicator',name:'Mirror Forge',set:'exp',level:4,type:'site',cost:1,integrity:3,count:1,worth:2.5,
+   abilities:[{need:0,actions:1,text:'Take 1 site out of the discard pile and play it for no actions. Then do 1 structural damage to Mirror Forge.',can:c=>G.discard.some(k=>k.def.type==='site'),
      run:async c=>{
-       const k=await pickDiscard(c,'Replicator: choose a discarded site to play.',k=>k.def.type==='site',k=>(k.def.worth||1)+(k.def.enterValue||0));if(!k)return;
+       const k=await pickDiscard(c,'Mirror Forge: choose a discarded site to play.',k=>k.def.type==='site',k=>(k.def.worth||1)+(k.def.enterValue||0));if(!k)return;
        G.discard.splice(G.discard.indexOf(k),1);c.me.hand.push(k);
        const ok=await playCard(c.pi,k,{free:true});
        if(!ok){if(c.me.hand.includes(k)){c.me.hand.splice(c.me.hand.indexOf(k),1);G.discard.push(k)}return}
@@ -982,18 +982,18 @@ async function startTurn(pi){
   const p=G.players[pi];
   p.actions=G.turnCount===1?2:3;
   log(`— ${p.name}: turn begins (${p.actions} actions).`);
-  if(p.lof){p.actions=Math.max(0,p.actions-p.lof);p.lof=0;p.lofTurn=G.turnCount;log(`Loss of Faith: ${p.name} ${isYou(p)?'have':'has'} ${p.actions} action${p.actions===1?'':'s'} and no site abilities this turn.`)}
+  if(p.lof){p.actions=Math.max(0,p.actions-p.lof);p.lof=0;p.lofTurn=G.turnCount;log(`Interdict: ${p.name} ${isYou(p)?'have':'has'} ${p.actions} action${p.actions===1?'':'s'} this turn.`)}
   for(const s of [...p.sites]) for(const a of [...s.attachments]){
     if(a.def.id==='plague'&&s.followers>0){killOn(s,1);log(`${a.def.name} kills a follower on ${poss(p)} ${s.card.def.name}.`)}
   }
   for(const s of [...p.sites]) for(const a of s.attachments){
-    if(a.def.id==='conscription'&&gainF(s,1)) log(`Conscription adds a follower to ${poss(p)} ${s.card.def.name}.`);
+    if(a.def.id==='conscription'&&gainF(s,1)) log(`Muster adds a follower to ${poss(p)} ${s.card.def.name}.`);
   }
   sweep();
   if(G.mode==='hot') UI.curtain=true;
   UI.busy=true; render();
   for(const s of [...p.sites]) for(const a of [...s.attachments]) if(a.def.id==='sanctions'&&inPlay(s)&&!G.over){
-    log(`Sanctions strain ${poss(p)} ${s.card.def.name}.`);await damage(a.attachedBy,s,1,{structural:true});
+    log(`Quarantine strains ${poss(p)} ${s.card.def.name}.`);await damage(a.attachedBy,s,1,{structural:true});
   }
   await flush();
   UI.busy=false;
@@ -1006,7 +1006,7 @@ async function endTurn(){
   if(!G||G.over) return;
   const p=G.players[G.turn];
   for(const s of p.sites) for(const a of [...s.attachments]) if(a.def.id==='threat'){
-    s.attachments.splice(s.attachments.indexOf(a),1);G.discard.push(a);log(`Threat on ${poss(p)} ${s.card.def.name} is discarded.`);
+    s.attachments.splice(s.attachments.indexOf(a),1);G.discard.push(a);log(`Death Mark on ${poss(p)} ${s.card.def.name} is discarded.`);
   }
   const empty=[1,2,3,4].filter(l=>!G.stacks[l].length).length;
   if(empty>=3){
@@ -1101,7 +1101,7 @@ function rlCan(r,uid,dir){
 async function damage(src,site,n,opt={}){
   if(!inPlay(site)||n<=0) return;
   const owner=G.players[site.owner];
-  if(src!=null&&src!==site.owner&&ffProtects(site)){log(`${Poss(owner)} Force Field blocks ${n} damage to ${site.card.def.name}.`);return}
+  if(src!=null&&src!==site.owner&&ffProtects(site)){log(`${Poss(owner)} Aegis blocks ${n} damage to ${site.card.def.name}.`);return}
   if(src!=null&&src!==site.owner){
     const used=new Set();
     for(let g=0;g<6&&n>0&&inPlay(site);g++){
@@ -1176,12 +1176,12 @@ async function onKilled(pi,n){
     const up=h.followers>=effNeed(h,h.card.def.abilities[1]);
     const g=up?Math.ceil(n/2):Math.floor(n/2);
     const x=gainF(h,g);
-    if(x) log(`${Poss(p)} Hospital saves ${x} follower${x>1?'s':''}.`);
+    if(x) log(`${Poss(p)} Infirmary saves ${x} follower${x>1?'s':''}.`);
   }
   const m=p.hand.find(k=>k.def.trigger==='kill');
   if(m&&drawableLevels(pi).length){
-    const use=p.ai?true:await pickOption(pi,{prompt:`${hotPfx(p)}${n} of your followers ${n>1?'were':'was'} killed. Play Martyr to draw ${n} card${n>1?'s':''}?`,options:[{label:'Play Martyr',value:true},{label:'Not now',value:false}]});
-    if(use&&p.hand.includes(m)){discardFromHand(pi,m);log(`${p.name} play${s_(p)} Martyr.`);await drawN(pi,n,'Martyr')}
+    const use=p.ai?true:await pickOption(pi,{prompt:`${hotPfx(p)}${n} of your followers ${n>1?'were':'was'} killed. Play Blessed Sacrifice to draw ${n} card${n>1?'s':''}?`,options:[{label:'Play Blessed Sacrifice',value:true},{label:'Not now',value:false}]});
+    if(use&&p.hand.includes(m)){discardFromHand(pi,m);log(`${p.name} play${s_(p)} Blessed Sacrifice.`);await drawN(pi,n,'Blessed Sacrifice')}
   }
 }
 async function onRelocate(pi){
@@ -1192,27 +1192,27 @@ async function onRelocate(pi){
     if(s.followers<effNeed(s,ab[0])) continue;
     const k=s.followers>=effNeed(s,ab[1])?2:1;
     for(let i=0;i<k&&totalF(p)>0&&!G.over;i++){
-      const t=await pickSite(o.i,{prompt:`${hotPfx(o)}Sniper Nest: ${p.name} relocated. Choose one of ${isYou(p)?'your':'their'} sites to kill a follower on${k>1?` (${i+1} of ${k})`:''}.`,
+      const t=await pickSite(o.i,{prompt:`${hotPfx(o)}Ranger's Perch: ${p.name} relocated. Choose one of ${isYou(p)?'your':'their'} sites to kill a follower on${k>1?` (${i+1} of ${k})`:''}.`,
         filter:x=>x.owner===pi&&x.followers>0,aiScore:killValue,auto:true,cancellable:false});
-      if(t){killOn(t,1);log(`Sniper Nest kills a follower on ${poss(p)} ${t.card.def.name}.`);checkGameOver()}
+      if(t){killOn(t,1);log(`Ranger's Perch kills a follower on ${poss(p)} ${t.card.def.name}.`);checkGameOver()}
     }
   }
   for(const s of ofId(o,'spy')){
     if(G.over||!inPlay(s)||abilBlocked(s)||s.followers<effNeed(s,s.card.def.abilities[0])) continue;
     const lv=[];for(let l=1;l<=p.level;l++)if(G.stacks[l].length)lv.push(l);
     if(!lv.length) continue;
-    const l=lv.length===1||o.ai?lv[lv.length-1]:await pickOption(o.i,{prompt:`${hotPfx(o)}Spy Agency: ${p.name} relocated. Draw from which level?`,options:lv.map(x=>({label:`Level ${ROMAN[x]} (${G.stacks[x].length} left)`,value:x}))});
-    log(`${Poss(o)} Spy Agency reports in.`);drawCard(o.i,l);
+    const l=lv.length===1||o.ai?lv[lv.length-1]:await pickOption(o.i,{prompt:`${hotPfx(o)}Thieves' Guild: ${p.name} relocated. Draw from which level?`,options:lv.map(x=>({label:`Level ${ROMAN[x]} (${G.stacks[x].length} left)`,value:x}))});
+    log(`${Poss(o)} Thieves' Guild reports in.`);drawCard(o.i,l);
   }
 }
 async function onPowerPlant(e){
   const p=G.players[e.pi];if(!p.sites.length)return;
   const picks=[];
   for(let i=0;i<2&&picks.length<p.sites.length;i++){
-    const s=await pickSite(e.pi,{prompt:`${hotPfx(p)}Your Power Plant was destroyed. Choose ${i?'a second':'a'} site of yours to take ${e.n} structural damage.`,filter:s=>s.owner===e.pi&&!picks.includes(s),aiScore:s=>-lossOf(s,e.n,{structural:true}),auto:true,cancellable:false});
+    const s=await pickSite(e.pi,{prompt:`${hotPfx(p)}Your Arcane Furnace was destroyed. Choose ${i?'a second':'a'} site of yours to take ${e.n} structural damage.`,filter:s=>s.owner===e.pi&&!picks.includes(s),aiScore:s=>-lossOf(s,e.n,{structural:true}),auto:true,cancellable:false});
     if(s)picks.push(s);
   }
-  log(`${Poss(p)} Power Plant explodes.`);
+  log(`${Poss(p)} Arcane Furnace explodes.`);
   for(const s of picks)await damage(e.pi,s,e.n,{structural:true});
 }
 async function onDestroyed(e){
@@ -1220,8 +1220,8 @@ async function onDestroyed(e){
   const m=p.hand.find(k=>k.def.trigger==='destroyed');
   if(!m||!drawableLevels(e.pi).length) return;
   const n=e.lvl+e.extra;
-  const use=p.ai?true:await pickOption(e.pi,{prompt:`${hotPfx(p)}Your ${e.name} was destroyed. Play Outrage to draw ${n} card${n>1?'s':''}?`,options:[{label:'Play Outrage',value:true},{label:'Not now',value:false}]});
-  if(use&&p.hand.includes(m)){discardFromHand(e.pi,m);log(`${p.name} play${s_(p)} Outrage.`);await drawN(e.pi,n,'Outrage')}
+  const use=p.ai?true:await pickOption(e.pi,{prompt:`${hotPfx(p)}Your ${e.name} was destroyed. Play Blood Feud to draw ${n} card${n>1?'s':''}?`,options:[{label:'Play Blood Feud',value:true},{label:'Not now',value:false}]});
+  if(use&&p.hand.includes(m)){discardFromHand(e.pi,m);log(`${p.name} play${s_(p)} Blood Feud.`);await drawN(e.pi,n,'Blood Feud')}
 }
 
 function abilityReady(pi,site,i){
@@ -1240,8 +1240,8 @@ async function useAbility(pi,site,i){
   const pay=()=>{if(paid)return;paid=true;p.actions-=ab.actions;if(!ab.infinite)site.usedTurn=G.turnCount;log(`${p.name} activate${s_(p)} ${site.card.def.name}.`)};
   await ab.run(mkCtx(pi,{site,pay}));
   if(paid&&!G.over&&hasAtt(site,'sentient')&&inPlay(site)&&!abilBlocked(site)&&site.followers>=effNeed(site,ab)&&(!ab.can||ab.can(mkCtx(pi,{site})))){
-    const yes=p.ai?ab.ai(mkCtx(pi,{site}))>0.5:await pickOption(pi,{prompt:`Sentient AI: activate ${site.card.def.name} again for no actions?`,options:[{label:'Activate again',value:true},{label:'No',value:false}]});
-    if(yes){let p2=false;await ab.run(mkCtx(pi,{site,pay:()=>{if(p2)return;p2=true;log(`Sentient AI activates ${site.card.def.name} again.`)}}))}
+    const yes=p.ai?ab.ai(mkCtx(pi,{site}))>0.5:await pickOption(pi,{prompt:`Awakened Grimoire: activate ${site.card.def.name} again for no actions?`,options:[{label:'Activate again',value:true},{label:'No',value:false}]});
+    if(yes){let p2=false;await ab.run(mkCtx(pi,{site,pay:()=>{if(p2)return;p2=true;log(`Awakened Grimoire activates ${site.card.def.name} again.`)}}))}
   }
   checkGameOver(); return paid;
 }
@@ -1278,12 +1278,12 @@ async function playCard(pi,card,o={}){
   const c=mkCtx(pi,{card,pay});
   const opp=G.players[1-pi], ta=opp.hand.find(k=>k.def.trigger==='play');
   if(ta){
-    const use=opp.ai?cardValue(pi,card)>=2.2:await pickOption(opp.i,{prompt:`${hotPfx(opp)}${subj(p)} playing ${d.name}. Play Trade Agreement to cancel it?`,options:[{label:'Play Trade Agreement',value:true},{label:'Let it resolve',value:false}]});
+    const use=opp.ai?cardValue(pi,card)>=2.2:await pickOption(opp.i,{prompt:`${hotPfx(opp)}${subj(p)} playing ${d.name}. Play Get Fucked to cancel it?`,options:[{label:'Play Get Fucked',value:true},{label:'Let it resolve',value:false}]});
     if(use&&opp.hand.includes(ta)&&p.hand.includes(card)&&!G.over){
       discardFromHand(opp.i,ta);pay();G.discard.push(card);
-      log(`${opp.name} play${s_(opp)} Trade Agreement. ${d.name} is discarded with no effect.`);
+      log(`${opp.name} play${s_(opp)} Get Fucked. ${d.name} is discarded with no effect.`);
       const lv=[];for(let l=1;l<=opp.level;l++)if(G.stacks[l].length)lv.push(l);
-      if(lv.length){const l=lv.length===1||p.ai?lv[lv.length-1]:await pickOption(pi,{prompt:`${hotPfx(p)}Trade Agreement: draw 1 card from which level?`,options:lv.map(x=>({label:`Level ${ROMAN[x]} (${G.stacks[x].length} left)`,value:x}))});drawCard(pi,l)}
+      if(lv.length){const l=lv.length===1||p.ai?lv[lv.length-1]:await pickOption(pi,{prompt:`${hotPfx(p)}Get Fucked: draw 1 card from which level?`,options:lv.map(x=>({label:`Level ${ROMAN[x]} (${G.stacks[x].length} left)`,value:x}))});drawCard(pi,l)}
       checkGameOver();return true;
     }
   }
@@ -1523,7 +1523,7 @@ const humanTurn=()=>G&&!G.over&&!G.players[G.turn].ai&&G.turn===viewer();
 function handSummary(p){const n={};for(const k of p.hand)n[k.def.level]=(n[k.def.level]||0)+1;return [1,2,3,4].filter(l=>n[l]).map(l=>`${n[l]} Level ${ROMAN[l]}`).join(', ')||'No cards'}
 function reqHTML(ab,site){
   const n=site?effNeed(site,ab):ab.need;
-  return `<span class="req">${ab.infinite?'<span class="rq inf" title="Works on any turn">∞</span>':''}<span class="rq f" title="Followers needed on this site${n<ab.need?' (lowered by University)':''}">${n}●</span>${ab.actions?`<span class="rq a" title="Actions to spend">${ab.actions}◆</span>`:''}</span>`;
+  return `<span class="req">${ab.infinite?'<span class="rq inf" title="Works on any turn">∞</span>':''}<span class="rq f" title="Followers needed on this site${n<ab.need?' (lowered by Academy)':''}">${n}●</span>${ab.actions?`<span class="rq a" title="Actions to spend">${ab.actions}◆</span>`:''}</span>`;
 }
 function bandHTML(d){
   return `<div class="band"><span class="lv">${ROMAN[d.level]}</span><span class="nm">${esc(d.name)}</span><span class="ty" title="${TYPE_NAME[d.type]}${d.start||d.type==='reaction'?'':', costs '+d.cost+' action'+(d.cost===1?'':'s')}">${ICONS[d.type]}${d.start||d.type==='reaction'?'':d.cost}</span></div>`;
@@ -1576,7 +1576,7 @@ function zoneHTML(pi,bottom){
     <span class="lvl era-${p.level}">LEVEL ${ROMAN[p.level]}</span>
     <span class="stat"><span class="dot"></span><b>${totalF(p)}</b> followers</span>
     <span class="stat">${showHand?'':`<span class="backs" title="${esc(handSummary(p))}">${[...p.hand].sort((a,b)=>a.def.level-b.def.level).map(k=>`<span class="back era-${k.def.level}">${ROMAN[k.def.level]}</span>`).join('')}</span>`}<b>${p.hand.length}</b> in hand</span>
-    ${lofNow?'<span class="stat warn">Loss of Faith: no site abilities this turn</span>':lofNext?'<span class="stat warn">Loss of Faith next turn</span>':''}
+    ${lofNext?'<span class="stat warn">Interdict next turn: 1 fewer action</span>':''}
     ${active&&p.ai?'<span class="stat">Thinking…</span>':''}</div>`;
   const sites=p.sites.map(s=>siteHTML(s,vi)).join('')||'<div class="empty">No sites.</div>';
   const sitesRow=`<div class="label">Sites</div><div class="row">${sites}</div>`;
@@ -1623,7 +1623,7 @@ function relocateHTML(){
   const r=UI.relocate, p=G.players[r.pi];
   const rows=p.sites.map(s=>{
     const need=minNeed(s);
-    return `<div class="rl"><div class="nm"><b>${esc(s.card.def.name)}</b><small>${need?`Ability needs ${need}`:'No follower requirement'} · damage ${s.damage}/${integ(s)}${isFort(s)?' · fortified':''}${canGain(s)?'':' · Threat: no followers can move here'}${canLeave(s)?'':' · Sanctions: followers cannot leave'}</small></div>
+    return `<div class="rl"><div class="nm"><b>${esc(s.card.def.name)}</b><small>${need?`Ability needs ${need}`:'No follower requirement'} · damage ${s.damage}/${integ(s)}${isFort(s)?' · fortified':''}${canGain(s)?'':' · Death Mark: no followers can move here'}${canLeave(s)?'':' · Quarantine: followers cannot leave'}</small></div>
       <button data-rl="-${s.uid}" ${rlCan(r,s.uid,-1)?'':'disabled'} aria-label="Take a follower from ${esc(s.card.def.name)}">−</button><span class="n">${r.counts[s.uid]}</span>
       <button data-rl="+${s.uid}" ${rlCan(r,s.uid,1)?'':'disabled'} aria-label="Add a follower to ${esc(s.card.def.name)}">+</button></div>`}).join('');
   const changed=p.sites.some(s=>r.orig[s.uid]!==r.counts[s.uid]);
