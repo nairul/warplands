@@ -836,7 +836,7 @@ const CARDS=[
    play:async c=>{const a=await divideKills(c,3,2,'Assassinate',s=>!c.me.ai||s.owner!==c.pi,true);if(!a||!a.size)return;
      c.pay();let k=0;for(const [s,x] of a)k+=killOn(s,x);log(`Assassinate kills ${k} follower${k===1?'':'s'}.`)},
    ai:c=>{const top=c.opp.sites.map(s=>s.followers).sort((a,b)=>b-a);return Math.min(3,(top[0]||0)+(top[1]||0))*1.2}},
-  {id:'trade',name:'Get Fucked',set:'exp',level:3,type:'reaction',cost:0,count:1,trigger:'play',
+  {id:'trade',name:'GET FUCKED',set:'exp',level:3,type:'reaction',cost:0,count:1,trigger:'play',
    text:'When an opponent plays a card, discard that card with no effect. They still lose the actions required to play that card, but they also draw 1 card of your level or lower.'},
 
   /* ---------- LEVEL IV · CORE SET ---------- */
@@ -1279,12 +1279,12 @@ async function playCard(pi,card,o={}){
   const c=mkCtx(pi,{card,pay});
   const opp=G.players[1-pi], ta=opp.hand.find(k=>k.def.trigger==='play');
   if(ta){
-    const use=opp.ai?cardValue(pi,card)>=2.2:await pickOption(opp.i,{prompt:`${hotPfx(opp)}${subj(p)} playing ${d.name}. Play Get Fucked to cancel it?`,options:[{label:'Play Get Fucked',value:true},{label:'Let it resolve',value:false}]});
+    const use=opp.ai?cardValue(pi,card)>=2.2:await pickOption(opp.i,{prompt:`${hotPfx(opp)}${subj(p)} playing ${d.name}. Play GET FUCKED to cancel it?`,options:[{label:'Play GET FUCKED',value:true},{label:'Let it resolve',value:false}]});
     if(use&&opp.hand.includes(ta)&&p.hand.includes(card)&&!G.over){
       discardFromHand(opp.i,ta);pay();G.discard.push(card);
-      log(`${opp.name} play${s_(opp)} Get Fucked. ${d.name} is discarded with no effect.`);
+      log(`${opp.name} play${s_(opp)} GET FUCKED. ${d.name} is discarded with no effect.`);
       const lv=[];for(let l=1;l<=opp.level;l++)if(G.stacks[l].length)lv.push(l);
-      if(lv.length){const l=lv.length===1||p.ai?lv[lv.length-1]:await pickOption(pi,{prompt:`${hotPfx(p)}Get Fucked: draw 1 card from which level?`,options:lv.map(x=>({label:`Level ${ROMAN[x]} (${G.stacks[x].length} left)`,value:x}))});drawCard(pi,l)}
+      if(lv.length){const l=lv.length===1||p.ai?lv[lv.length-1]:await pickOption(pi,{prompt:`${hotPfx(p)}GET FUCKED: draw 1 card from which level?`,options:lv.map(x=>({label:`Level ${ROMAN[x]} (${G.stacks[x].length} left)`,value:x}))});drawCard(pi,l)}
       checkGameOver();return true;
     }
   }
