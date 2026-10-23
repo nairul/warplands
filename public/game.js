@@ -1641,7 +1641,7 @@ function setPicker(){
 function menuHTML(){
   return `<div class="panel"><div class="eras"><span style="background:var(--era1)"></span><span style="background:var(--era2)"></span><span style="background:var(--era3)"></span><span style="background:var(--era4)"></span></div>
     <h1>Warplands</h1>
-    <p>Lead your followers from the medieval age to the far future. Wipe out your opponent's followers, or hold more of them when three draw stacks run dry.</p>
+    <p>Lead your followers from a humble hamlet to a sprawling empire. Wipe out your opponent's followers, or hold more of them when three draw stacks run dry.</p>
     <p class="fine">Each game deals a fresh random draw stack for every level: 20 Level I cards, 15 Level II, 10 Level III and 5 Level IV.</p>
     <div class="choices"><button class="btn primary" data-new="ai">Play the computer</button>${G&&!G.over?'<button class="btn" data-resume="1">Resume game</button>':''}</div>
     ${onlineMenuHTML()}
