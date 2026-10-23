@@ -1,5 +1,6 @@
 /* Warplands game engine, computer opponent and interface.
    Runs in the browser (createGame()) and on the Cloudflare server (createGame({server:true,...})). */
+import {ART} from './art.js';
 export function createGame(HOST={}){
 
 /* ================= SOUND =================
@@ -1525,6 +1526,8 @@ function reqHTML(ab,site){
   const n=site?effNeed(site,ab):ab.need;
   return `<span class="req">${ab.infinite?'<span class="rq inf" title="Works on any turn">∞</span>':''}<span class="rq f" title="Followers needed on this site${n<ab.need?' (lowered by Academy)':''}">${n}●</span>${ab.actions?`<span class="rq a" title="Actions to spend">${ab.actions}◆</span>`:''}</span>`;
 }
+const eraCls=d=>d.start?'era-h':'era-'+d.level;
+const artHTML=d=>ART[d.id]?`<div class="art" aria-hidden="true"><svg viewBox="0 0 160 84" preserveAspectRatio="xMidYMid slice">${ART[d.id]}</svg></div>`:'';
 function bandHTML(d){
   return `<div class="band"><span class="lv">${ROMAN[d.level]}</span><span class="nm">${esc(d.name)}</span><span class="ty" title="${TYPE_NAME[d.type]}${d.start||d.type==='reaction'?'':', costs '+d.cost+' action'+(d.cost===1?'':'s')}">${ICONS[d.type]}${d.start||d.type==='reaction'?'':d.cost}</span></div>`;
 }
@@ -1541,7 +1544,7 @@ function handCardHTML(card,pi){
   if(d.type==='site') body=`${d.text?`<div class="tx">${esc(d.text)}</div>`:''}<div class="abs">${abListHTML(d)}</div><div class="tx" style="font-size:12px;color:var(--ink-soft)">Integrity ${d.integrity||3}</div>`;
   else body=`<div class="tx">${esc(d.text)}</div>`;
   const title=pick?'Choose '+d.name:ok?'Play '+d.name:d.type==='reaction'?'Reactions are offered to you automatically when their condition happens':'Not enough actions';
-  return `<button class="card era-${d.level} ${ok?'playable':''} ${pick?'target':''}" ${pick?`data-pick="${card.uid}"`:`data-play="${card.uid}"`} ${ok||pick?'':'aria-disabled="true"'} title="${esc(title)}">${bandHTML(d)}${kindHTML(d)}${body}</button>`;
+  return `<button class="card ${eraCls(d)} ${ok?'playable':''} ${pick?'target':''}" ${pick?`data-pick="${card.uid}"`:`data-play="${card.uid}"`} ${ok||pick?'':'aria-disabled="true"'} title="${esc(title)}">${bandHTML(d)}${artHTML(d)}${kindHTML(d)}${body}</button>`;
 }
 function siteHTML(s,vi){
   const d=s.card.def, mine=s.owner===vi&&!G.players[s.owner].ai;
@@ -1557,8 +1560,8 @@ function siteHTML(s,vi){
   const integB=Array.from({length:integ(s)},(_,i)=>`<i class="${i<s.damage?'hit':''}"></i>`).join('');
   const atts=s.attachments.map(a=>`<div class="att" title="${esc(a.def.text)}"><b>${esc(a.def.name)}</b> · ${esc(a.def.text)}</div>`).join('');
   const used=s.usedTurn===G.turnCount&&G.turn===s.owner&&(d.abilities||[]).length;
-  return `<div class="card site era-${d.level} ${target?'target':''}" ${target?`data-site="${s.uid}" tabindex="0" role="button" aria-label="Choose ${esc(d.name)}"`:''}>
-    ${bandHTML(d)}${kindHTML(d)}
+  return `<div class="card site ${eraCls(d)} ${target?'target':''}" ${target?`data-site="${s.uid}" tabindex="0" role="button" aria-label="Choose ${esc(d.name)}"`:''}>
+    ${bandHTML(d)}${artHTML(d)}${kindHTML(d)}
     ${d.text?`<div class="tx">${esc(d.text)}</div>`:''}
     ${abs?`<div class="abs">${abs}</div>`:''}
     ${used?'<div class="used">Ability used this turn</div>':''}

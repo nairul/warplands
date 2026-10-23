@@ -3,7 +3,8 @@ Usage: python3 tools/build_artifact.py OUTPUT.html"""
 import re, sys, pathlib
 root = pathlib.Path(__file__).resolve().parent.parent
 page = (root / 'public/index.html').read_text()
-game = (root / 'public/game.js').read_text().replace('export function createGame', 'function createGame', 1)
+art = (root / 'public/art.js').read_text().replace('export const ART', 'const ART', 1)
+game = art + '\n' + (root / 'public/game.js').read_text().replace("import {ART} from './art.js';\n", '', 1).replace('export function createGame', 'function createGame', 1)
 head = re.search(r'<head>(.*)</head>', page, re.S).group(1)
 body = re.search(r'<body>(.*)</body>', page, re.S).group(1)
 head = re.sub(r'<meta charset[^>]*>\s*|<meta name="viewport"[^>]*>\s*', '', head).strip()
