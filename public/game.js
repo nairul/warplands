@@ -979,7 +979,7 @@ function newGame(mode,setChoice){
 }
 
 async function startTurn(pi){
-  G.turn=pi; G.turnCount++;
+  G.turn=pi; G.turnCount++; G.turnStart=Date.now(); G.turnEnd=null;
   const p=G.players[pi];
   p.actions=G.turnCount===1?2:3;
   log(`— ${p.name}: turn begins (${p.actions} actions).`);
@@ -1683,7 +1683,7 @@ function render(){
   const vi=viewer(), cur=G.players[G.turn];
   const net=G.mode==='online'?` · Room ${esc(ONLINE.code||'')}${ONLINE.status&&ONLINE.status!=='Connected'?' · '+esc(ONLINE.status):''}`:'';
   const waitP=G.mode==='online'&&G.waiting!=null&&G.waiting!==ONLINE.seat?G.players[G.waiting]:null;
-  $('turnline').innerHTML=term((G.over?'Game over':waitP?`Waiting for <b>${esc(waitP.name)}</b> to decide…`:`<b>${esc(cur.name)}</b> ${isYou(cur)?'are':'is'} taking a turn · ${cur.actions} action${cur.actions===1?'':'s'} left`)+net);
+  $('turnline').innerHTML=term((G.over?'Game over':waitP?`Waiting for <b>${esc(waitP.name)}</b> to decide…`:`<b>${esc(cur.name)}</b> ${isYou(cur)?'are':'is'} taking a turn · ${cur.actions} action${cur.actions===1?'':'s'} left`)+(G.turnStart!=null?' · '+clockHTML():'')+net);
   if(inLobby) return;
   $('oppZone').innerHTML=term(zoneHTML(1-vi,false));
   $('oppZone').classList.toggle('active',G.turn===1-vi&&!G.over);
@@ -1728,7 +1728,8 @@ function snapshot(pi,full){
         attachments:x.attachments.map(a=>cardOut(a)),tucked:x.tucked.map(k=>cardOut(k,!full&&x.owner!==pi))}))})),
     stacks:Object.fromEntries([1,2,3,4].map(l=>[l,full?G.stacks[l].map(k=>cardOut(k)):G.stacks[l].length])),
     discard:G.discard.map(k=>cardOut(k)),
-    busy:!!UI.busy
+    busy:!!UI.busy,
+    turnMs:turnElapsed()
   };
   if(full) return s;
   if(P){
@@ -1753,8 +1754,13 @@ function stateIn(s,full){
       attachments:x.attachments.map(cardIn),tucked:x.tucked.map(cardIn)}))}));
   const stacks={};
   for(const l of [1,2,3,4]) stacks[l]=full?s.stacks[l].map(cardIn):Array.from({length:s.stacks[l]},(_,i)=>({uid:-1-i,def:HIDDEN_LV[l]}));
-  return {mode:s.mode,players,stacks,discard:s.discard.map(cardIn),turn:s.turn,turnCount:s.turnCount,log:s.log,over:s.over,pending:[],sets:{},choice:'random'};
+  return {mode:s.mode,players,stacks,discard:s.discard.map(cardIn),turn:s.turn,turnCount:s.turnCount,log:s.log,over:s.over,pending:[],sets:{},choice:'random',
+    turnStart:Date.now()-(s.turnMs||0),turnEnd:s.over?Date.now():null};
 }
+/* Turn timer: counts up from the start of the current turn and stops when the game ends */
+function turnElapsed(){if(!G||G.turnStart==null)return 0;if(G.over&&G.turnEnd==null)G.turnEnd=Date.now();return Math.max(0,(G.turnEnd??Date.now())-G.turnStart)}
+function fmtClock(ms){const t=Math.floor(ms/1000),h=Math.floor(t/3600),m=Math.floor(t/60)%60,sec=String(t%60).padStart(2,'0');return h?`${h}:${String(m).padStart(2,'0')}:${sec}`:`${m}:${sec}`}
+const clockHTML=()=>`<span class="clock" title="Time spent on this turn">⏱ <span id="turnclock">${fmtClock(turnElapsed())}</span></span>`;
 /* ---- server side ---- */
 function serverLoad(saved){
   G=stateIn(saved,true);
@@ -1950,6 +1956,7 @@ function readName(){
 }
 
 if(HAS_DOM){
+  setInterval(()=>{const el=$('turnclock');if(el&&G)el.textContent=fmtClock(turnElapsed())},500);
   const syncSound=()=>{const b=$('soundBtn');if(b){b.textContent=SFX.on?'Sound on':'Sound off';b.setAttribute('aria-pressed',String(SFX.on))}};
   syncSound();
   document.addEventListener('pointerdown',()=>{if(SFX.on)audioCtx()});
