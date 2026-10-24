@@ -534,7 +534,6 @@ export const ART = {
     <rect class="s" x="71" y="7.5" width="8" height="8" rx="3.5"/>
     <path d="M70.5 24h9M70.5 34h9" style="fill:none;stroke:#4a382b;stroke-width:1.2"/>
     <path d="M69 39v11M81 39v11M92.5 41v10" style="fill:none;stroke:#4a382b;stroke-width:1.4"/>
-    <path class="k" d="M52 58q0-7 8-7h20q7 0 7 6t-7 6H60q-8 0-8-5z" stroke="#3a2c22" stroke-width="1.3"/>
     <path class="b" d="M56 8l7 5M53 19h8M57 29l6-3M104 8l-7 5M107 19h-8M103 29l-6-3" stroke="#d2321f" stroke-width="2.6" stroke-linecap="round"/>`,
 
 
