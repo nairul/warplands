@@ -31,6 +31,10 @@ const SOUNDS={
   /* Chat: a bright two-note bell, unlike any game sound */
   chat:(ctx,out,t)=>{tone(ctx,out,t,987.77,987.77,0.14,0.2,'sine');tone(ctx,out,t,1975.5,1975.5,0.1,0.05,'sine');
     tone(ctx,out,t+0.12,1318.5,1318.5,0.32,0.22,'sine');tone(ctx,out,t+0.12,2637,2637,0.22,0.06,'sine')},
+  /* Upgrade: a quick climbing fanfare in fifths that rings out on a bright chord with shimmer */
+  upgrade:(ctx,out,t)=>{[392,587.33,783.99].forEach((f,i)=>{tone(ctx,out,t+i*0.09,f,f,0.12,0.24,'square');tone(ctx,out,t+i*0.09,f/2,f/2,0.12,0.1,'triangle')});
+    [783.99,987.77,1174.66].forEach(f=>tone(ctx,out,t+0.3,f,f*1.003,0.7,0.12,'triangle'));tone(ctx,out,t+0.3,392,392,0.7,0.12,'triangle');
+    for(let i=0;i<6;i++)tone(ctx,out,t+0.34+i*0.06,2349+i*180,2349+i*180,0.09,0.035,'sine')},
   /* Defeat: a slow, sagging descent */
   lose:(ctx,out,t)=>{[392,369.99,349.23].forEach((f,i)=>tone(ctx,out,t+i*0.34,f,f*0.99,0.3,0.28,'triangle'));
     tone(ctx,out,t+1.02,329.63,293.66,1.1,0.3,'triangle');tone(ctx,out,t+1.02,164.81,146.83,1.1,0.16,'sine')}
@@ -53,6 +57,12 @@ function sfx(kind,n){
 let CUR_SRC=null, SND_CAP=null;
 const ARROWS={q:[],until:0};
 async function withSrc(src,fn){const prev=CUR_SRC;CUR_SRC=src;try{return await fn()}finally{CUR_SRC=prev}}
+const UPS={q:[]};
+function fxUp(d){
+  if(typeof G!=='undefined'&&G&&G.sim) return;
+  if(HOST.server){if(HOST.fx)HOST.fx('lvlup',d);return}
+  if(typeof document!=='undefined') UPS.q.push(d);
+}
 function fxArrow(d){
   if(typeof G!=='undefined'&&G&&G.sim) return null;
   if(HOST.server){if(HOST.fx)HOST.fx('arrow',d);return d}
@@ -175,7 +185,7 @@ function drawHigher(pi){
   if(l>4||!G.stacks[l].length){log(`There is no Level ${ROMAN[l]||'V'} card to draw.`);return}
   drawCard(pi,l);
 }
-function upgradeLevel(pi){const p=G.players[pi];if(p.level>=4)return;p.level++;log(`${p.name} upgrade${s_(p)} to Level ${ROMAN[p.level]}.`);G.pending.push({t:'upgrade'})}
+function upgradeLevel(pi){const p=G.players[pi];if(p.level>=4)return;p.level++;log(`${p.name} upgrade${s_(p)} to Level ${ROMAN[p.level]}.`);G.pending.push({t:'upgrade'});sfx('upgrade');fxUp({pi,to:p.level})}
 async function drawN(pi,n,label,maxL){
   const p=G.players[pi]; maxL=maxL||p.level; let left=n;
   while(left>0&&G&&!G.over){
@@ -359,8 +369,8 @@ function bankValue(c,s){
    set: 'core' | 'exp' marks which printed set each card belongs to.
    passive:true marks ∞ abilities that fire automatically when their condition happens. */
 const CARDS=[
-  {id:'homeland',name:'Homeland',level:1,type:'site',cost:0,integrity:6,start:true,worth:1,count:0,
-   text:'During setup, place 10 followers on Homeland.',abilities:[]},
+  {id:'homeland',name:'Warpland',level:1,type:'site',cost:0,integrity:6,start:true,worth:1,count:0,
+   text:'During setup, place 10 followers on Warpland.',abilities:[]},
 
   /* ---------- LEVEL I · HAMLET ---------- */
   {id:'catapult',name:'Trebuchet',level:1,type:'site',cost:2,integrity:3,count:2,worth:2,
@@ -1752,6 +1762,8 @@ function render(){
   chatSync();
   drawAnims();
   if(oldRects){placeAnims(oldRects);if(ARROWS.q.length)playArrows(oldRects)}
+  if(UPS.q.length) playUps();
+  equalizeCards();
 }
 
 /* ---- Damage animation: a projectile arcs from the source (a site, the played card, or the
@@ -1911,6 +1923,43 @@ function flySite(st,el,a,flip){
   if(flip)f.querySelector('.fly-inner').animate([{transform:'rotateY(180deg)'},{transform:'rotateY(180deg)',offset:0.2},{transform:'rotateY(0deg)',offset:0.8},{transform:'rotateY(0deg)'}],{duration:dur,easing:'ease-in-out',fill:'both'});
   let fin=false;const end=()=>{if(fin)return;fin=true;f.remove();done()};
   anim.onfinish=end;anim.oncancel=end;setTimeout(end,dur+500);
+}
+/* ---- Upgrade effect: a banner sweeps across the player's area in the new level's color,
+   the level badge pulses and embers rise from it ---- */
+function playUps(){
+  const list=UPS.q.splice(0);
+  if(typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  for(const d of list){
+    const zone=document.getElementById(d.pi===viewer()?'meZone':'oppZone');if(!zone)continue;
+    const p=G.players[d.pi],who=isYou(p)?'You':p.name;
+    const ban=document.createElement('div');ban.className=`lvlup era-${d.to}`;ban.setAttribute('aria-hidden','true');
+    ban.innerHTML=`<div class="lvlup-band"><small>${esc(who)} reached</small><b>${esc(term('Level '+ROMAN[d.to]))}</b></div>`;
+    const zr=zone.getBoundingClientRect();Object.assign(ban.style,{left:zr.left+'px',top:zr.top+'px',width:zr.width+'px',height:Math.min(zr.height,innerHeight)+'px'});
+    document.body.appendChild(ban);
+    ban.animate([{opacity:0},{opacity:1,offset:.12},{opacity:1,offset:.75},{opacity:0}],{duration:1900,easing:'ease-out',fill:'forwards'}).onfinish=()=>ban.remove();
+    ban.querySelector('.lvlup-band').animate([{transform:'scaleX(.2) translateY(6px)',letterSpacing:'0'},{transform:'scaleX(1.06)',offset:.2},{transform:'scaleX(1)',offset:.3},{transform:'scaleX(1) translateY(-4px)'}],{duration:1900,easing:'cubic-bezier(.2,.8,.2,1)',fill:'forwards'});
+    zone.animate([{boxShadow:'0 0 0 0 rgba(0,0,0,0)'},{boxShadow:`0 0 40px 6px ${getComputedStyle(ban).getPropertyValue('--era')}`,offset:.25},{boxShadow:'0 0 0 0 rgba(0,0,0,0)'}],{duration:1600,easing:'ease-out'});
+    const badge=zone.querySelector('.lvl');
+    if(badge){badge.animate([{transform:'scale(1)'},{transform:'scale(1.5)',offset:.3},{transform:'scale(.95)',offset:.6},{transform:'scale(1)'}],{duration:900,easing:'ease-out'});
+      const r=badge.getBoundingClientRect();emberBurst(r.left+r.width/2,r.top+r.height/2,getComputedStyle(ban).getPropertyValue('--era').trim()||'#ffd27a')}
+  }
+}
+function emberBurst(x,y,col){
+  const svg=fxLayer(),NS='http://www.w3.org/2000/svg';
+  for(let i=0;i<22;i++){
+    const c=document.createElementNS(NS,'circle');c.setAttribute('cx',x);c.setAttribute('cy',y);c.setAttribute('r',String(1.6+Math.random()*2.4));
+    c.setAttribute('fill',i%3?col:'#fff1c9');c.setAttribute('style',`filter:drop-shadow(0 0 4px ${col})`);svg.appendChild(c);
+    const ang=-Math.PI/2+(Math.random()-0.5)*Math.PI*1.4,d=40+Math.random()*90;
+    c.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${Math.cos(ang)*d}px,${Math.sin(ang)*d-30}px)`,opacity:0}],{duration:900+Math.random()*600,delay:Math.random()*150,easing:'cubic-bezier(.2,.7,.4,1)',fill:'both'}).onfinish=()=>c.remove();
+  }
+}
+/* ---- Every card is the same height: the tallest card on the table sets it ---- */
+function equalizeCards(){
+  const cards=[...document.querySelectorAll('#app .card')];
+  if(!cards.length) return;
+  for(const c of cards) c.style.minHeight='';
+  const h=Math.max(...cards.map(c=>c.offsetHeight));
+  for(const c of cards) c.style.minHeight=h+'px';
 }
 /* Gold sparkles around a card that was just played */
 function sparkle(r){
@@ -2160,7 +2209,7 @@ function onlineSnap(s){
     UI.relocate.resolve=v=>{const seq=r.seq;UI.relocate=null;UI.busy=true;render();onlineSend(v?{t:'answer',a:'reloc',seq,counts:v}:{t:'answer',a:'relocCancel',seq})};
   }
   ONLINE.conn=s.conn||ONLINE.conn;
-  for(const f of (s.fx||[])) if(f.k==='arrow')ARROWS.q.push(f.n); else sfx(f.k,f.n,true);
+  for(const f of (s.fx||[])) if(f.k==='arrow')ARROWS.q.push(f.n); else if(f.k==='lvlup')UPS.q.push(f.n); else sfx(f.k,f.n,true);
   if(!wasOver&&G.over) gameOverSound();
   render();
 }
@@ -2307,6 +2356,7 @@ if(HAS_DOM){
     if((e.key==='Enter'||e.key===' ')&&e.target.dataset&&e.target.dataset.site){e.preventDefault();e.target.click()}
     if(e.key==='Escape'&&UI.prompt&&UI.prompt.cancellable)UI.prompt.resolve(null);
   });
+  addEventListener('resize',()=>{if(G)equalizeCards()});
   render();
   if(/^https?:$/.test(location.protocol)) fetch('/api/ping').then(r=>r.ok?r.json():null).then(j=>{
     if(!j||!j.warplands) return;

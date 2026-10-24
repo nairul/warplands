@@ -197,6 +197,17 @@ button.ab:disabled{opacity:.75}
 .slot .slot-nm{writing-mode:vertical-rl;transform:rotate(180deg);font-family:var(--display);font-weight:600;font-size:13px;letter-spacing:.06em;white-space:nowrap;opacity:.85}
 .slot:hover,.slot:focus-visible{width:72px;background:color-mix(in srgb,var(--era) 30%,transparent);border-style:solid;color:#fff}
 @keyframes slotglow{50%{box-shadow:0 0 14px rgba(255,170,60,.45)}}
+/* Upgrade banner */
+.lvlup{position:fixed;z-index:38;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5;
+  background:radial-gradient(ellipse at 50% 50%, color-mix(in srgb,var(--era) 40%,transparent) 0%, transparent 70%)}
+.lvlup-band{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 60px;color:var(--era-ink);
+  background:var(--grain), linear-gradient(90deg, transparent 0%, var(--era) 18%, color-mix(in srgb,var(--era) 75%,#fff) 50%, var(--era) 82%, transparent 100%);
+  box-shadow:0 0 40px color-mix(in srgb,var(--era) 70%,transparent)}
+.lvlup-band small{font-family:var(--body);font-weight:700;font-size:13px;letter-spacing:.2em;text-transform:uppercase;opacity:.85}
+.lvlup-band b{font-family:var(--display);font-weight:800;font-size:40px;letter-spacing:.14em;line-height:1;text-transform:uppercase;text-shadow:0 2px 0 rgba(0,0,0,.25)}
+/* Equal-height cards: keep the footer and HP line at the bottom */
+.site .foot{margin-top:auto}
+.hand .card>:last-child{margin-top:auto}
 /* Damage projectiles */
 #fxsvg{position:fixed;left:0;top:0;z-index:39;pointer-events:none;overflow:visible}
 .fx-num{font-family:var(--display);font-weight:800;font-size:26px;paint-order:stroke;stroke:#1a0804;stroke-width:4px}
