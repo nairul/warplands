@@ -67,9 +67,9 @@ async function withSrc(src,fn){const prev=CUR_SRC;CUR_SRC=src;try{return await f
 const UPS={q:[]};
 const REV={q:[],until:0};
 /* A reaction card played from hand is shown to both players */
-function fxReveal(pi,card){
+function fxReveal(pi,card,to){
   if(typeof G!=='undefined'&&G&&G.sim) return;
-  const d={pi,id:card.def.id,uid:card.uid};
+  const d={pi,id:card.def.id,uid:card.uid};if(to!=null)d.to=to;
   sfx('reveal');
   if(HOST.server){if(HOST.fx)HOST.fx('reveal',d);return}
   if(typeof document!=='undefined') REV.q.push(d);
@@ -1361,7 +1361,7 @@ async function playCard(pi,card,o={}){
   else if(d.type==='attachment'){
     const s=await pickSite(pi,{prompt:`Attach ${d.name} to which site?`,filter:()=>true,aiScore:s=>d.aiAttach(c,s)});
     if(!s) return false;
-    pay(); await attach(card,s,pi);
+    fxReveal(pi,card,s.uid); pay(); await attach(card,s,pi);
   } else {
     await withSrc({card:card.uid,pi},()=>d.play(c));
     if(!paid) return false;
@@ -1884,7 +1884,8 @@ function playReveals(old){
   const now=performance.now();let t0=Math.max(now,REV.until);
   for(const d of list){
     const def=DEF[d.id];if(!def)continue;
-    const delay=t0-now,dur=reduce?1600:2300;
+    const quick=d.to!=null&&d.pi===viewer();
+    const delay=t0-now,dur=reduce?1600:quick?750:2300;
     REV.until=t0+dur;t0+=dur;
     ARROWS.until=Math.max(ARROWS.until,now+delay+(reduce?1200:1650));
     setTimeout(()=>revealCard(d,def,old,reduce,dur),delay);
@@ -1894,24 +1895,34 @@ function revealCard(d,def,old,reduce,dur){
   const p=G&&G.players[d.pi];if(!p)return;
   const mine=d.pi===viewer();
   const src=old['c'+d.uid]||(document.querySelector(mine?'#handDock .hand':'#oppZone .backs')||document.body).getBoundingClientRect();
-  const disc=(document.querySelector('#mid .discard')||document.body).getBoundingClientRect();
+  const siteEl=d.to!=null?document.querySelector(`[data-suid="${d.to}"]`):null;
+  const tgtSite=d.to!=null?allSites().find(x=>x.uid===d.to):null;
+  const disc=(siteEl||document.querySelector('#mid .discard')||document.body).getBoundingClientRect();
   const W=250,H=W*1.45,cx=innerWidth/2,cy=innerHeight*0.42;
   const box={left:cx-W/2,top:cy-H/2};
   const f=document.createElement('div');f.className='flyer reveal';f.setAttribute('aria-hidden','true');
   Object.assign(f.style,{left:box.left+'px',top:box.top+'px',width:W+'px',height:H+'px'});
   const face=`<div class="card ${eraCls(def)}" style="width:100%;height:100%">${bandHTML(def)}${artHTML(def)}${kindHTML(def)}<div class="body"><div class="tx">${esc(def.text||'')}</div></div></div>`;
   f.innerHTML=term(`<div class="fly-inner"><div class="fly-face fly-back era-${def.level}"><span style="font-size:52px">${ROMAN[def.level]}</span></div><div class="fly-face fly-front">${face}</div></div>
-    <div class="reveal-cap">${esc(isYou(p)?'You play':p.name+' plays')} <b>${esc(def.name)}</b></div>`);
+    <div class="reveal-cap">${esc(isYou(p)?'You play':p.name+' plays')} <b>${esc(def.name)}</b>${tgtSite?` on ${esc(poss(G.players[tgtSite.owner]))} ${esc(tgtSite.card.def.name)}`:''}</div>`);
   document.body.appendChild(f);
   const fromX=src.left+src.width/2-cx,fromY=src.top+src.height/2-cy,sc0=Math.max(0.12,Math.min(0.7,src.width/W));
   const toX=disc.left+disc.width/2-cx,toY=disc.top+disc.height/2-cy;
+  const endSc=siteEl?Math.max(0.2,disc.width/W*0.8):0.18;
+  const land=()=>{const e=d.to!=null&&document.querySelector(`[data-suid="${d.to}"]`);if(e){e.animate([{boxShadow:'0 0 0 0 rgba(255,200,90,0)'},{boxShadow:'0 0 26px 8px rgba(255,190,80,.85)'},{boxShadow:'0 0 0 0 rgba(255,200,90,0)'}],{duration:800,easing:'ease-out'});sparkle(e.getBoundingClientRect())}};
+  if(siteEl&&d.pi===viewer()&&!reduce){
+    f.querySelector('.reveal-cap').remove();
+    f.animate([{transform:`translate(${fromX}px,${fromY}px) scale(${sc0})`,opacity:.6},{transform:`translate(${(fromX+toX)/2}px,${(fromY+toY)/2-60}px) scale(${(sc0+endSc)/2+0.1})`,opacity:1,offset:.5},{transform:`translate(${toX}px,${toY}px) scale(${endSc})`,opacity:.9}],
+      {duration:dur,easing:'cubic-bezier(.3,.7,.3,1)',fill:'both'}).onfinish=()=>{f.remove();land()};
+    setTimeout(()=>{if(f.isConnected)f.remove()},dur+600);return;
+  }
   if(reduce){f.animate([{opacity:0},{opacity:1,offset:.15},{opacity:1,offset:.85},{opacity:0}],{duration:dur,fill:'forwards'}).onfinish=()=>f.remove();return}
   f.animate([
     {transform:`translate(${fromX}px,${fromY}px) scale(${sc0})`,opacity:.3,easing:'cubic-bezier(.2,.8,.3,1)'},
     {transform:'translate(0,0) scale(1.08)',opacity:1,offset:.2,easing:'ease-out'},
     {transform:'translate(0,0) scale(1)',offset:.28,easing:'linear'},
     {transform:'translate(0,0) scale(1)',opacity:1,offset:.76,easing:'cubic-bezier(.5,0,.8,.4)'},
-    {transform:`translate(${toX}px,${toY}px) scale(.18) rotate(8deg)`,opacity:.25}],{duration:dur,easing:'linear',fill:'both'}).onfinish=()=>f.remove();
+    {transform:`translate(${toX}px,${toY}px) scale(${endSc}) rotate(${siteEl?0:8}deg)`,opacity:siteEl?.9:.25}],{duration:dur,easing:'linear',fill:'both'}).onfinish=()=>{f.remove();if(siteEl)land()};
   f.querySelector('.fly-inner').animate([{transform:mine?'rotateY(0deg)':'rotateY(180deg)'},{transform:mine?'rotateY(0deg)':'rotateY(180deg)',offset:.12,easing:'ease-in-out'},{transform:'rotateY(0deg)',offset:.3},{transform:'rotateY(0deg)'}],{duration:dur,easing:'linear',fill:'both'});
   f.querySelector('.reveal-cap').animate([{opacity:0},{opacity:0,offset:.22},{opacity:1,offset:.32},{opacity:1,offset:.7},{opacity:0,offset:.76},{opacity:0}],{duration:dur,fill:'both'});
   const glow=f.animate([{boxShadow:'0 0 0 0 rgba(255,200,90,0)'},{boxShadow:'0 0 60px 16px rgba(255,190,80,.55)',offset:.32},{boxShadow:'0 0 40px 8px rgba(255,190,80,.35)',offset:.7},{boxShadow:'0 0 0 0 rgba(255,200,90,0)'}],{duration:dur,fill:'both'});
