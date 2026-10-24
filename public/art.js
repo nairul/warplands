@@ -124,6 +124,16 @@ export const ART = {
     <circle class="k" cx="52" cy="70" r="4"/><circle class="k" cx="92" cy="70" r="4"/>${GROUND}`,
 
 
+  healerhut: `${MOON(128, 18, 7)}${HILLS}${SMOKE(92, 30)}
+    <path class="k" d="M52 70V48h56v22z"/><path class="m" d="M44 50q36-34 72 0q-6-3-12 0q-6-3-12 0q-6-3-12 0q-6-3-12 0q-6-3-12 0q-6-3-12 0z"/>
+    <path class="k" d="M46 50q34-30 68 0" fill="none" stroke="#0b0806" stroke-width="2"/><rect class="k" x="88" y="26" width="6" height="14"/>
+    <path class="y" d="M72 70V58a8 8 0 0 1 16 0v12z"/><circle class="e" cx="80" cy="64" r="2"/>
+    <path class="k" d="M58 50v8M64 50v6M96 50v7M102 50v6" stroke="#0b0806" stroke-width="1"/>
+    <path class="p" d="M56 57l2 4 2-4zM62 55l2 4 2-4zM94 56l2 4 2-4zM100 55l2 4 2-4z" opacity=".85"/>
+    <path class="s" d="M114 68q6 6 14 0z"/><path class="sm" d="M118 64q-2-4 1-7M124 64q2-4-1-7" stroke-width="2"/>
+    <path class="p" d="M30 70q2-10 8-12q-2 8-8 12zM36 70q4-8 10-8q-4 6-10 8z" opacity=".8"/>
+    ${GROUND}`,
+
   /* ---- Hamlet events ---- */
   fertility: `<circle class="y" cx="80" cy="30" r="15"/>${[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map(a => { const r = a * Math.PI / 180; return `<path class="ln-y" d="M${80 + Math.cos(r) * 19} ${30 + Math.sin(r) * 19}L${80 + Math.cos(r) * 26} ${30 + Math.sin(r) * 26}"/>`; }).join('')}
     ${HILLS}

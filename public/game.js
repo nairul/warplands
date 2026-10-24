@@ -133,8 +133,12 @@ function bestAlloc(sites,n,maxSites,val){
 }
 
 /* Shared effect pieces */
-function noteKill(pi,n){if(n>0&&G)G.pending.push({t:'kill',pi,n})}
-function killOn(site,k){const x=Math.min(k,site.followers);site.followers-=x;noteKill(site.owner,x);sweep();return x}
+/* Cards under a site, as its abilities count them: Ancient Wisdom adds one */
+const TUCK_SITES={farm:1,port:1.1,bank:1.2,alienweapon:2};
+function tuckN(site){return site.tucked.length+(hasAtt(site,'wisdom')?1:0)}
+/* Record kills; note any Healer Hut next to the site so it can save some of them */
+function noteKill(pi,n,site){if(n>0&&G){const hh=site&&inPlay(site)?adjacent(site).filter(x=>x.card.def.id==='healerhut').map(x=>x.uid):[];G.pending.push({t:'kill',pi,n,hh})}}
+function killOn(site,k){const x=Math.min(k,site.followers);site.followers-=x;noteKill(site.owner,x,site);sweep();return x}
 function gainF(site,n){if(!canGain(site)||n<=0)return 0;site.followers+=n;sfx('place',n);return n}
 function sweep(){
   if(!G) return;
@@ -427,6 +431,10 @@ const CARDS=[
      run:async c=>{const t=await pickSite(c.pi,{prompt:'Garrison: choose a site to take 1 damage.',filter:s=>!c.me.ai||s.owner!==c.pi,aiScore:s=>dmgValue(s,1)});
        if(!t)return;c.pay();killOn(c.site,1);await damage(c.pi,t,1)},
      ai:c=>bestOpp(c,1)-1}]},
+  {id:'healerhut',name:'Healer Hut',level:1,type:'site',cost:2,integrity:3,count:1,worth:1.8,
+   abilities:[
+    {need:1,actions:0,infinite:true,passive:true,text:'After your followers are killed on an adjacent site, gain followers on Healer Hut equal to half the number killed (rounded down).'},
+    {need:3,actions:0,infinite:true,passive:true,text:'Round up instead.'}]},
   {id:'farm',name:'Fields',level:1,type:'site',cost:1,integrity:2,count:2,worth:1.5,
    abilities:[
     {need:0,actions:0,text:'Tuck 1 card under Fields to gain 1 follower on any site.',can:c=>c.me.hand.length>0&&c.me.sites.some(canGain),
@@ -434,9 +442,9 @@ const CARDS=[
        const s=await pickSite(c.pi,{prompt:'Fields: choose one of your sites to gain 1 follower.',filter:s=>s.owner===c.pi&&canGain(s),aiScore:placeScore,auto:true});if(!s)return;
        c.pay();c.me.hand.splice(c.me.hand.indexOf(k),1);c.site.tucked.push(k);gainF(s,1);log(`${c.me.name} tuck${s_(c.me)} a card under Fields and gain${s_(c.me)} a follower.`)},
      ai:c=>{const h=c.me.hand.length;if(h<2)return -1;const cheap=Math.min(...c.me.hand.map(keepValue));return h>=3||cheap<=1.3?0.8+1.4*gameLeft()-(cheap-1)*0.6:-1}},
-    {need:1,actions:0,text:'Gain 1 follower on Fields for each card tucked under Fields.',can:c=>c.site.tucked.length>0&&canGain(c.site),
-     run:async c=>{c.pay();const n=gainF(c.site,c.site.tucked.length);log(`${c.me.name} gain${s_(c.me)} ${n} follower${n>1?'s':''} on Fields.`)},
-     ai:c=>c.site.tucked.length}]},
+    {need:1,actions:0,text:'Gain 1 follower on Fields for each card tucked under Fields.',can:c=>tuckN(c.site)>0&&canGain(c.site),
+     run:async c=>{c.pay();const n=gainF(c.site,tuckN(c.site));log(`${c.me.name} gain${s_(c.me)} ${n} follower${n>1?'s':''} on Fields.`)},
+     ai:c=>tuckN(c.site)}]},
   {id:'castle',name:'Stone Keep',level:1,type:'site',cost:2,integrity:4,count:1,worth:3,fortified:true,text:'Fortified.',
    abilities:[
     {need:0,actions:0,text:'Relocate followers to Stone Keep.',can:c=>canGain(c.site)&&c.me.sites.some(s=>s!==c.site&&s.followers>0&&canLeave(s)),
@@ -624,8 +632,8 @@ const CARDS=[
        const counts=await relocateBy(c,'Harbor: relocate followers','Free · tucks '+k.def.name);if(!counts)return;
        c.pay();c.me.hand.splice(c.me.hand.indexOf(k),1);c.site.tucked.push(k);applyCounts(c.me,counts);log(`${c.me.name} tuck${s_(c.me)} a card under Harbor and relocate${s_(c.me)}.`)},
      ai:c=>{if(c.me.hand.length<4)return -1;const rv=relocateValue(c.me,relocatePlan(c.me));return rv>=2?rv-0.8:-1}},
-    {need:3,actions:0,text:'Draw 1 card for each card tucked under Harbor.',can:c=>c.site.tucked.length>0&&drawableLevels(c.pi).length>0,
-     run:async c=>{c.pay();await drawN(c.pi,c.site.tucked.length,'Harbor')},ai:c=>c.site.tucked.length*1.1}]},
+    {need:3,actions:0,text:'Draw 1 card for each card tucked under Harbor.',can:c=>tuckN(c.site)>0&&drawableLevels(c.pi).length>0,
+     run:async c=>{c.pay();await drawN(c.pi,tuckN(c.site),'Harbor')},ai:c=>tuckN(c.site)*1.1}]},
   {id:'university',name:'Academy',set:'exp',level:2,type:'site',cost:1,integrity:3,count:1,worth:2.5,
    abilities:[
     {need:1,actions:0,infinite:true,passive:true,text:"When activating another site's ability, you may do so with 1 fewer follower than that ability currently requires."},
@@ -658,6 +666,10 @@ const CARDS=[
      run:async c=>{const s=await pickSite(c.pi,{prompt:'Thieves\' Guild: choose a site to kill 1 follower on.',filter:s=>s.followers>0&&(!c.me.ai||s.owner!==c.pi),aiScore:killValue});
        if(!s)return;c.pay();killOn(s,1);log(`A spy kills a follower on ${poss(G.players[s.owner])} ${s.card.def.name}.`)},
      ai:c=>c.opp.sites.some(s=>s.followers>0)?Math.max(...c.opp.sites.filter(s=>s.followers>0).map(killValue)):-1}]},
+  {id:'wisdom',name:'Ancient Wisdom',set:'exp',level:2,type:'attachment',cost:1,count:1,
+   text:"This site's abilities count as having 1 additional tucked card under it.",
+   aiAttach:(c,s)=>s.owner===c.pi&&!hasAtt(s,'wisdom')&&!hasAtt(s,'sabotage')&&TUCK_SITES[s.card.def.id]?TUCK_SITES[s.card.def.id]*2+(s.card.def.id==='farm'?fieldsTuckVal(s):0):-99,
+   ai:c=>{const t=c.me.sites.filter(s=>TUCK_SITES[s.card.def.id]&&!hasAtt(s,'wisdom')&&!hasAtt(s,'sabotage'));return t.length?1.2+Math.max(...t.map(s=>TUCK_SITES[s.card.def.id])):-1}},
   {id:'conscription',name:'Muster',set:'exp',level:2,type:'attachment',cost:1,count:2,
    text:"Upon attachment, gain 2 followers on this site. At the start of site owner's turn, gain 1 follower on this site.",
    onAttach:async s=>{const n=gainF(s,2);if(n)log(`${n} conscripts arrive at ${s.card.def.name}.`)},
@@ -789,9 +801,9 @@ const CARDS=[
        const k=await pickHandCard(c.pi,{prompt:'Treasury: choose a card to tuck under Treasury.'});if(!k)return;
        c.pay();c.me.hand.splice(c.me.hand.indexOf(k),1);c.site.tucked.push(k);s.usedTurn=-1;log(`${c.me.name} tuck${s_(c.me)} a card under the Treasury so ${s.card.def.name} can act again.`)},
      ai:c=>{if(c.me.hand.length<3)return -1;const v=Math.max(-1,...c.me.sites.filter(s=>s!==c.site&&s.usedTurn===G.turnCount).map(s=>bankValue(c,s)));return v-0.8}},
-    {need:3,actions:0,text:'Gain 1 action for each card tucked under Treasury.',can:c=>c.site.tucked.length>0,
-     run:async c=>{c.pay();const n=c.site.tucked.length;c.me.actions+=n;log(`${c.me.name} gain${s_(c.me)} ${n} action${n>1?'s':''} from the Treasury.`)},
-     ai:c=>c.site.tucked.length*1.2}]},
+    {need:3,actions:0,text:'Gain 1 action for each card tucked under Treasury.',can:c=>tuckN(c.site)>0,
+     run:async c=>{c.pay();const n=tuckN(c.site);c.me.actions+=n;log(`${c.me.name} gain${s_(c.me)} ${n} action${n>1?'s':''} from the Treasury.`)},
+     ai:c=>tuckN(c.site)*1.2}]},
   {id:'pplant',name:'Arcane Furnace',set:'exp',level:3,type:'site',cost:1,integrity:3,count:1,worth:2.4,
    text:"When Arcane Furnace is destroyed, Arcane Furnace's owner chooses 2 sites they own. Both sites take 1 structural damage for each card tucked under Arcane Furnace.",
    abilities:[{need:2,actions:2,text:'Play a discarded event for no actions. Then tuck that event under Arcane Furnace.',can:c=>G.discard.some(k=>k.def.type==='event'),
@@ -887,9 +899,9 @@ const CARDS=[
        log(`${c.me.name} tuck${s_(c.me)} a card under Doom Engine and discard${s_(c.me)} ${n} card${n>1?'s':''} from the Level ${ROMAN[l]} stack.`);
        if(!G.stacks[l].length){log(`The Level ${ROMAN[l]} stack has run out.`);G.pending.push({t:'stackout'})}},
      ai:c=>c.me.hand.length>=3?(totalF(c.me)>totalF(c.opp)+3?1.6:0.8):-1},
-    {need:2,actions:0,text:'Do 2 damage for each card tucked under Doom Engine, divided among up to 2 sites.',can:c=>c.site.tucked.length>0,
-     run:async c=>{const n=2*c.site.tucked.length;const a=await divideDamage(c,n,2,`Doom Engine (${n} damage)`,()=>true);if(!a)return;c.pay();for(const [s,k] of a)await damage(c.pi,s,k)},
-     ai:c=>c.site.tucked.length?bestAlloc(c.opp.sites,2*c.site.tucked.length,2,dmgValue).v:-1}]},
+    {need:2,actions:0,text:'Do 2 damage for each card tucked under Doom Engine, divided among up to 2 sites.',can:c=>tuckN(c.site)>0,
+     run:async c=>{const n=2*tuckN(c.site);const a=await divideDamage(c,n,2,`Doom Engine (${n} damage)`,()=>true);if(!a)return;c.pay();for(const [s,k] of a)await damage(c.pi,s,k)},
+     ai:c=>tuckN(c.site)?bestAlloc(c.opp.sites,2*tuckN(c.site),2,dmgValue).v:-1}]},
   {id:'assimilation',name:'Conquest',set:'exp',level:4,type:'event',cost:2,count:1,
    text:'Choose a site owned by an opponent. They must relocate followers off that site, if able. Then gain ownership of that site.',
    play:async c=>{
@@ -1131,7 +1143,7 @@ async function damage(src,site,n,opt={}){
     if(n<=0||!inPlay(site)) return;
   }
   const kill=(opt.structural||isFort(site))?0:Math.min(n,site.followers);
-  site.followers-=kill; site.damage+=n; noteKill(site.owner,kill);
+  site.followers-=kill; site.damage+=n; noteKill(site.owner,kill,site);
   log(`${n}${opt.structural?' structural':''} damage to ${poss(owner)} ${site.card.def.name}${kill?` (${kill} follower${kill>1?'s':''} killed)`:''}.`);
   if(site.damage>=integ(site)) destroySite(site); else sfx(opt.structural?'struct':'hit');
   sweep();
@@ -1140,8 +1152,8 @@ function destroySite(site,verb='destroyed'){
   const owner=G.players[site.owner];
   sfx('destroy');
   const k=site.followers; site.followers=0;
+  noteKill(site.owner,k,site);
   owner.sites.splice(owner.sites.indexOf(site),1);
-  noteKill(site.owner,k);
   if(site.card.def.id==='pplant'&&site.tucked.length) G.pending.push({t:'pplant',pi:site.owner,n:site.tucked.length});
   G.pending.push({t:'destroyed',pi:site.owner,lvl:site.card.def.level,extra:site.attachments.length+site.tucked.length,name:site.card.def.name});
   G.discard.push(site.card,...site.attachments,...site.tucked);
@@ -1160,8 +1172,9 @@ async function flush(){
   while(G&&G.pending.length&&!G.over&&guard++<30){
     const wave=G.pending.splice(0);
     const kills={};
-    for(const e of wave) if(e.t==='kill') kills[e.pi]=(kills[e.pi]||0)+e.n;
-    for(const pi of [0,1]) if(kills[pi]&&!G.over) await onKilled(pi,kills[pi]);
+    const heal={};
+    for(const e of wave) if(e.t==='kill'){kills[e.pi]=(kills[e.pi]||0)+e.n;for(const u of e.hh||[])heal[u]=(heal[u]||0)+e.n}
+    for(const pi of [0,1]) if(kills[pi]&&!G.over) await onKilled(pi,kills[pi],heal);
     for(const e of wave){
       if(G.over) break;
       if(e.t==='upgrade'||e.t==='stackout') await badOmen(e.t==='upgrade'?1:3);
@@ -1178,8 +1191,15 @@ async function badOmen(n){
   for(const s of allSites()) for(const a of s.attachments) if(a.def.id==='badomen') hits.push([s,a]);
   for(const [s,a] of hits){ if(!inPlay(s)) continue; log(`${a.def.name} strikes ${poss(G.players[s.owner])} ${s.card.def.name}.`); await damage(a.attachedBy,s,n); }
 }
-async function onKilled(pi,n){
+async function onKilled(pi,n,heal={}){
   const p=G.players[pi];
+  for(const h of ofId(p,'healerhut')){
+    const k=heal[h.uid];if(!k||!inPlay(h)||abilBlocked(h)) continue;
+    const ab=h.card.def.abilities;if(h.followers<effNeed(h,ab[0])) continue;
+    const g=h.followers>=effNeed(h,ab[1])?Math.ceil(k/2):Math.floor(k/2);
+    const x=gainF(h,g);
+    if(x) log(`${Poss(p)} Healer Hut saves ${x} follower${x>1?'s':''}.`);
+  }
   for(const h of ofId(p,'hospital')){
     if(!inPlay(h)||abilBlocked(h)) continue;
     const up=h.followers>=effNeed(h,h.card.def.abilities[1]);
@@ -1265,6 +1285,7 @@ function slotScore(row,pos,def){
   const nb=[row[pos-1],row[pos]].filter(Boolean);
   let v=nb.filter(s=>s.card.def.id==='market').length*1.5;
   if(def.id==='market') v+=nb.length;
+  if(def.id==='healerhut') v+=nb.reduce((a,s)=>a+s.followers,0)*0.2;
   return v+pos*0.01;
 }
 async function pickSlot(pi,def,forced){
@@ -1431,6 +1452,7 @@ function attVal(a,s){
     case 'compnet': return hasAb?w*0.9:0.2;
     case 'sentient': return hasAb?w*0.9:0.2;
     case 'retrofit': return 0.6+0.15*s.followers;
+    case 'wisdom': return TUCK_SITES[s.card.def.id]?(s.card.def.id==='farm'?fieldsTuckVal(s):TUCK_SITES[s.card.def.id]):0.1;
     default: return a.def.fortify?0.6+0.25*s.followers:(HARMFUL.includes(a.def.id)?-EV.att:EV.att*0.6);
   }
 }
@@ -1446,6 +1468,7 @@ function evalPos(pi,noPot){
       if(staffed)v+=EV.staffed*w;
       if(s.card.def.attacker)v+=EV.atk*(staffed?1:0.4)*(left/I);
       v+=s.tucked.length*(s.card.def.id==='farm'?fieldsTuckVal(s):EV.tuck);
+      if(s.card.def.id==='healerhut')v+=Math.min(2,adjacent(s).reduce((a,x)=>a+x.followers,0)*0.12);
       for(const a of s.attachments)v+=attVal(a,s);
       v-=EV.risk*s.followers*(s.damage/I)*(isFort(s)?0.6:1);
     }
