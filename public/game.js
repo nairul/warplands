@@ -1763,7 +1763,7 @@ function render(){
   ov.hidden=!o; ov.innerHTML=term(o);
   chatSync();
   drawAnims();
-  if(oldRects){placeAnims(oldRects);if(ARROWS.q.length)playArrows(oldRects)}
+  if(oldRects){followerAnims(oldRects);placeAnims(oldRects);if(ARROWS.q.length)playArrows(oldRects)}
   if(UPS.q.length) playUps();
   equalizeCards();
 }
@@ -1775,6 +1775,8 @@ function snapRects(){
   for(const e of document.querySelectorAll('[data-suid]'))m['s'+e.dataset.suid]=e.getBoundingClientRect();
   for(const e of document.querySelectorAll('#meZone [data-play],#meZone [data-pick]'))m['c'+(e.dataset.play||e.dataset.pick)]=e.getBoundingClientRect();
   for(const e of document.querySelectorAll('[data-buid]'))m['c'+e.dataset.buid]=e.getBoundingClientRect();
+  for(const e of document.querySelectorAll('[data-suid] .tokens')){const u=e.closest('[data-suid]').dataset.suid;m['t'+u]=e.getBoundingClientRect()}
+  for(const z of ['meZone','oppZone']){const h=document.querySelector(`#${z} .hand`)||document.querySelector(`#${z} .backs`)||document.querySelector(`#${z} .pname`);if(h)m['h'+z]=h.getBoundingClientRect()}
   return m;
 }
 function zoneRect(pi){const z=document.querySelector(pi===viewer()?'#meZone .pname':'#oppZone .pname');return z?z.getBoundingClientRect():null}
@@ -1962,6 +1964,50 @@ function equalizeCards(){
   for(const c of cards) c.style.minHeight='';
   const h=Math.max(...cards.map(c=>c.offsetHeight));
   for(const c of cards) c.style.minHeight=h+'px';
+}
+/* ---- Zealot animation: dots fly between sites when they move, and in from the hand when gained ---- */
+function followerAnims(old){
+  if(!G){FLY.fol=null;return}
+  const now=new Map();for(const p of G.players)for(const st of p.sites)now.set(st.uid,{n:st.followers,pi:p.i});
+  const prev=FLY.fol;FLY.fol=now;
+  if(!prev||G.turnCount<(FLY.folTurn||0)){FLY.folTurn=G.turnCount;return}
+  FLY.folTurn=G.turnCount;
+  if(typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const ups=[],downs=[];
+  for(const [u,v] of now){const was=prev.get(u);if(!was)continue;const d=v.n-was.n;if(d>0)ups.push({u,pi:v.pi,n:d});else if(d<0)downs.push({u,pi:v.pi,n:-d})}
+  if(!ups.length) return;
+  /* Pair Zealots that left a site with sites that gained them: same player first (relocation), then across (steals) */
+  const moves=[];
+  const pair=same=>{for(const up of ups)for(const dn of downs){if(!up.n)break;if(!dn.n||(same?dn.pi!==up.pi:dn.pi===up.pi))continue;const k=Math.min(up.n,dn.n);moves.push({from:'t'+dn.u,to:up.u,n:k});up.n-=k;dn.n-=k}};
+  pair(true);pair(false);
+  for(const up of ups) if(up.n) moves.push({from:'h'+(up.pi===viewer()?'meZone':'oppZone'),to:up.u,n:up.n,hand:true});
+  let delay=0;
+  for(const m of moves){
+    const a=old[m.from];
+    const el=document.querySelector(`[data-suid="${m.to}"] .tokens`);
+    if(!a||!el||(FLY.hiddenSites&&FLY.hiddenSites.has(m.to)))continue;
+    const b=el.getBoundingClientRect();
+    const n=Math.min(m.n,8);
+    for(let i=0;i<n;i++){flyDot(a,b,delay+i*55,m.hand);}
+    delay+=Math.min(300,n*55)+60;
+  }
+}
+function flyDot(a,b,delay,fromHand){
+  const d=document.createElement('span');d.className='dot fly-dot';d.setAttribute('aria-hidden','true');
+  const jit=()=>(Math.random()-0.5)*14;
+  const x0=fromHand?a.left+a.width/2+jit()*4:a.left+6+Math.random()*Math.max(4,a.width-30),y0=fromHand?a.top+10:a.top+a.height/2+jit()*0.5;
+  const x1=b.left+6+Math.random()*Math.max(4,Math.min(b.width,70)-12),y1=b.top+b.height/2+jit()*0.6;
+  d.style.left=x0+'px';d.style.top=y0+'px';document.body.appendChild(d);
+  const dx=x1-x0,dy=y1-y0,lift=Math.min(120,Math.hypot(dx,dy)*0.35+20);
+  const dur=fromHand?560:640;
+  const an=d.animate([
+    {transform:'translate(-50%,-50%) scale(.4)',opacity:0},
+    {transform:'translate(-50%,-50%) scale(1.1)',opacity:1,offset:.12},
+    {transform:`translate(calc(${dx*0.5}px - 50%),calc(${dy*0.5-lift}px - 50%)) scale(1.25)`,opacity:1,offset:.55},
+    {transform:`translate(calc(${dx}px - 50%),calc(${dy}px - 50%)) scale(1)`,opacity:1,offset:.92},
+    {transform:`translate(calc(${dx}px - 50%),calc(${dy}px - 50%)) scale(.6)`,opacity:0}],
+    {duration:dur,delay,easing:'cubic-bezier(.35,.6,.35,1)',fill:'both'});
+  const end=()=>d.remove();an.onfinish=end;an.oncancel=end;setTimeout(()=>{if(d.isConnected)end()},dur+delay+400);
 }
 /* Gold sparkles around a card that was just played */
 function sparkle(r){
