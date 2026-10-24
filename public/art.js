@@ -524,11 +524,19 @@ export const ART = {
     <circle class="b" cx="80" cy="18" r="5"/><path class="w" d="M77 18h6" stroke="#e6dccb" stroke-width="2"/>
     ${GROUND}`,
 
-  trade: `${HILLS}
-    <path class="k" d="M64 70V40q0-10 8-10h6v-8q0-6 4-6t4 6v20h4v-14q0-4 4-4t4 4v16q6-2 8 4l-6 18v14z"/>
-    <path class="b" d="M60 24l8 6M56 34h8M60 44l8-4" stroke="#9a1e14" stroke-width="2.5" stroke-linecap="round"/>
-    <path class="w" d="M108 30l20-14M112 40h22M108 50l20 10" stroke="#e6dccb" stroke-width="2" opacity=".6" stroke-linecap="round"/>
-    ${GROUND}`,
+  trade: `<circle class="b" cx="80" cy="26" r="26" opacity=".35"/>${HILLS}${GROUND}
+    <path class="k" d="M64 84l3-20h30l3 20z"/>
+    <rect class="k" x="55" y="40" width="48" height="28" rx="9"/>
+    <rect class="k" x="55" y="35" width="14" height="16" rx="6.5"/>
+    <rect class="k" x="81" y="35" width="12" height="16" rx="6"/>
+    <rect class="k" x="92" y="38" width="11" height="14" rx="5.5"/>
+    <rect class="k" x="68.5" y="5" width="13" height="42" rx="6.5"/>
+    <rect class="s" x="71" y="7.5" width="8" height="8" rx="3.5"/>
+    <path d="M70.5 24h9M70.5 34h9" style="fill:none;stroke:#4a382b;stroke-width:1.2"/>
+    <path d="M69 39v11M81 39v11M92.5 41v10" style="fill:none;stroke:#4a382b;stroke-width:1.4"/>
+    <path class="k" d="M52 58q0-7 8-7h20q7 0 7 6t-7 6H60q-8 0-8-5z" stroke="#3a2c22" stroke-width="1.3"/>
+    <path class="b" d="M56 8l7 5M53 19h8M57 29l6-3M104 8l-7 5M107 19h-8M103 29l-6-3" stroke="#d2321f" stroke-width="2.6" stroke-linecap="round"/>`,
+
 
   /* ---- Empire sites ---- */
   ark: `<circle class="y" cx="80" cy="22" r="18" opacity=".35"/>${HILLS}
