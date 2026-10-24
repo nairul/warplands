@@ -1783,6 +1783,7 @@ function menuHTML(){
       <li>Damage kills followers on a site. A site is destroyed when damage reaches its integrity, and everyone on it dies. Structural damage and fortified sites don't kill followers unless the site is destroyed.</li>
       <li>Reactions are offered to you automatically when their condition happens.</li>
     </ul></details>
+    <p class="fine disclaimer">Unofficial fan implementation for personal play. Time Barons is designed by Jon Perry and Derek Yu.</p>
     </div>`;
 }
 function overHTML(){
