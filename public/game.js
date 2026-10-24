@@ -1609,7 +1609,7 @@ function zoneHTML(pi,bottom){
   let h=`<div class="zhead"><span class="pname">${esc(p.name)}</span>${G.mode==='online'&&!ONLINE.conn[pi]?'<span class="stat warn">Disconnected</span>':''}
     <span class="lvl era-${p.level}">LEVEL ${ROMAN[p.level]}</span>
     <span class="stat"><span class="dot"></span><b>${totalF(p)}</b> followers</span>
-    <span class="stat">${showHand?'':`<span class="backs" title="${esc(handSummary(p))}">${[...p.hand].sort((a,b)=>a.def.level-b.def.level).map(k=>`<span class="back era-${k.def.level}">${ROMAN[k.def.level]}</span>`).join('')}</span>`}<b>${p.hand.length}</b> in hand</span>
+    <span class="stat">${showHand?'':`<span class="backs" title="${esc(handSummary(p))}">${[...p.hand].sort((a,b)=>a.def.level-b.def.level).map(k=>`<span class="back era-${k.def.level}" data-buid="${k.uid}">${ROMAN[k.def.level]}</span>`).join('')}</span>`}<b>${p.hand.length}</b> in hand</span>
     ${lofNext?'<span class="stat warn">Interdict next turn: 1 fewer action</span>':''}
     ${active&&p.ai?'<span class="stat">Thinking…</span>':''}</div>`;
   const sites=p.sites.map(s=>siteHTML(s,vi)).join('')||'<div class="empty">No sites.</div>';
@@ -1732,6 +1732,58 @@ function render(){
   else if(G.over&&!UI.closedOver) o=overHTML();
   ov.hidden=!o; ov.innerHTML=term(o);
   chatSync();
+  drawAnims();
+}
+
+/* ---- Draw animation: a new card flies from its draw stack (or the discard pile) to the hand,
+   flipping face-up on the way for your cards and staying face-down for the opponent's. ---- */
+const FLY={prev:null,hidden:new Set()};
+function drawAnims(){
+  if(!G){FLY.prev=null;return}
+  const now={hands:G.players.map(p=>p.hand.map(k=>k.uid)),stacks:[1,2,3,4].map(l=>G.stacks[l].length),turn:G.turnCount};
+  const prev=FLY.prev;FLY.prev=now;
+  for(const u of FLY.hidden){const el=handEl(u);if(el)el.style.visibility='hidden'}
+  const reduce=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const fresh=!prev||now.turn<prev.turn;
+  if(reduce||(fresh&&!(G.turnCount<=1&&G.mode!=='online')))return;
+  const left=prev&&!fresh?[...prev.stacks]:[99,99,99,99];
+  let i=0;
+  G.players.forEach((p,pi)=>{
+    const had=new Set(prev&&!fresh?prev.hands[pi]:[]);
+    for(const k of p.hand){
+      if(had.has(k.uid))continue;
+      const l=k.def.level;let src;
+      if(now.stacks[l-1]<left[l-1]){left[l-1]--;src=document.querySelector(`[data-draw="${l}"]`)}
+      else src=document.querySelector('#mid .discard');
+      flyCard(k,src,i++*(fresh?110:140));
+    }
+  });
+}
+function handEl(uid){return document.querySelector(`#meZone [data-play="${uid}"],#meZone [data-pick="${uid}"]`)}
+function flyCard(k,src,delay){
+  const mine=!!handEl(k.uid), tgt=mine?handEl(k.uid):document.querySelector(`#oppZone [data-buid="${k.uid}"]`);
+  if(!src||!tgt)return;
+  const a=src.getBoundingClientRect(),b=tgt.getBoundingClientRect();
+  if(!b.width||!a.width)return;
+  if(mine){FLY.hidden.add(k.uid);tgt.style.visibility='hidden'}
+  const f=document.createElement('div');f.className='flyer';f.setAttribute('aria-hidden','true');
+  Object.assign(f.style,{left:b.left+'px',top:b.top+'px',width:b.width+'px',height:b.height+'px'});
+  const lv=k.def.level;
+  f.innerHTML=`<div class="fly-inner"><div class="fly-face fly-back era-${lv}"><span>${ROMAN[lv]}</span></div>${mine?`<div class="fly-face fly-front">${tgt.outerHTML}</div>`:''}</div>`;
+  const fr=f.querySelector('.fly-front>*');if(fr){fr.style.visibility='visible';fr.removeAttribute('data-play');fr.removeAttribute('data-pick');fr.style.margin='0'}
+  const bs=f.querySelector('.fly-back span');if(bs)bs.style.fontSize=Math.max(9,Math.min(44,b.width*0.24))+'px';
+  document.body.appendChild(f);
+  const sw=mine?a.width*0.72:Math.min(a.width*0.55,70),sh=mine?sw*(b.height/b.width):sw*1.4;
+  const sx=sw/b.width,sy=sh/b.height;
+  const dx=a.left+a.width/2-(b.left+b.width/2),dy=a.top+a.height/2-(b.top+b.height/2);
+  const dur=mine?620:520,ease='cubic-bezier(.3,.7,.3,1)';
+  const anim=f.animate([
+    {transform:`translate(${dx}px,${dy}px) scale(${sx},${sy})`,opacity:0.2},
+    {transform:`translate(${dx*0.45}px,${dy*0.45-40}px) scale(${(sx+1)/2*1.08},${(sy+1)/2*1.08})`,opacity:1,offset:0.5},
+    {transform:'translate(0,0) scale(1,1)',opacity:1}],{duration:dur,delay,easing:ease,fill:'both'});
+  if(mine)f.querySelector('.fly-inner').animate([{transform:'rotateY(180deg)'},{transform:'rotateY(180deg)',offset:0.2},{transform:'rotateY(0deg)'}],{duration:dur,delay,easing:'ease-in-out',fill:'both'});
+  const done=()=>{f.remove();if(mine){FLY.hidden.delete(k.uid);const el=handEl(k.uid);if(el)el.style.visibility=''}};
+  anim.onfinish=done;anim.oncancel=done;setTimeout(()=>{if(f.isConnected)done()},dur+delay+500);
 }
 
 /* ---- Chat (online games only) ---- */
