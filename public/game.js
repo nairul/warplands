@@ -66,11 +66,10 @@ const PEND=new Map(), GHOSTS=new Map();
 async function withSrc(src,fn){const prev=CUR_SRC;CUR_SRC=src;try{return await fn()}finally{CUR_SRC=prev}}
 const UPS={q:[]};
 const REV={q:[],until:0};
-/* A reaction card played from hand is shown to both players */
-function fxReveal(pi,card,to){
+/* A card played from hand (reaction, attachment, or an opponent's event) is shown to both players */
+function fxReveal(pi,card,to,ev){
   if(typeof G!=='undefined'&&G&&G.sim) return;
-  const d={pi,id:card.def.id,uid:card.uid};if(to!=null)d.to=to;
-  sfx('reveal');
+  const d={pi,id:card.def.id,uid:card.uid};if(to!=null)d.to=to;if(ev)d.ev=1;
   if(HOST.server){if(HOST.fx)HOST.fx('reveal',d);return}
   if(typeof document!=='undefined') REV.q.push(d);
 }
@@ -1345,13 +1344,13 @@ async function playCard(pi,card,o={}){
   if(o.free){if(G.over||d.type==='reaction'||!p.hand.includes(card))return false}
   else if(!canPlay(pi,card)) return false;
   let paid=false;
-  const pay=()=>{if(paid)return;paid=true;if(!o.free)p.actions-=d.cost;p.hand.splice(p.hand.indexOf(card),1);log(`${p.name} play${s_(p)} ${d.name}.`)};
+  const pay=()=>{if(paid)return;paid=true;if(d.type==='event')fxReveal(pi,card,undefined,true);if(!o.free)p.actions-=d.cost;p.hand.splice(p.hand.indexOf(card),1);log(`${p.name} play${s_(p)} ${d.name}.`)};
   const c=mkCtx(pi,{card,pay});
   const opp=G.players[1-pi], ta=opp.hand.find(k=>k.def.trigger==='play');
   if(ta){
     const use=opp.ai?cardValue(pi,card)>=2.2:await pickOption(opp.i,{prompt:`${hotPfx(opp)}${subj(p)} playing ${d.name}. Play GET FUCKED to cancel it?`,options:[{label:'Play GET FUCKED',value:true},{label:'Let it resolve',value:false}]});
     if(use&&opp.hand.includes(ta)&&p.hand.includes(card)&&!G.over){
-      fxReveal(opp.i,ta);discardFromHand(opp.i,ta);pay();G.discard.push(card);
+      pay();fxReveal(opp.i,ta);discardFromHand(opp.i,ta);G.discard.push(card);
       log(`${opp.name} play${s_(opp)} GET FUCKED. ${d.name} is discarded with no effect.`);
       const lv=[];for(let l=1;l<=opp.level;l++)if(G.stacks[l].length)lv.push(l);
       if(lv.length){const l=lv.length===1||p.ai?lv[lv.length-1]:await pickOption(pi,{prompt:`${hotPfx(p)}GET FUCKED: draw 1 card from which level?`,options:lv.map(x=>({label:`Level ${ROMAN[x]} (${G.stacks[x].length} left)`,value:x}))});drawCard(pi,l)}
@@ -1968,6 +1967,7 @@ function playReveals(old){
   const now=performance.now();let t0=Math.max(now,REV.until);
   for(const d of list){
     const def=DEF[d.id];if(!def)continue;
+    if(d.ev&&d.pi===viewer())continue;
     const quick=d.to!=null&&d.pi===viewer();
     const delay=t0-now,dur=reduce?1600:quick?750:2300;
     REV.until=t0+dur;t0+=dur;
@@ -1977,6 +1977,7 @@ function playReveals(old){
 }
 function revealCard(d,def,old,reduce,dur){
   const p=G&&G.players[d.pi];if(!p)return;
+  sfx('reveal');
   const mine=d.pi===viewer();
   const src=old['c'+d.uid]||(document.querySelector(mine?'#handDock .hand':'#oppZone .backs')||document.body).getBoundingClientRect();
   const siteEl=d.to!=null?document.querySelector(`[data-suid="${d.to}"]`):null;
