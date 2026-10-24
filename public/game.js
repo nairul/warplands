@@ -39,6 +39,8 @@ const SOUNDS={
   yourturn:(ctx,out,t)=>{tone(ctx,out,t,98,92,1.4,0.32,'sine');tone(ctx,out,t,196,190,1.0,0.12,'triangle');tone(ctx,out,t,293.7,290,0.8,0.06,'sine');
     noise(ctx,out,t,0.25,0.12,'bandpass',600,300,2);
     tone(ctx,out,t+0.18,587.33,587.33,0.22,0.16,'triangle');tone(ctx,out,t+0.36,880,880,0.5,0.16,'triangle');tone(ctx,out,t+0.36,1760,1760,0.3,0.04,'sine')},
+  /* Reveal: a quick whoosh into a bright double chime */
+  reveal:(ctx,out,t)=>{noise(ctx,out,t,0.28,0.22,'bandpass',500,3200,1.2);tone(ctx,out,t+0.2,1046.5,1046.5,0.18,0.14,'triangle');tone(ctx,out,t+0.3,1568,1568,0.35,0.12,'triangle');tone(ctx,out,t+0.3,784,784,0.4,0.08,'sine')},
   /* Defeat: a slow, sagging descent */
   lose:(ctx,out,t)=>{[392,369.99,349.23].forEach((f,i)=>tone(ctx,out,t+i*0.34,f,f*0.99,0.3,0.28,'triangle'));
     tone(ctx,out,t+1.02,329.63,293.66,1.1,0.3,'triangle');tone(ctx,out,t+1.02,164.81,146.83,1.1,0.16,'sine')}
@@ -63,6 +65,15 @@ const ARROWS={q:[],until:0};
 const PEND=new Map(), GHOSTS=new Map();
 async function withSrc(src,fn){const prev=CUR_SRC;CUR_SRC=src;try{return await fn()}finally{CUR_SRC=prev}}
 const UPS={q:[]};
+const REV={q:[],until:0};
+/* A reaction card played from hand is shown to both players */
+function fxReveal(pi,card){
+  if(typeof G!=='undefined'&&G&&G.sim) return;
+  const d={pi,id:card.def.id,uid:card.uid};
+  sfx('reveal');
+  if(HOST.server){if(HOST.fx)HOST.fx('reveal',d);return}
+  if(typeof document!=='undefined') REV.q.push(d);
+}
 function fxUp(d){
   if(typeof G!=='undefined'&&G&&G.sim) return;
   if(HOST.server){if(HOST.fx)HOST.fx('lvlup',d);return}
@@ -1161,7 +1172,7 @@ async function damage(src,site,n,opt={}){
       if(!pick) break;
       used.add(pick.uid);
       const r={pi:owner.i,site,n,opt,paid:false};
-      r.pay=()=>{if(r.paid)return;r.paid=true;owner.hand.splice(owner.hand.indexOf(pick),1);G.discard.push(pick);log(`${owner.name} play${s_(owner)} ${pick.def.name}.`)};
+      r.pay=()=>{if(r.paid)return;r.paid=true;fxReveal(owner.i,pick);owner.hand.splice(owner.hand.indexOf(pick),1);G.discard.push(pick);log(`${owner.name} play${s_(owner)} ${pick.def.name}.`)};
       await pick.def.react(r);
       if(r.paid){site=r.site;n=r.n}
       render();
@@ -1239,7 +1250,7 @@ async function onKilled(pi,n,heal={}){
   const m=p.hand.find(k=>k.def.trigger==='kill');
   if(m&&drawableLevels(pi).length){
     const use=p.ai?true:await pickOption(pi,{prompt:`${hotPfx(p)}${n} of your followers ${n>1?'were':'was'} killed. Play Blessed Sacrifice to draw ${n} card${n>1?'s':''}?`,options:[{label:'Play Blessed Sacrifice',value:true},{label:'Not now',value:false}]});
-    if(use&&p.hand.includes(m)){discardFromHand(pi,m);log(`${p.name} play${s_(p)} Blessed Sacrifice.`);await drawN(pi,n,'Blessed Sacrifice')}
+    if(use&&p.hand.includes(m)){fxReveal(pi,m);discardFromHand(pi,m);log(`${p.name} play${s_(p)} Blessed Sacrifice.`);await drawN(pi,n,'Blessed Sacrifice')}
   }
 }
 async function onRelocate(pi){
@@ -1279,7 +1290,7 @@ async function onDestroyed(e){
   if(!m||!drawableLevels(e.pi).length) return;
   const n=e.lvl+e.extra;
   const use=p.ai?true:await pickOption(e.pi,{prompt:`${hotPfx(p)}Your ${e.name} was destroyed. Play Blood Feud to draw ${n} card${n>1?'s':''}?`,options:[{label:'Play Blood Feud',value:true},{label:'Not now',value:false}]});
-  if(use&&p.hand.includes(m)){discardFromHand(e.pi,m);log(`${p.name} play${s_(p)} Blood Feud.`);await drawN(e.pi,n,'Blood Feud')}
+  if(use&&p.hand.includes(m)){fxReveal(e.pi,m);discardFromHand(e.pi,m);log(`${p.name} play${s_(p)} Blood Feud.`);await drawN(e.pi,n,'Blood Feud')}
 }
 
 function abilityReady(pi,site,i){
@@ -1339,7 +1350,7 @@ async function playCard(pi,card,o={}){
   if(ta){
     const use=opp.ai?cardValue(pi,card)>=2.2:await pickOption(opp.i,{prompt:`${hotPfx(opp)}${subj(p)} playing ${d.name}. Play GET FUCKED to cancel it?`,options:[{label:'Play GET FUCKED',value:true},{label:'Let it resolve',value:false}]});
     if(use&&opp.hand.includes(ta)&&p.hand.includes(card)&&!G.over){
-      discardFromHand(opp.i,ta);pay();G.discard.push(card);
+      fxReveal(opp.i,ta);discardFromHand(opp.i,ta);pay();G.discard.push(card);
       log(`${opp.name} play${s_(opp)} GET FUCKED. ${d.name} is discarded with no effect.`);
       const lv=[];for(let l=1;l<=opp.level;l++)if(G.stacks[l].length)lv.push(l);
       if(lv.length){const l=lv.length===1||p.ai?lv[lv.length-1]:await pickOption(pi,{prompt:`${hotPfx(p)}GET FUCKED: draw 1 card from which level?`,options:lv.map(x=>({label:`Level ${ROMAN[x]} (${G.stacks[x].length} left)`,value:x}))});drawCard(pi,l)}
@@ -1822,7 +1833,7 @@ function render(){
   ov.hidden=!o; ov.innerHTML=term(o);
   chatSync();
   drawAnims();
-  if(oldRects){followerAnims(oldRects);placeAnims(oldRects);if(ARROWS.q.length)playArrows(oldRects)}
+  if(oldRects){if(REV.q.length)playReveals(oldRects);followerAnims(oldRects);placeAnims(oldRects);if(ARROWS.q.length)playArrows(oldRects)}
   if(UPS.q.length) playUps();
   yourTurnCheck();
   equalizeCards();
@@ -1864,6 +1875,47 @@ function playArrows(old){
     setTimeout(()=>flyArrow(d,src,tgt,dur),delay);
     setTimeout(()=>settle(d),delay+dur+1500);
   }
+}
+/* ---- Reaction reveal: the card leaves its owner's hand, flips face-up in the middle of the screen with a
+   caption, then drops onto the discard pile. Damage it affects waits until the card has been seen. ---- */
+function playReveals(old){
+  const list=REV.q.splice(0);
+  const reduce=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const now=performance.now();let t0=Math.max(now,REV.until);
+  for(const d of list){
+    const def=DEF[d.id];if(!def)continue;
+    const delay=t0-now,dur=reduce?1600:2300;
+    REV.until=t0+dur;t0+=dur;
+    ARROWS.until=Math.max(ARROWS.until,now+delay+(reduce?1200:1650));
+    setTimeout(()=>revealCard(d,def,old,reduce,dur),delay);
+  }
+}
+function revealCard(d,def,old,reduce,dur){
+  const p=G&&G.players[d.pi];if(!p)return;
+  const mine=d.pi===viewer();
+  const src=old['c'+d.uid]||(document.querySelector(mine?'#handDock .hand':'#oppZone .backs')||document.body).getBoundingClientRect();
+  const disc=(document.querySelector('#mid .discard')||document.body).getBoundingClientRect();
+  const W=250,H=W*1.45,cx=innerWidth/2,cy=innerHeight*0.42;
+  const box={left:cx-W/2,top:cy-H/2};
+  const f=document.createElement('div');f.className='flyer reveal';f.setAttribute('aria-hidden','true');
+  Object.assign(f.style,{left:box.left+'px',top:box.top+'px',width:W+'px',height:H+'px'});
+  const face=`<div class="card ${eraCls(def)}" style="width:100%;height:100%">${bandHTML(def)}${artHTML(def)}${kindHTML(def)}<div class="body"><div class="tx">${esc(def.text||'')}</div></div></div>`;
+  f.innerHTML=term(`<div class="fly-inner"><div class="fly-face fly-back era-${def.level}"><span style="font-size:52px">${ROMAN[def.level]}</span></div><div class="fly-face fly-front">${face}</div></div>
+    <div class="reveal-cap">${esc(isYou(p)?'You play':p.name+' plays')} <b>${esc(def.name)}</b></div>`);
+  document.body.appendChild(f);
+  const fromX=src.left+src.width/2-cx,fromY=src.top+src.height/2-cy,sc0=Math.max(0.12,Math.min(0.7,src.width/W));
+  const toX=disc.left+disc.width/2-cx,toY=disc.top+disc.height/2-cy;
+  if(reduce){f.animate([{opacity:0},{opacity:1,offset:.15},{opacity:1,offset:.85},{opacity:0}],{duration:dur,fill:'forwards'}).onfinish=()=>f.remove();return}
+  f.animate([
+    {transform:`translate(${fromX}px,${fromY}px) scale(${sc0})`,opacity:.3,easing:'cubic-bezier(.2,.8,.3,1)'},
+    {transform:'translate(0,0) scale(1.08)',opacity:1,offset:.2,easing:'ease-out'},
+    {transform:'translate(0,0) scale(1)',offset:.28,easing:'linear'},
+    {transform:'translate(0,0) scale(1)',opacity:1,offset:.76,easing:'cubic-bezier(.5,0,.8,.4)'},
+    {transform:`translate(${toX}px,${toY}px) scale(.18) rotate(8deg)`,opacity:.25}],{duration:dur,easing:'linear',fill:'both'}).onfinish=()=>f.remove();
+  f.querySelector('.fly-inner').animate([{transform:mine?'rotateY(0deg)':'rotateY(180deg)'},{transform:mine?'rotateY(0deg)':'rotateY(180deg)',offset:.12,easing:'ease-in-out'},{transform:'rotateY(0deg)',offset:.3},{transform:'rotateY(0deg)'}],{duration:dur,easing:'linear',fill:'both'});
+  f.querySelector('.reveal-cap').animate([{opacity:0},{opacity:0,offset:.22},{opacity:1,offset:.32},{opacity:1,offset:.7},{opacity:0,offset:.76},{opacity:0}],{duration:dur,fill:'both'});
+  const glow=f.animate([{boxShadow:'0 0 0 0 rgba(255,200,90,0)'},{boxShadow:'0 0 60px 16px rgba(255,190,80,.55)',offset:.32},{boxShadow:'0 0 40px 8px rgba(255,190,80,.35)',offset:.7},{boxShadow:'0 0 0 0 rgba(255,200,90,0)'}],{duration:dur,fill:'both'});
+  setTimeout(()=>{if(f.isConnected)f.remove()},dur+600);
 }
 /* A destroyed site lingers as a copy until the projectile that destroys it lands */
 function makeGhost(uid,html,r){
@@ -2384,7 +2436,7 @@ function onlineSnap(s){
     UI.relocate.resolve=v=>{const seq=r.seq;UI.relocate=null;UI.busy=true;render();onlineSend(v?{t:'answer',a:'reloc',seq,counts:v}:{t:'answer',a:'relocCancel',seq})};
   }
   ONLINE.conn=s.conn||ONLINE.conn;
-  for(const f of (s.fx||[])) if(f.k==='arrow')ARROWS.q.push(f.n); else if(f.k==='lvlup')UPS.q.push(f.n); else sfx(f.k,f.n,true);
+  for(const f of (s.fx||[])) if(f.k==='arrow')ARROWS.q.push(f.n); else if(f.k==='lvlup')UPS.q.push(f.n); else if(f.k==='reveal')REV.q.push(f.n); else sfx(f.k,f.n,true);
   if(!wasOver&&G.over) gameOverSound();
   render();
 }
