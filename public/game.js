@@ -105,10 +105,15 @@ function placeScore(s){
   let sc=(integ(s)-s.damage)*0.5+(isFort(s)?1.5:0);
   const need=minNeed(s);
   if(need&&s.followers<need) sc+=6-(need-s.followers);
+  if(s.card.def.id==='farm'&&s.tucked.length&&s.followers<1) sc+=4+s.tucked.length;
   if(hasAtt(s,'plague')) sc-=5;
   if(hasAtt(s,'sabotage')) sc-=2;
   return sc-s.followers*0.15;
 }
+/* How far through the game we are: 1 at the start, 0 when the draw stacks are empty */
+function gameLeft(){if(!G||!G.stacks)return 0.5;let n=0;for(const l of [1,2,3,4])n+=G.stacks[l].length;return Math.min(1,n/50)}
+/* A card under Fields pays out 1 Zealot every harvest, so it is worth more the longer the game has left */
+function fieldsTuckVal(s){return (0.5+2.2*gameLeft())*(s.followers>0?1:0.75)}
 function keepValue(k){return k.def.level+(k.def.type==='reaction'?1:0)+(k.def.type==='site'?0.3:0)}
 function wantsMore(c){
   const a=c.me.actions+1, uc=UPGRADE_COST[c.me.level];
@@ -428,7 +433,7 @@ const CARDS=[
      run:async c=>{const k=await pickHandCard(c.pi,{prompt:'Fields: choose a card to tuck under Fields.'});if(!k)return;
        const s=await pickSite(c.pi,{prompt:'Fields: choose one of your sites to gain 1 follower.',filter:s=>s.owner===c.pi&&canGain(s),aiScore:placeScore,auto:true});if(!s)return;
        c.pay();c.me.hand.splice(c.me.hand.indexOf(k),1);c.site.tucked.push(k);gainF(s,1);log(`${c.me.name} tuck${s_(c.me)} a card under Fields and gain${s_(c.me)} a follower.`)},
-     ai:c=>c.me.hand.length>=5?0.7:-1},
+     ai:c=>{const h=c.me.hand.length;if(h<2)return -1;const cheap=Math.min(...c.me.hand.map(keepValue));return h>=3||cheap<=1.3?0.8+1.4*gameLeft()-(cheap-1)*0.6:-1}},
     {need:1,actions:0,text:'Gain 1 follower on Fields for each card tucked under Fields.',can:c=>c.site.tucked.length>0&&canGain(c.site),
      run:async c=>{c.pay();const n=gainF(c.site,c.site.tucked.length);log(`${c.me.name} gain${s_(c.me)} ${n} follower${n>1?'s':''} on Fields.`)},
      ai:c=>c.site.tucked.length}]},
@@ -1440,7 +1445,7 @@ function evalPos(pi,noPot){
       const staffed=(s.card.def.abilities||[]).length&&s.followers>=needOf(s)&&!abilBlocked(s);
       if(staffed)v+=EV.staffed*w;
       if(s.card.def.attacker)v+=EV.atk*(staffed?1:0.4)*(left/I);
-      v+=s.tucked.length*EV.tuck;
+      v+=s.tucked.length*(s.card.def.id==='farm'?fieldsTuckVal(s):EV.tuck);
       for(const a of s.attachments)v+=attVal(a,s);
       v-=EV.risk*s.followers*(s.damage/I)*(isFort(s)?0.6:1);
     }
