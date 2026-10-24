@@ -1777,6 +1777,7 @@ function zoneHTML(pi,bottom){
     <span class="lvl era-${p.level}">LEVEL ${ROMAN[p.level]}</span>
     <span class="stat"><span class="dot"></span><b>${totalF(p)}</b> followers</span>
     <span class="stat">${showHand?'':`<span class="backs" title="${esc(handSummary(p))}">${[...p.hand].sort((a,b)=>a.def.level-b.def.level).map(k=>`<span class="back era-${k.def.level}" data-buid="${k.uid}">${ROMAN[k.def.level]}</span>`).join('')}</span>`}<b>${p.hand.length}</b> in hand</span>
+    ${!bottom&&active?`<span class="stat oppmana" title="${p.actions} action${p.actions===1?'':'s'} left this turn"><span class="pips">${Array.from({length:Math.max(3,p.actions)},(_,i)=>`<span class="pip ${i<p.actions?'on':''}"></span>`).join('')}</span><b>${p.actions}</b> actions left</span>`:''}
     ${lofNext?'<span class="stat warn">Interdict next turn: 1 fewer action</span>':''}
     ${active&&p.ai?'<span class="stat">Thinking…</span>':''}</div>`;
   const SP=UI.prompt&&UI.prompt.kind==='slot'&&UI.prompt.pi===pi&&pi===vi?UI.prompt:null;
@@ -1899,6 +1900,9 @@ function render(){
   if(inLobby) return;
   $('oppZone').innerHTML=term(zoneHTML(1-vi,false));
   $('oppZone').classList.toggle('active',G.turn===1-vi&&!G.over);
+  {const om=G.turn===1-vi?G.players[1-vi].actions:null;const el=document.querySelector('#oppZone .oppmana');
+   if(el&&FLY.oppMana!=null&&om!=null&&om!==FLY.oppMana&&G.turnCount===FLY.oppManaTurn)el.animate([{transform:'scale(1)',filter:'brightness(1)'},{transform:'scale(1.18)',filter:'brightness(1.8)'},{transform:'scale(1)',filter:'brightness(1)'}],{duration:450,easing:'ease-out'});
+   FLY.oppMana=om;FLY.oppManaTurn=G.turnCount}
   $('mid').innerHTML=term(midHTML());
   $('meZone').innerHTML=term(zoneHTML(vi,true));
   const dock=$('handDock'),me=G.players[vi];
