@@ -189,6 +189,28 @@ button.ab:disabled{opacity:.75}
 .fieldrow input{font:inherit;background:var(--table);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:7px 10px;min-width:0;flex:1 1 140px;max-width:220px}
 .fieldrow input:focus-visible{outline:2px solid var(--brass);outline-offset:1px}
 .code{font-family:var(--display);font-weight:800;font-size:44px;letter-spacing:.18em;color:var(--brass);text-align:center;padding:8px 0;user-select:all}
+/* Chat (online games only), docked bottom left */
+.chat{position:fixed;left:max(16px, env(safe-area-inset-left, 0px));bottom:16px;z-index:35;width:min(300px, calc(100vw - 32px));display:flex;flex-direction:column;border:3px solid transparent;border-radius:6px;overflow:hidden;
+  background:var(--grain) padding-box, linear-gradient(rgba(20,15,11,.96),rgba(14,10,8,.97)) padding-box, var(--iron) border-box;box-shadow:0 8px 24px rgba(0,0,0,.7), inset 0 0 0 1px rgba(201,160,110,.22)}
+.chat-head{display:flex;align-items:center;gap:8px;background:transparent;border:none;padding:7px 10px;font-family:var(--display);font-weight:600;letter-spacing:.06em;color:var(--brass);text-align:left}
+.chat-head span:first-child{flex:1}
+.chat-caret{transition:transform .15s;color:var(--muted)}
+.chat.closed .chat-caret{transform:rotate(180deg)}
+.chat-badge{background:var(--damage);color:#fff;border-radius:999px;font-family:var(--body);font-size:12px;font-weight:700;min-width:20px;padding:1px 6px;text-align:center}
+.chat-log{list-style:none;margin:0;padding:6px 10px;height:170px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;font-size:13.5px;border-top:1px solid rgba(201,160,110,.18);overflow-wrap:anywhere}
+.chat-log li{color:var(--fg);line-height:1.3}
+.chat-log li b{font-weight:700;margin-right:2px}
+.chat-log li.me b{color:var(--brass)}
+.chat-log li.them b{color:#8fb8ff}
+.chat-log li.none{color:var(--muted);font-style:italic}
+.chat-form{display:flex;gap:6px;padding:8px;border-top:1px solid rgba(201,160,110,.18)}
+.chat-form input{flex:1;min-width:0;font:inherit;font-size:14px;background:rgba(0,0,0,.45);color:var(--fg);border:1px solid #0a0705;box-shadow:inset 0 1px 4px rgba(0,0,0,.6);border-radius:4px;padding:6px 8px}
+.chat-form input:focus-visible{outline:2px solid var(--brass);outline-offset:1px}
+.chat-form button{background:var(--grain), linear-gradient(180deg,#f0c272,#c8862e 55%,#8c5718);color:var(--brass-ink);border:1px solid #3a2208;border-radius:4px;padding:6px 12px;font-weight:700}
+.chat.closed .chat-log,.chat.closed .chat-form{display:none}
+/* Leave room to scroll the board clear of the chat box */
+body.chat-on #app{padding-bottom:90px}
+body.chat-open #app{padding-bottom:300px}
 @media (max-width:760px){
   .mid{grid-template-columns:minmax(0,1fr)}
   .card{width:146px}.site{width:162px}
@@ -211,6 +233,7 @@ button.ab:disabled{opacity:.75}
   <section class="zone" id="meZone"></section>
 </div>
 <div class="prompt" id="prompt" hidden></div>
+<aside class="chat" id="chat" hidden aria-label="Chat"></aside>
 <div class="overlay" id="overlay" hidden></div>
 <script type="module">
 import {createGame} from './game.js';
