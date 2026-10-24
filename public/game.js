@@ -514,9 +514,9 @@ const CARDS=[
      run:async c=>{const s=await pickSite(c.pi,{prompt:'Iron Pit: choose one of your non-starting sites to take 1 structural damage.',filter:s=>s.owner===c.pi&&!s.card.def.start,aiScore:s=>integ(s)-s.damage-s.followers*0.3,auto:true});
        if(!s)return;c.pay();await damage(c.pi,s,1,{structural:true});c.me.actions++;log(`${c.me.name} gain${s_(c.me)} an action from the Iron Pit.`)},
      ai:c=>c.me.sites.some(s=>!s.card.def.start&&integ(s)-s.damage>1)&&wantsMore(c)?0.9:-1}]},
-  {id:'onslaught',name:'Howling Advance',level:1,type:'event',cost:2,count:2,text:'Do 1 damage each to up to 3 different sites.',
+  {id:'onslaught',name:'Howling Advance',level:1,type:'event',cost:2,count:2,text:"Do 1 damage each to up to 3 different sites owned by an opponent.",
    play:async c=>{
-     const picked=await pickUpTo(c,3,{prompt:(i)=>`Howling Advance: choose site ${i+1} of up to 3 (1 damage each).`,filter:s=>!c.me.ai||s.owner!==c.pi,aiScore:s=>dmgValue(s,1)});
+     const picked=await pickUpTo(c,3,{prompt:(i)=>`Howling Advance: choose ${i?'another':'an'} opponent's site (${i+1} of up to 3, 1 damage each).`,filter:s=>s.owner!==c.pi,aiScore:s=>dmgValue(s,1)});
      if(!picked||!picked.length)return;c.pay();for(const s of picked)await damage(c.pi,s,1)},
    ai:c=>c.opp.sites.map(s=>dmgValue(s,1)).sort((a,b)=>b-a).slice(0,3).reduce((a,b)=>a+b,0)},
   {id:'radicalism',name:'Heresy',level:1,type:'event',cost:2,count:2,text:"Do damage to an opponent's site, where the damage dealt equals their level.",
