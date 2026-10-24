@@ -56,6 +56,7 @@ function sfx(kind,n){
 /* ---- Damage projectiles: where each hit comes from, and the queue the browser draws ---- */
 let CUR_SRC=null, SND_CAP=null;
 const ARROWS={q:[],until:0};
+const PEND=new Map(), GHOSTS=new Map();
 async function withSrc(src,fn){const prev=CUR_SRC;CUR_SRC=src;try{return await fn()}finally{CUR_SRC=prev}}
 const UPS={q:[]};
 function fxUp(d){
@@ -1612,7 +1613,8 @@ function siteHTML(s,vi){
                :`<div class="ab">${reqHTML(ab,s)}<span>${esc(ab.text)}</span></div>`;
   }).join('');
   const toks=Array.from({length:Math.min(s.followers,10)},()=>'<span class="dot"></span>').join('');
-  const integB=Array.from({length:integ(s)},(_,i)=>`<i class="${i<s.damage?'hit':''}"></i>`).join('');
+  const shownDmg=Math.max(0,s.damage-(PEND.get(s.uid)||0));
+  const integB=Array.from({length:integ(s)},(_,i)=>`<i class="${i<shownDmg?'hit':''}"></i>`).join('');
   const atts=s.attachments.map(a=>`<div class="att" title="${esc(a.def.text)}"><b>${esc(a.def.name)}</b> · ${esc(a.def.text)}</div>`).join('');
   const used=s.usedTurn===G.turnCount&&G.turn===s.owner&&(d.abilities||[]).length;
   return `<div class="card site ${eraCls(d)} ${target?'target':''}" data-suid="${s.uid}" ${target?`data-site="${s.uid}" tabindex="0" role="button" aria-label="Choose ${esc(d.name)}"`:''}>
@@ -1738,6 +1740,10 @@ function render(){
   if(HOST.server){if(!(G&&G.sim)&&HOST.broadcast)HOST.broadcast();return}
   if(!HAS_DOM||(G&&G.sim)) return;
   const oldRects=G&&!G.sim?snapRects():null;
+  if(oldRects&&ARROWS.q.length&&!(typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches)){
+    for(const d of ARROWS.q){if(d.pend)continue;d.pend=true;PEND.set(d.t,(PEND.get(d.t)||0)+d.n);
+      if(!oldRects['html'+d.t]){const e=document.querySelector(`[data-suid="${d.t}"]`);if(e)oldRects['html'+d.t]=e.outerHTML}}
+  }
   chatSync();
   const ov=$('overlay');
   const inLobby=ONLINE.active&&ONLINE.lobby&&(!G||G.mode!=='online');
@@ -1794,14 +1800,52 @@ function playArrows(old){
   for(const d of list){
     const src=d.s.site!=null?siteRect(d.s.site,old):d.s.card!=null?(old['c'+d.s.card]||zoneRect(d.s.pi)):zoneRect(d.s.pi);
     const tgt=siteRect(d.t,old);
-    if(reduce||!src||!tgt){if(d.snd)sfx(d.snd);continue}
+    if(reduce||!src||!tgt){if(d.snd)sfx(d.snd);settle(d);continue}
+    if(!document.querySelector(`[data-suid="${d.t}"]`)&&old['html'+d.t]&&!GHOSTS.has(d.t)) makeGhost(d.t,old['html'+d.t],tgt);
     const delay=t0-now;
     const dist=Math.hypot(src.left-tgt.left,src.top-tgt.top);
     const dur=Math.min(820,420+dist*0.35);
     t0+=Math.min(260,dur*0.4);
     ARROWS.until=Math.max(ARROWS.until,now+delay+dur);
     setTimeout(()=>flyArrow(d,src,tgt,dur),delay);
+    setTimeout(()=>settle(d),delay+dur+1500);
   }
+}
+/* A destroyed site lingers as a copy until the projectile that destroys it lands */
+function makeGhost(uid,html,r){
+  const g=document.createElement('div');g.className='ghost-site';g.setAttribute('aria-hidden','true');
+  Object.assign(g.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px'});
+  g.innerHTML=html;const c=g.firstElementChild;if(c){c.removeAttribute('data-suid');c.removeAttribute('data-site');c.style.visibility='visible';c.style.margin='0';c.style.width='100%';c.style.height='100%'}
+  document.body.appendChild(g);GHOSTS.set(uid,g);
+  setTimeout(()=>{if(GHOSTS.get(uid)===g){g.remove();GHOSTS.delete(uid)}},6000);
+}
+function crumble(uid,col){
+  const g=GHOSTS.get(uid);if(!g)return;GHOSTS.delete(uid);
+  const r=g.getBoundingClientRect();
+  g.animate([{transform:'translate(0,0) rotate(0)',filter:'brightness(1)'},{transform:'translate(-6px,0) rotate(-1.5deg)',filter:'brightness(1.8) saturate(1.6)',offset:.12},
+    {transform:'translate(5px,2px) rotate(1.2deg)',filter:'brightness(1.4)',offset:.24},{transform:'translate(0,6px) rotate(0)',filter:'brightness(.9)',offset:.36,opacity:1},
+    {transform:'translate(0,40px) rotate(4deg) scale(.85)',filter:'brightness(.4) blur(1px)',opacity:0}],{duration:900,easing:'ease-in',fill:'forwards'}).onfinish=()=>g.remove();
+  const svg=fxLayer(),NS='http://www.w3.org/2000/svg';
+  for(let i=0;i<18;i++){
+    const x=r.left+Math.random()*r.width,y=r.top+r.height*(0.3+Math.random()*0.6);
+    const sz=3+Math.random()*7;const rk=document.createElementNS(NS,'rect');
+    rk.setAttribute('x',x);rk.setAttribute('y',y);rk.setAttribute('width',sz);rk.setAttribute('height',sz*0.8);rk.setAttribute('fill',i%3?'#4b4037':'#2a211b');svg.appendChild(rk);
+    const dx=(Math.random()-0.5)*90,dy=40+Math.random()*80;
+    rk.animate([{transform:'translate(0,0) rotate(0)',opacity:1},{transform:`translate(${dx}px,${dy}px) rotate(${(Math.random()-0.5)*300}deg)`,opacity:0}],{duration:700+Math.random()*400,delay:200+Math.random()*150,easing:'cubic-bezier(.3,0,.8,.6)',fill:'both'}).onfinish=()=>rk.remove();
+  }
+  const dust=document.createElementNS(NS,'ellipse');dust.setAttribute('cx',r.left+r.width/2);dust.setAttribute('cy',r.bottom-10);dust.setAttribute('rx',r.width*0.6);dust.setAttribute('ry',22);dust.setAttribute('fill','rgba(120,100,80,.35)');
+  dust.setAttribute('style','filter:blur(6px)');svg.appendChild(dust);
+  dust.animate([{opacity:0,transform:'scale(.6)'},{opacity:1,transform:'scale(1)',offset:.4},{opacity:0,transform:'scale(1.3)'}],{duration:1000,delay:250,fill:'both'}).onfinish=()=>dust.remove();
+}
+/* Show the damage a projectile carried, once it lands (or if its animation is skipped) */
+function settle(d){
+  if(d.settled)return;d.settled=true;
+  if(!d.pend)return;
+  const left=(PEND.get(d.t)||0)-d.n;if(left>0)PEND.set(d.t,left);else PEND.delete(d.t);
+  const el=document.querySelector(`[data-suid="${d.t}"]`);if(!el||!G)return;
+  const st=allSites().find(x=>x.uid===d.t);if(!st)return;
+  const shown=Math.max(0,st.damage-(PEND.get(d.t)||0));
+  el.querySelectorAll('.integ i').forEach((b,i)=>{const was=b.classList.contains('hit');b.classList.toggle('hit',i<shown);if(!was&&i<shown)b.animate([{transform:'scale(1.9)',filter:'brightness(2)'},{transform:'scale(1)',filter:'brightness(1)'}],{duration:380,easing:'ease-out'})});
 }
 function flyArrow(d,a,b,dur){
   const svg=fxLayer(),NS='http://www.w3.org/2000/svg';
@@ -1809,7 +1853,8 @@ function flyArrow(d,a,b,dur){
   const same=Math.abs(a.left-b.left)<2&&Math.abs(a.top-b.top)<2;
   const p0={x:a.left+a.width/2,y:a.top+Math.min(a.height/2,60)},p2={x:b.left+b.width/2,y:b.top+Math.min(b.height*0.32,70)};
   const dist=Math.hypot(p2.x-p0.x,p2.y-p0.y),lift=Math.min(260,dist*0.45+50);
-  const p1={x:(p0.x+p2.x)/2,y:Math.min(p0.y,p2.y)-lift};
+  const ddx=p2.x-p0.x,bend=Math.abs(ddx)<140?(ddx>=0?1:-1)*(140-Math.abs(ddx))*0.9:0;
+  const p1={x:(p0.x+p2.x)/2+bend,y:Math.min(p0.y,p2.y)-lift};
   const g=document.createElementNS(NS,'g');g.setAttribute('style',`filter:drop-shadow(0 0 4px ${glow})`);
   const path=document.createElementNS(NS,'path');
   path.setAttribute('d',`M${p0.x} ${p0.y}Q${p1.x} ${p1.y} ${p2.x} ${p2.y}`);
@@ -1839,6 +1884,8 @@ function flyArrow(d,a,b,dur){
 }
 function impact(d,p,col,glow){
   if(d.snd)sfx(d.snd);
+  settle(d);
+  if(GHOSTS.has(d.t)){if(d.snd==='destroy')crumble(d.t,col);else{const g=GHOSTS.get(d.t);g.animate([{transform:'translate(0,0)'},{transform:'translate(-5px,1px) rotate(-1deg)'},{transform:'translate(4px,-1px)'},{transform:'translate(0,0)'}],{duration:320})}}
   const svg=fxLayer(),NS='http://www.w3.org/2000/svg';
   const ring=document.createElementNS(NS,'circle');ring.setAttribute('cx',p.x);ring.setAttribute('cy',p.y);ring.setAttribute('r','6');
   ring.setAttribute('fill','none');ring.setAttribute('stroke',col);ring.setAttribute('stroke-width','4');ring.setAttribute('style',`filter:drop-shadow(0 0 6px ${glow})`);
@@ -1981,17 +2028,19 @@ function followerAnims(old){
   const pair=same=>{for(const up of ups)for(const dn of downs){if(!up.n)break;if(!dn.n||(same?dn.pi!==up.pi:dn.pi===up.pi))continue;const k=Math.min(up.n,dn.n);moves.push({from:'t'+dn.u,to:up.u,n:k});up.n-=k;dn.n-=k}};
   pair(true);pair(false);
   for(const up of ups) if(up.n) moves.push({from:'h'+(up.pi===viewer()?'meZone':'oppZone'),to:up.u,n:up.n,hand:true});
-  let delay=0;
+  /* every destination animates at the same time, so a split relocation shows each stream */
   for(const m of moves){
     const a=old[m.from];
-    const el=document.querySelector(`[data-suid="${m.to}"] .tokens`);
+    const el=document.querySelector(`[data-suid="${m.to}"] .tokens`)||document.querySelector(`[data-suid="${m.to}"]`);
     if(!a||!el||(FLY.hiddenSites&&FLY.hiddenSites.has(m.to)))continue;
     const b=el.getBoundingClientRect();
-    const n=Math.min(m.n,8);
-    for(let i=0;i<n;i++){flyDot(a,b,delay+i*55,m.hand);}
-    delay+=Math.min(300,n*55)+60;
+    const n=Math.min(m.n,10);
+    for(let i=0;i<n;i++) flyDot(a,b,i*70,m.hand);
+    pulseTokens(m.to,n*70+560);
   }
 }
+/* the receiving site's Zealot row glows as the dots arrive */
+function pulseTokens(uid,at){setTimeout(()=>{const t=document.querySelector(`[data-suid="${uid}"] .tokens`);if(t)t.animate([{filter:'drop-shadow(0 0 0 rgba(110,170,255,0))'},{filter:'drop-shadow(0 0 8px rgba(110,170,255,1))'},{filter:'drop-shadow(0 0 0 rgba(110,170,255,0))'}],{duration:500})},Math.max(0,at-200))}
 function flyDot(a,b,delay,fromHand){
   const d=document.createElement('span');d.className='dot fly-dot';d.setAttribute('aria-hidden','true');
   const jit=()=>(Math.random()-0.5)*14;
@@ -1999,7 +2048,7 @@ function flyDot(a,b,delay,fromHand){
   const x1=b.left+6+Math.random()*Math.max(4,Math.min(b.width,70)-12),y1=b.top+b.height/2+jit()*0.6;
   d.style.left=x0+'px';d.style.top=y0+'px';document.body.appendChild(d);
   const dx=x1-x0,dy=y1-y0,lift=Math.min(120,Math.hypot(dx,dy)*0.35+20);
-  const dur=fromHand?560:640;
+  const dur=fromHand?620:760;
   const an=d.animate([
     {transform:'translate(-50%,-50%) scale(.4)',opacity:0},
     {transform:'translate(-50%,-50%) scale(1.1)',opacity:1,offset:.12},
