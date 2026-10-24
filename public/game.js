@@ -1030,6 +1030,7 @@ function newGame(mode,setChoice){
     for(let k=0;k<5;k++) p.hand.push(stacks[1].pop());
   }
   UI.prompt=null;UI.relocate=null;UI.menu=false;UI.busy=false;
+  if(setChoice==='tutorial'){tutSetup();startTurn(0);return}
   const first=Math.random()<.5?0:1;
   log(`${players[first].name} ${isYou(players[first])?'are':'is'} the first player.`);
   startTurn(first);
@@ -1038,7 +1039,7 @@ function newGame(mode,setChoice){
 async function startTurn(pi){
   G.turn=pi; G.turnCount++; G.turnStart=Date.now(); G.turnEnd=null;
   const p=G.players[pi];
-  p.actions=G.turnCount===1?2:3;
+  p.actions=G.turnCount===1&&!G.tut?2:3;
   log(`— ${p.name}: turn begins (${p.actions} actions).`);
   if(p.lof){p.actions=Math.max(0,p.actions-p.lof);p.lof=0;p.lofTurn=G.turnCount;log(`Interdict: ${p.name} ${isYou(p)?'have':'has'} ${p.actions} action${p.actions===1?'':'s'} this turn.`)}
   for(const s of [...p.sites]) for(const a of [...s.attachments]){
@@ -1552,6 +1553,7 @@ async function aiStep(pi){
 }
 async function runAI(){
   const pi=G.turn;
+  if(G.tut){await tutOpponent(pi);return}
   await sleep(G.mode==='ai'?1500:0);
   let guard=0;
   while(!G.over&&G.turn===pi&&guard++<40){
@@ -1561,6 +1563,86 @@ async function runAI(){
     await sleep(G.mode==='ai'?2500:0);
   }
   if(!G.over&&G.turn===pi) await endTurn();
+}
+
+/* ================= TUTORIAL =================
+   A guided game: fixed hands, a scripted opponent for its first two turns, and a coach panel that
+   explains one idea at a time, highlights what to click and blocks everything else. */
+const mkCard=id=>({uid:uidc++,def:DEF[id]});
+function tutSetup(){
+  const [me,op]=G.players;
+  me.hand=['church','catapult','farm','fertility','castle'].map(mkCard);
+  op.hand=['siege','temple','farm','mission','fanaticism'].map(mkCard);
+  /* no reaction cards anywhere near the scripted turns */
+  for(const l of [1,2]) G.stacks[l]=G.stacks[l].filter(k=>k.def.type!=='reaction');
+  const spark=mkCard('siege');G.stacks[1].push(spark);
+  G.tut={step:0,spark:spark.uid,chapel:me.hand[0].uid,free:false};
+  G.log=[];log('Tutorial: you go first.');
+}
+async function tutOpponent(pi){
+  const p=G.players[pi],me=G.players[1-pi],wait=ms=>sleep(ms);
+  await wait(1300);
+  if(!G.tut.free&&G.turnCount===2){
+    const spark=p.hand.find(k=>k.def.id==='siege');if(spark){await playCard(pi,spark);await flush();checkGameOver();render();await wait(2600)}
+    const altar=p.hand.find(k=>k.def.id==='temple');if(altar&&!G.over){await playCard(pi,altar);await flush();render();await wait(1800)}
+    if(!G.over){await actGain(pi);await flush();render();await wait(1500)}
+  } else if(!G.tut.free&&G.turnCount===4){
+    for(let i=0;i<2&&!G.over;i++){await actGain(pi);await flush();render();await wait(1400)}
+    if(!G.over&&drawableLevels(pi).length){await actDraw(pi,1);render();await wait(1200)}
+  } else {
+    /* easy opponent: no lookahead, picks among a few decent options at random, often stops early */
+    let guard=0;
+    while(!G.over&&G.turn===pi&&guard++<6){
+      const opts=aiOptions(pi,true).filter(o=>o.score>0.6).sort((a,b)=>b.score-a.score).slice(0,4);
+      if(!opts.length||Math.random()<0.25)break;
+      await opts[Math.floor(Math.random()*opts.length)].exec();await flush();checkGameOver();render();await wait(1800);
+    }
+  }
+  if(!G.over&&G.turn===pi) await endTurn();
+}
+const tutMe=()=>G.players[0], tutChapel=()=>tutMe().sites.find(x=>x.card.uid===G.tut.chapel);
+/* the opponent's Altar is the Spark target; any opponent site if the Altar is gone */
+const tutAltarSel=()=>{const a=G.players[1].sites.find(x=>x.card.def.id==='temple');return a?`#oppZone [data-site="${a.uid}"]`:'#oppZone [data-site]'};
+const TUT_STEPS=[
+  {title:'Welcome to Warplands',text:'You and your opponent each lead a band of <b>Zealots</b>. Build sites, cast events and grow from a humble <b>Hamlet</b> into an <b>Empire</b>.<br><br><b>How to win:</b> wipe out every one of your opponent’s Zealots, or hold more Zealots than them when three of the four draw stacks run dry.',cont:true},
+  {title:'Your Warpland',text:'This is your starting site, <b>Warpland</b>. It holds your first 10 Zealots (the blue dots). Its <b>HP</b> boxes fill red as it takes damage; when they are all red, the site is destroyed along with everyone on it.',hl:'#meZone [data-suid]',cont:true},
+  {title:'Mana',text:'Each turn you get <b>Mana</b> (the gold dots) to spend on actions. You have 3. Spend 1 to add a Zealot: click <b>Gain Zealot</b>.',hl:'[data-act="gain"],.pips',allow:['[data-act="gain"]','[data-site]','#prompt button'],done:()=>totalF(tutMe())>=11},
+  {title:'Building a site',text:'Cards in your hand cost Mana to play. Sites stay on the table and give you abilities. Play <b>Chapel</b> (2 Mana), then click a glowing gap to choose where it goes in your row.',hl:()=>`[data-play="${G.tut.chapel}"],[data-slot]`,allow:()=>[`[data-play="${G.tut.chapel}"]`,'[data-slot]','#prompt button'],done:()=>!!tutChapel()},
+  {title:'Ending your turn',text:'You are out of Mana. Click <b>End turn</b> and watch what your opponent does.',hl:'[data-act="end"]',allow:['[data-act="end"]'],done:()=>G.turn===1},
+  {title:'Opponent’s turn',text:'Your opponent is taking its turn…',wait:true,done:()=>G.turn===0&&G.turnCount>=3&&!UI.busy},
+  {title:'You took damage',text:'Your opponent cast <b>Spark</b>, an <b>event</b>: a one-time effect that is discarded after use. Damage kills Zealots on the site it hits and fills its HP boxes. Your opponent also built an <b>Altar</b>.',hl:'#meZone [data-suid]',cont:true},
+  {title:'Drawing cards',text:'Spend 1 Mana to draw a card from a draw stack. Right now you can only draw from <b>Hamlet</b>, your current level. Click the Hamlet stack.',hl:'[data-draw="1"]',allow:['[data-draw="1"]','#prompt button'],done:()=>tutMe().hand.some(k=>k.uid===G.tut.spark)},
+  {title:'Staffing a site',text:'A site’s abilities need Zealots standing on it. Chapel’s ability needs <b>2</b> (the blue badge). Click <b>Relocate</b> (1 Mana) and move 2 Zealots from Warpland onto Chapel.',hl:'[data-act="relocate"]',allow:['[data-act="relocate"]','#overlay button'],done:()=>{const c=tutChapel();return c&&c.followers>=2}},
+  {title:'Using an ability',text:'Chapel is staffed. Its ability costs no Mana: click it to gain a Zealot on any of your sites. Each site can use one ability per turn.',hl:()=>`[data-ab="${tutChapel()?tutChapel().uid:0}:0"]`,allow:()=>[`[data-ab="${tutChapel()?tutChapel().uid:0}:0"]`,'[data-site]','#prompt button'],done:()=>{const c=tutChapel();return c&&c.usedTurn===G.turnCount}},
+  {title:'Casting an event',text:'You drew a <b>Spark</b>. Play it (1 Mana) and target the opponent’s <b>Altar</b> to do 2 damage.',hl:()=>`[data-play="${G.tut.spark}"],${tutAltarSel()}`,allow:()=>[`[data-play="${G.tut.spark}"]`,tutAltarSel(),'#prompt button'],done:()=>!tutMe().hand.some(k=>k.uid===G.tut.spark)},
+  {title:'End your turn',text:'Out of Mana again. Click <b>End turn</b>.',hl:'[data-act="end"]',allow:['[data-act="end"]'],done:()=>G.turn===1},
+  {title:'Opponent’s turn',text:'Your opponent is taking its turn…',wait:true,done:()=>G.turn===0&&G.turnCount>=5&&!UI.busy},
+  {title:'Upgrading',text:'Upgrading to <b>Township</b> costs 2 Mana and unlocks the Township draw stack, full of stronger cards. Click <b>Upgrade to Township</b>.',hl:'[data-act="upgrade"]',allow:['[data-act="upgrade"]'],done:()=>tutMe().level>=2},
+  {title:'Reactions and attachments',text:'Two more card types:<br>• <b>Reactions</b> are played on your opponent’s turn when their trigger happens, for example when one of your sites is about to take damage. The game asks you when one can be used.<br>• <b>Attachments</b> stick to a site, for good or ill, and keep working turn after turn.<br><br>Hover any site to read its full card.',cont:true},
+  {title:'Your turn now',text:'That’s the basics. Finish the game against this easy opponent. Good luck!',cont:true,last:true}
+];
+const tutStep=()=>G&&G.tut&&!G.tut.free?TUT_STEPS[G.tut.step]:null;
+const val=(x)=>typeof x==='function'?x():x;
+function tutTick(){
+  const coach=$('coach');if(!coach)return;
+  const st=tutStep();
+  if(!st||G.over||UI.menu){coach.hidden=true;return}
+  if(st.done&&st.done()){G.tut.step++;return tutTick()}
+  coach.hidden=false;
+  const dw=$('dockwrap');coach.style.bottom=((dw?dw.offsetHeight:200)+14)+'px';
+  coach.innerHTML=term(`<div class="coach-n">Tutorial · step ${G.tut.step+1} of ${TUT_STEPS.length}</div><h3>${st.title}</h3><p>${st.text}</p>
+    <div class="coach-btns">${st.cont?`<button class="btn primary" data-tut="next">${st.last?'Start playing':'Continue'}</button>`:''}<button class="ghost" data-tut="skip">Skip tutorial</button></div>`);
+  document.querySelectorAll('.tut-hl').forEach(e=>e.classList.remove('tut-hl'));
+  if(st.hl) document.querySelectorAll(val(st.hl)).forEach(e=>e.classList.add('tut-hl'));
+}
+function tutAdvance(){const st=tutStep();if(!st)return;if(st.last){G.tut.free=true}else G.tut.step++;render()}
+/* While a step is waiting for a specific action, only that action's controls respond */
+function tutAllows(t){
+  const st=tutStep();if(!st)return true;
+  if(t.closest('#coach,#soundBtn,#menuBtn,.chat'))return true;
+  if(UI.menu&&t.closest('#overlay'))return true;
+  const allow=st.allow?val(st.allow):[];
+  return allow.some(sel=>t.closest(sel));
 }
 
 /* ================= TERMINOLOGY =================
@@ -1770,7 +1852,7 @@ function menuHTML(){
     <h1>Warplands</h1>
     <p>Lead your followers from a humble hamlet to a sprawling empire. Wipe out your opponent's followers, or hold more of them when three draw stacks run dry.</p>
     <p class="fine">Each game deals a fresh random draw stack for every level: 20 Level I cards, 15 Level II, 10 Level III and 5 Level IV.</p>
-    <div class="choices"><button class="btn primary" data-new="ai">Play the computer</button>${G&&!G.over?'<button class="btn" data-resume="1">Resume game</button>':''}</div>
+    <div class="choices"><button class="btn primary" data-new="ai">Play the computer</button><button class="btn" data-new="tutorial">Tutorial</button>${G&&!G.over?'<button class="btn" data-resume="1">Resume game</button>':''}</div>
     ${onlineMenuHTML()}
     <details><summary>How to play</summary><ul>
       <li>Each turn you get 3 actions (the first player gets 2 on turn one).</li>
@@ -1837,6 +1919,7 @@ function render(){
   if(oldRects){if(REV.q.length)playReveals(oldRects);followerAnims(oldRects);placeAnims(oldRects);if(ARROWS.q.length)playArrows(oldRects)}
   if(UPS.q.length) playUps();
   yourTurnCheck();
+  tutTick();
   equalizeCards();
 }
 
@@ -2548,6 +2631,9 @@ if(HAS_DOM){
   document.addEventListener('pointerdown',()=>{if(SFX.on)audioCtx()});
   document.addEventListener('keydown',()=>{if(SFX.on)audioCtx()});
   document.addEventListener('click',e=>{
+    if(G&&G.tut&&!G.tut.free&&!tutAllows(e.target)){e.stopPropagation();e.preventDefault();const c=$('coach');if(c)c.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:260});}
+  },true);
+  document.addEventListener('click',e=>{
     if(e.target.closest('#soundBtn')){SFX.on=!SFX.on;try{localStorage.setItem('tb-sound',SFX.on?'on':'off')}catch(err){}if(SFX.on){audioCtx();setTimeout(()=>sfx('place',1),30)}syncSound();return}
     const st=e.target.closest('[data-site]');
     const t=(st&&UI.prompt&&UI.prompt.kind==='site')?st:e.target.closest('button,[data-site]'); if(!t) return;
@@ -2558,7 +2644,9 @@ if(HAS_DOM){
     if(ds.online==='rematch'){onlineSend({t:'rematch'});return}
     if(ds.leave){onlineLeave();return}
     if(ds.copycode){const c=ONLINE.code||'';(navigator.clipboard?navigator.clipboard.writeText(c):Promise.reject()).then(()=>{t.textContent='Copied'}).catch(()=>{t.textContent=c});return}
-    if(ds.new){if(ONLINE.active)onlineLeave();UI.closedOver=false;newGame(ds.new);return}
+    if(ds.new){if(ONLINE.active)onlineLeave();UI.closedOver=false;if(ds.new==='tutorial')newGame('ai','tutorial');else newGame(ds.new);return}
+    if(ds.tut==='next'){tutAdvance();return}
+    if(ds.tut==='skip'){if(G&&G.tut){G.tut.free=true;render()}return}
     if(ds.resume){UI.menu=false;render();return}
     if(ds.menu){UI.menu=true;UI.closedOver=false;render();return}
     if(ds.close){UI.closedOver=true;render();return}

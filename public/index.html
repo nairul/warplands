@@ -222,6 +222,18 @@ button.ab:disabled{opacity:.75}
 .reveal-cap{position:absolute;left:50%;top:100%;transform:translate(-50%,14px);white-space:nowrap;font-family:var(--display);font-size:20px;color:#ffe2a8;
   text-shadow:0 2px 0 #1a0d05,0 0 14px rgba(255,150,40,.7);letter-spacing:.04em}
 .reveal-cap b{color:#fff}
+/* Tutorial coach */
+.coach{position:fixed;right:max(16px, env(safe-area-inset-right, 0px));bottom:236px;z-index:42;width:min(360px, calc(100vw - 32px));padding:14px 16px;border:3px solid transparent;border-radius:6px;
+  background:var(--grain) padding-box, linear-gradient(rgba(36,26,18,.98),rgba(20,14,10,.98)) padding-box, linear-gradient(150deg,#f0c272,#8c5718 45%,#f0c272 70%,#6b4212) border-box;
+  box-shadow:0 14px 40px rgba(0,0,0,.75), 0 0 24px rgba(255,170,60,.25)}
+.coach h3{font-family:var(--display);color:var(--brass);margin:2px 0 6px;font-size:18px;letter-spacing:.04em}
+.coach p{margin:0;color:var(--fg);font-size:14.5px;line-height:1.45}
+.coach p b{color:#ffd27a}
+.coach-n{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+.coach-btns{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:12px}
+.coach-btns .ghost{margin-left:auto;font-size:12px;padding:4px 10px}
+.tut-hl{outline:3px solid #ffd27a!important;outline-offset:3px;box-shadow:0 0 22px 4px rgba(255,190,80,.7)!important;animation:tutpulse 1.1s ease-in-out infinite;position:relative;z-index:3}
+@keyframes tutpulse{50%{outline-color:rgba(255,210,122,.35);box-shadow:0 0 8px 1px rgba(255,190,80,.35)}}
 /* Damage projectiles */
 #fxsvg{position:fixed;left:0;top:0;z-index:39;pointer-events:none;overflow:visible}
 .fx-num{font-family:var(--display);font-weight:800;font-size:26px;paint-order:stroke;stroke:#1a0804;stroke-width:4px}
@@ -341,6 +353,7 @@ body.chat-open #app{padding-bottom:300px}
 </div>
 <div class="dockwrap" id="dockwrap"><div class="prompt" id="prompt" hidden></div><div class="dock" id="handDock" hidden></div></div>
 <div class="zoom" id="zoom" hidden aria-hidden="true"></div>
+<aside class="coach" id="coach" hidden aria-live="polite"></aside>
 <aside class="chat" id="chat" hidden aria-label="Chat"></aside>
 <div class="overlay" id="overlay" hidden></div>
 <script type="module">
