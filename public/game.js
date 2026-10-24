@@ -1596,8 +1596,8 @@ function handCardHTML(card,pi){
   const pick=UI.prompt&&UI.prompt.kind==='hand'&&UI.prompt.pi===pi&&UI.prompt.set.has(card.uid);
   const ok=!pick&&humanTurn()&&!UI.busy&&!UI.prompt&&canPlay(pi,card);
   let body;
-  if(d.type==='site') body=`${d.text?`<div class="tx">${esc(d.text)}</div>`:''}<div class="abs">${abListHTML(d)}</div><div class="tx" style="font-size:12px;color:var(--ink-soft)">Integrity ${d.integrity||3}</div>`;
-  else body=`<div class="tx">${esc(d.text)}</div>`;
+  if(d.type==='site') body=`<div class="body">${d.text?`<div class="tx">${esc(d.text)}</div>`:''}${(d.abilities||[]).length?`<div class="abs">${abListHTML(d)}</div>`:''}</div><div class="tx hpline">Integrity ${d.integrity||3}</div>`;
+  else body=`<div class="body"><div class="tx">${esc(d.text)}</div></div>`;
   const title=pick?'Choose '+d.name:ok?'Play '+d.name:d.type==='reaction'?'Reactions are offered to you automatically when their condition happens':'Not enough actions';
   return `<button class="card ${eraCls(d)} ${ok?'playable':''} ${pick?'target':''}" ${pick?`data-pick="${card.uid}"`:`data-play="${card.uid}"`} ${ok||pick?'':'aria-disabled="true"'} title="${esc(title)}">${bandHTML(d)}${artHTML(d)}${kindHTML(d)}${body}</button>`;
 }
@@ -1617,11 +1617,13 @@ function siteHTML(s,vi){
   const used=s.usedTurn===G.turnCount&&G.turn===s.owner&&(d.abilities||[]).length;
   return `<div class="card site ${eraCls(d)} ${target?'target':''}" data-suid="${s.uid}" ${target?`data-site="${s.uid}" tabindex="0" role="button" aria-label="Choose ${esc(d.name)}"`:''}>
     ${bandHTML(d)}${artHTML(d)}${kindHTML(d)}
+    <div class="body">
     ${d.text?`<div class="tx">${esc(d.text)}</div>`:''}
     ${abs?`<div class="abs">${abs}</div>`:''}
     ${used?'<div class="used">Ability used this turn</div>':''}
     ${s.tucked.length?`<div class="tuck">${s.tucked.length} card${s.tucked.length>1?'s':''} tucked underneath</div>`:''}
     ${atts?`<div class="atts">${atts}</div>`:''}
+    </div>
     <div class="foot"><div class="tokens" title="${s.followers} followers">${toks}<span class="n">${s.followers}</span></div>
     <div class="integ" title="Damage ${s.damage} of ${integ(s)} integrity${isFort(s)?' · fortified':''}">${isFort(s)?'<span style="font-size:11px;font-weight:700;margin-right:2px" title="Fortified">F</span>':''}${integB}</div></div>
   </div>`;
