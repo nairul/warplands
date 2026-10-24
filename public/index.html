@@ -189,6 +189,17 @@ button.ab:disabled{opacity:.75}
 .fieldrow input{font:inherit;background:var(--table);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:7px 10px;min-width:0;flex:1 1 140px;max-width:220px}
 .fieldrow input:focus-visible{outline:2px solid var(--brass);outline-offset:1px}
 .code{font-family:var(--display);font-weight:800;font-size:44px;letter-spacing:.18em;color:var(--brass);text-align:center;padding:8px 0;user-select:all}
+/* Site placement: glowing gaps in your row */
+.slot{flex:0 0 auto;align-self:stretch;min-height:200px;width:46px;border:2px dashed var(--brass);border-radius:7px;background:rgba(210,154,69,.08);
+  color:var(--brass);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:8px 0;cursor:pointer;
+  transition:width .15s, background .15s;animation:slotglow 1.4s ease-in-out infinite}
+.slot .slot-plus{font-family:var(--display);font-weight:800;font-size:26px;line-height:1}
+.slot .slot-nm{writing-mode:vertical-rl;transform:rotate(180deg);font-family:var(--display);font-weight:600;font-size:13px;letter-spacing:.06em;white-space:nowrap;opacity:.85}
+.slot:hover,.slot:focus-visible{width:72px;background:color-mix(in srgb,var(--era) 30%,transparent);border-style:solid;color:#fff}
+@keyframes slotglow{50%{box-shadow:0 0 14px rgba(255,170,60,.45)}}
+/* Damage projectiles */
+#fxsvg{position:fixed;left:0;top:0;z-index:39;pointer-events:none;overflow:visible}
+.fx-num{font-family:var(--display);font-weight:800;font-size:26px;paint-order:stroke;stroke:#1a0804;stroke-width:4px}
 /* Draw animation */
 .flyer{position:fixed;z-index:40;pointer-events:none;perspective:900px;transform-origin:50% 50%;will-change:transform}
 .fly-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d}
