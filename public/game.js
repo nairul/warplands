@@ -533,22 +533,19 @@ const CARDS=[
    },
    ai:c=>Math.max(Math.min(3,c.me.sites.filter(canGain).length),c.opp.sites.filter(s=>s.followers>0).length)},
   {id:'fodder',name:'Peasant Levy',level:1,type:'reaction',cost:0,count:1,
-   text:'When one of your sites is damaged, sacrifice any number of followers to prevent 1 damage to that site for each follower sacrificed.',
-   reactCan:(pi)=>totalF(G.players[pi])>0,
-   reactAI:(pi,site,n,opt)=>{if(site.damage+n<integ(site))return -1;const k=site.damage+n-integ(site)+1;if(k>n||k>=totalF(G.players[pi]))return -1;return site.followers+(site.card.def.worth||1)-k-1},
+   text:'When one of your sites is damaged, sacrifice any number of followers on that site to prevent 1 damage to it for each follower sacrificed.',
+   reactCan:(pi,site)=>site.followers>0,
+   reactAI:(pi,site,n,opt)=>{if(site.damage+n<integ(site))return -1;const k=site.damage+n-integ(site)+1;if(k>n||k>=site.followers)return -1;return site.followers-k+(site.card.def.worth||1)-1},
    react:async r=>{
      const p=G.players[r.pi];
-     const max=Math.min(r.n,totalF(p));
+     const max=Math.min(r.n,r.site.followers);
+     if(!max)return;
      let k;
      if(p.ai) k=Math.min(max,r.site.damage+r.n-integ(r.site)+1);
-     else k=await pickOption(r.pi,{prompt:`Peasant Levy: sacrifice how many followers? Each one prevents 1 of the ${r.n} damage.`,options:Array.from({length:max},(_,i)=>({label:String(i+1),value:i+1})),cancellable:true});
+     else k=await pickOption(r.pi,{prompt:`Peasant Levy: sacrifice how many of the ${r.site.followers} followers on ${r.site.card.def.name}? Each one prevents 1 of the ${r.n} damage.`,options:Array.from({length:max},(_,i)=>({label:String(i+1),value:i+1})),cancellable:true});
      if(!k)return;r.pay();
-     for(let i=0;i<k;i++){
-       const s=await pickSite(r.pi,{prompt:`Peasant Levy: sacrifice a follower from which site? (${i+1} of ${k})`,filter:s=>s.owner===r.pi&&s.followers>0,
-         aiScore:s=>(s===r.site?-5:0)+s.followers-minNeed(s),auto:true,cancellable:false});
-       if(s)killOn(s,1);
-     }
-     r.n-=k;log(`${p.name} sacrifice${s_(p)} ${k} follower${k>1?'s':''} to prevent ${k} damage.`)}},
+     killOn(r.site,k);
+     r.n-=k;log(`${p.name} sacrifice${s_(p)} ${k} follower${k>1?'s':''} on ${r.site.card.def.name} to prevent ${k} damage.`)}},
   {id:'pillage',name:'Reave',level:1,type:'event',cost:1,count:1,
    text:'Do 3 damage to an unoccupied site. OR Look at all cards tucked under all sites and put 1 into your hand.',
    play:async c=>{
