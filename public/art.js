@@ -217,6 +217,397 @@ export const ART = {
     ${[[26, 0], [50, 3], [74, -1], [98, 2], [122, 0], [140, 4]].map(([x, dy], i) => `<path class="k" d="M${x - 6} 72l2-18q4-3 8 0l2 18z"/><circle class="k" cx="${x}" cy="${47 + dy}" r="4"/>
       <path class="k" d="M${x + (i % 2 ? -6 : 6)} 70V${30 + dy}" stroke="#0b0806" stroke-width="1.6"/>
       <path class="ln" d="M${x + (i % 2 ? -9 : 3)} ${30 + dy}v-7M${x + (i % 2 ? -6 : 6)} ${30 + dy}v-8M${x + (i % 2 ? -3 : 9)} ${30 + dy}v-7M${x + (i % 2 ? -9 : 3)} ${30 + dy}h6"/>`).join('')}
+    ${GROUND}`,
+  /* ---- Township sites ---- */
+  milbase: `${HILLS}
+    <path class="k" d="M30 70V40h100v30z"/><path class="k" d="M24 42l56-20 56 20z"/>
+    <rect class="e" x="72" y="50" width="16" height="20"/>
+    ${[40, 52, 104, 116].map(x => `<rect class="y" x="${x}" y="48" width="5" height="7"/>`).join('')}
+    <path class="k" d="M80 22V2" stroke="#0b0806" stroke-width="1.6"/><path class="b" d="M81 2h18l-5 5 5 5H81z"/>
+    ${[10, 16, 144, 150].map(x => `<path class="k" d="M${x} 70V40" stroke="#0b0806" stroke-width="1.2"/><path class="w" d="M${x - 1.6} 41l1.6-6 1.6 6z"/>`).join('')}
+    ${GROUND}`,
+
+  library: `${MOON(132, 18, 7)}${HILLS}
+    <path class="k" d="M36 70V30h88v40z"/><path class="k" d="M30 32l50-22 50 22z"/>
+    ${[46, 62, 90, 106].map(x => `<path class="y" d="M${x} 62V46a4 4 0 0 1 8 0v16z"/>`).join('')}
+    <circle class="y" cx="80" cy="24" r="5"/><path class="k" d="M80 19v10M75 24h10" stroke="#0b0806" stroke-width="1.2"/>
+    <path class="e" d="M74 70V52a6 6 0 0 1 12 0v18z"/>
+    <path class="w" d="M8 66l14-4 14 4v4H8z" opacity=".7"/><path class="ln" d="M22 62v8"/>
+    ${GROUND}`,
+
+  hospital: `${MOON(30, 18, 7)}${HILLS}
+    <path class="k" d="M44 70V36h72v34z"/><path class="k" d="M38 38l42-18 42 18z"/>
+    ${[52, 66, 88, 102].map(x => `<rect class="y" x="${x}" y="44" width="6" height="8"/>`).join('')}
+    <path class="e" d="M72 70V56a8 8 0 0 1 16 0v14z"/>
+    <path class="p" d="M128 70q-4-14 4-22q2 10 6 12q-2-10 6-16q2 14-4 26z" opacity=".8"/>
+    <path class="w" d="M76 28h8v4h4v8h-4v4h-8v-4h-4v-8h4z" opacity=".75" transform="translate(0 -6) scale(1)"/>
+    ${GROUND}`,
+
+  sniper: `${MOON(124, 20, 9)}${HILLS}
+    <path class="k" d="M30 70q4-30-2-60l6 2q4 30 2 58z"/><path class="k" d="M14 30q16-14 34 0q-10-2-17 0q-8-2-17 0z"/>
+    <path class="k" d="M18 24q12-14 26 0z"/>
+    <path class="k" d="M24 22h16v4H24z"/><circle class="k" cx="34" cy="16" r="3"/>
+    <path class="k" d="M36 18q10 4 6 12" stroke="#0b0806" stroke-width="1.4" fill="none"/>
+    <path class="ln-y" d="M44 16L118 40" stroke-dasharray="3 5" opacity=".7"/>
+    <path class="k" d="M104 70l3-14h8l3 14zM111 56a3 3 0 1 0 .1 0z"/>
+    ${GROUND}`,
+
+  railroad: `${HILLS}
+    <path class="s" d="M70 70l4-52h12l4 52z"/><path class="ln" d="M74 30h12M73 44h14M72 58h16"/>
+    <path class="p" d="M78 24h4v6h-4zM77 38h6v4h-6zM79 50h2v6h-2z" opacity=".9"/>
+    <path class="s" d="M30 70l2-14h8l2 14zM118 70l2-18h8l2 18z" opacity=".8"/>
+    <path class="sm" d="M20 74q60-14 120 0" stroke-dasharray="2 6" opacity=".6"/>
+    ${SPARKS([[80, 14, 1.4], [74, 10, 0.9], [86, 8, 1]]).replace(/class="e"/g, 'class="p"')}
+    ${GROUND}`,
+
+  mortar: `${HILLS}
+    <path class="k" d="M54 70l8-56h36l8 56z"/><path class="m" d="M60 14h40v-6H60z"/>
+    <path class="ln" d="M64 24h32M62 38h36M60 52h40"/>
+    <path class="k" d="M98 20l36-6v6l-36 6z"/>
+    ${[40, 120].map(x => `<circle class="k" cx="${x}" cy="70" r="6"/>`).join('')}
+    <path class="k" d="M40 70h80" stroke="#0b0806" stroke-width="3"/>
+    <rect class="e" x="74" y="30" width="12" height="6"/>
+    ${GROUND}`,
+
+  port: `${MOON(128, 18, 8)}
+    <path class="m" d="M0 58h160v26H0z"/><path class="ln" d="M0 64q20-3 40 0t40 0t40 0t40 0M0 72q20-3 40 0t40 0t40 0t40 0" opacity=".6"/>
+    <path class="k" d="M12 58h48v-6H12z"/><path class="k" d="M16 52V40M30 52V38M44 52V40" stroke="#0b0806" stroke-width="2"/>
+    <path class="k" d="M84 62h52l-8 10H92z"/><path class="k" d="M108 62V20" stroke="#0b0806" stroke-width="2"/>
+    <path class="w" d="M110 22q16 10 0 34z" opacity=".85"/><path class="w" d="M106 24q-14 10 0 32z" opacity=".6"/>
+    <circle class="y" cx="24" cy="36" r="2.5"/>`,
+
+  university: `${HILLS}
+    <path class="k" d="M40 70V34h80v36z"/><path class="k" d="M32 36l48-24 48 24z"/>
+    <path class="k" d="M74 14V2h12v12z"/><circle class="y" cx="80" cy="7" r="2.5"/>
+    ${[50, 62, 74, 86, 98, 110].map(x => `<rect class="y" x="${x - 2}" y="42" width="4" height="10" opacity="${x % 24 ? 1 : 0.6}"/>`).join('')}
+    <path class="e" d="M74 70V58a6 6 0 0 1 12 0v12z"/>
+    <path class="w" d="M126 58l10-4 10 4-10 4z"/><path class="ln" d="M136 62v6"/>
+    ${GROUND}`,
+
+  depot: `${HILLS}
+    <path class="k" d="M24 70V44h56v26z"/><path class="k" d="M20 46l32-14 32 14z"/>
+    <rect class="s" x="92" y="54" width="18" height="16"/><rect class="s" x="112" y="58" width="14" height="12"/><rect class="s" x="98" y="40" width="16" height="14"/>
+    <path class="ln" d="M92 54l18 16M110 54L92 70M112 58l14 12"/>
+    <path class="k" d="M134 70l4-16h10l4 16z"/><ellipse class="k" cx="143" cy="54" rx="5" ry="2"/>
+    <rect class="y" x="44" y="54" width="10" height="16"/>
+    ${GROUND}`,
+
+  spy: `${MOON(118, 18, 9)}
+    <path class="k" d="M0 70V36h40v34zM44 70V24h36v46zM84 70V40h32v30zM120 70V30h40v40z"/>
+    <path class="k" d="M44 24l18-10 18 10zM120 30l20-10 20 10z"/>
+    <rect class="y" x="56" y="34" width="6" height="8"/><rect class="y" x="132" y="40" width="5" height="7"/>
+    <path class="k" d="M92 40q4-10 10-6l2 6z"/><circle class="k" cx="98" cy="30" r="4"/>
+    <path class="m" d="M90 40q8-8 16 0v8H90z"/>
+    <path class="w" d="M104 38l8-4-1 3z"/>
+    <path class="k" d="M0 70h160v14H0z"/>`,
+
+  /* ---- Township events ---- */
+  conversion: `<circle class="y" cx="132" cy="26" r="12" opacity=".8"/>${HILLS}
+    <path class="sm" d="M10 72q40-16 80-12t70-10" stroke-dasharray="1 5" opacity=".7"/>
+    ${[[30, 0], [50, 3], [70, 1], [90, -1], [110, 2]].map(([x, d]) => `<path class="k" d="M${x - 5} ${72 - d}l2-16q3-3 6 0l2 16z"/><circle class="k" cx="${x}" cy="${51 - d}" r="3.5"/><path class="k" d="M${x + 5} ${70 - d}l3-26" stroke="#0b0806" stroke-width="1.4"/>`).join('')}
+    ${GROUND}`,
+
+  shelling: `<path class="m" d="M0 14q40-10 80-4t80 0v8H0z"/>
+    ${[[30, 10, 60, 52], [80, 6, 92, 50], [130, 12, 116, 56]].map(([x0, y0, x1, y1]) => `<path class="ln-y" d="M${x0} ${y0}Q${(x0 + x1) / 2} ${y0 - 6} ${x1} ${y1}" stroke-dasharray="2 4" opacity=".7"/><circle class="e" cx="${x1}" cy="${y1}" r="4"/>`).join('')}
+    ${HILLS}
+    <path class="k" d="M40 70V50h30v20zM94 70V46h26v24z"/><path class="e" d="M50 50q4-12 8-4q4-8 6 4z"/><path class="e" d="M100 46q4-10 7-2q4-6 6 2z"/>
+    ${GROUND}`,
+
+  blockade: `${MOON(130, 18, 7)}
+    <path class="m" d="M0 56h160v28H0z"/>
+    ${[20, 46, 72, 98, 124].map(x => `<path class="k" d="M${x} 62h22l-4 6h-14z"/><path class="k" d="M${x + 11} 62V40" stroke="#0b0806" stroke-width="1.6"/><path class="b" d="M${x + 12} 40h10l-3 3 3 3h-10z"/>`).join('')}
+    <path class="k" d="M0 64q80 4 160 0" stroke="#0b0806" stroke-width="2" fill="none"/>`,
+
+  lossfaith: `${HILLS}
+    <path class="k" d="M58 70V36l22-14 22 14v34z"/><path class="k" d="M76 24V10h8v14z"/>
+    <path class="w" d="M66 70V54a14 14 0 0 1 28 0v16z" opacity=".25"/>
+    <path class="k" d="M66 50l28 20M94 50L66 70" stroke="#0b0806" stroke-width="3"/>
+    <path class="b" d="M60 46l40 0" stroke="#9a1e14" stroke-width="2.5"/>
+    <path class="w" d="M112 36q6-2 8 4q-6 0-8-4z" opacity=".5"/>
+    ${GROUND}`,
+
+  research: `<path class="y" d="M80 46l-40-30M80 46l40-30M80 46V8" stroke="#ffc66b" stroke-width="1" opacity=".5"/>
+    <path class="k" d="M40 70l6-14h68l6 14z"/>
+    <path class="w" d="M50 58q15-6 30 0q15-6 30 0v-14q-15-6-30 0q-15-6-30 0z"/>
+    <path class="ln" d="M80 44v14M56 48q10-3 20 0M56 52q10-3 20 0M84 48q10-3 20 0M84 52q10-3 20 0"/>
+    <circle class="y" cx="80" cy="32" r="6"/>
+    ${SPARKS([[64, 24, 1.3], [96, 20, 1.1], [80, 14, 1], [70, 36, 0.8], [92, 34, 0.9]]).replace(/class="e"/g, 'class="y"')}
+    ${GROUND}`,
+
+  demolition: `${HILLS}${SMOKE(60, 34)}${SMOKE(100, 30)}
+    <path class="k" d="M40 70V40h10v-8h12v10l8-6v34zM90 70V46l10-4v-8h14v36z"/>
+    <path class="k" d="M70 70l4-24 10 4-2 20z" transform="rotate(12 76 58)"/>
+    <path class="s" d="M58 70l6-6 8 6zM82 70l4-8 10 8zM108 70l3-4 5 4z"/>
+    ${SPARKS([[74, 40, 1.4], [86, 44, 1], [66, 46, 1.2], [94, 38, 0.9]])}
+    ${GROUND}`,
+
+  revolt: `${HILLS}
+    ${[[30, 0], [48, 4], [66, 1], [84, 3], [102, 0], [120, 2]].map(([x, d], i) => `<path class="k" d="M${x - 6} ${72}l2-18q4-3 8 0l2 18z"/><circle class="k" cx="${x}" cy="${49 + d}" r="4"/>
+      <path class="k" d="M${x + 3} ${52 + d}l${i % 2 ? 6 : -4} -14" stroke="#0b0806" stroke-width="2.4"/>${i % 2 ? `<path class="e" d="M${x + 9} ${38 + d}q-4-6 1-11q1 5 4 4q1 5-5 7z"/>` : `<circle class="k" cx="${x - 1}" cy="${37 + d}" r="2.6"/>`}`).join('')}
+    ${GROUND}`,
+
+  /* ---- Township attachments ---- */
+  fortify: `${HILLS}
+    <path class="s" d="M50 70V30l30-12 30 12v40z"/>
+    <path class="ln" d="M50 40h60M50 50h60M50 60h60M64 30v10M96 30v10M80 40v10M64 50v10M96 50v10M80 60v10"/>
+    <path class="k" d="M66 24l14-6 14 6v38q-14 12-14 12t-14-12z"/><path class="y" d="M72 30l8-4 8 4v22q-8 8-8 8t-8-8z" opacity=".9"/>
+    ${GROUND}`,
+
+  sabotage: `<circle class="p" cx="80" cy="36" r="22" opacity=".18"/>${HILLS}
+    <circle class="ln" cx="80" cy="36" r="18" stroke="#9bd13a" opacity=".8"/>
+    <path class="p" d="M80 20l14 26H66z" fill="none" stroke="#a6d63f" stroke-width="2"/>
+    <circle class="p" cx="80" cy="36" r="3"/>
+    <path class="k" d="M62 70q4-10 18-10q14 0 18 10z"/>
+    <path class="k" d="M54 70l12-16M106 70L94 54" stroke="#0b0806" stroke-width="2"/>
+    ${GROUND}`,
+
+  wisdom: `${MOON(30, 18, 6)}${HILLS}
+    <path class="k" d="M48 70l4-30h56l4 30z"/>
+    <path class="w" d="M52 40q14-8 28 0q14-8 28 0v-6q-14-8-28 0q-14-8-28 0z" opacity=".9"/>
+    <path class="m" d="M54 46h52v4H54zM54 54h52v4H54zM54 62h52v4H54z"/>
+    <circle class="y" cx="80" cy="22" r="7"/><path class="ln-y" d="M80 10v-6M68 22h-6M92 22h6M71 13l-4-4M89 13l4-4"/>
+    ${GROUND}`,
+
+  conscription: `${HILLS}
+    ${[20, 34, 48, 62, 76, 90, 104, 118, 132].map((x, i) => `<path class="k" d="M${x - 5} 72l2-16q3-3 6 0l2 16z"/><circle class="k" cx="${x}" cy="${51 - (i % 2)}" r="3.5"/><path class="k" d="M${x + 4} 70V${30 + (i % 3) * 2}" stroke="#0b0806" stroke-width="1.2"/><path class="w" d="M${x + 2.5} ${31 + (i % 3) * 2}l1.5-5 1.5 5z"/>`).join('')}
+    <path class="k" d="M146 72V20" stroke="#0b0806" stroke-width="1.6"/><path class="b" d="M147 20h12v12h-12z"/>
+    ${GROUND}`,
+
+  retrofit: `${HILLS}
+    <path class="s" d="M46 70V28h68v42z"/>
+    <path class="k" d="M40 70V24h8v46zM112 70V24h8v46z"/>
+    <path class="k" d="M40 34h80M40 50h80M40 64h80" stroke="#0b0806" stroke-width="3"/>
+    ${[44, 116].map(x => [30, 42, 56].map(y => `<circle class="w" cx="${x}" cy="${y}" r="1.6"/>`).join('')).join('')}
+    <path class="k" d="M128 30l14 14-4 4-14-14z"/><path class="k" d="M130 44l-8 8" stroke="#0b0806" stroke-width="3"/>
+    ${SPARKS([[122, 40, 1.2], [118, 46, 0.9], [126, 36, 0.8]])}
+    ${GROUND}`,
+
+  threat: `<circle class="b" cx="80" cy="34" r="20" opacity=".35"/>${HILLS}
+    <path class="w" d="M66 28a14 13 0 1 1 28 0v8h-4v4H70v-4h-4z"/>
+    <circle class="k" cx="74" cy="28" r="3.5"/><circle class="k" cx="86" cy="28" r="3.5"/><path class="k" d="M78 34l2-3 2 3z"/>
+    <path class="b" d="M54 52l52-40M54 12l52 40" stroke="#9a1e14" stroke-width="4" stroke-linecap="round" opacity=".9"/>
+    ${GROUND}`,
+
+  /* ---- Township reactions ---- */
+  martyr: `<circle class="y" cx="80" cy="22" r="14" opacity=".9"/>${[0, 40, 80, 120, 160, 200, 240, 280, 320].map(a => { const r = a * Math.PI / 180; return `<path class="ln-y" d="M${80 + Math.cos(r) * 18} ${22 + Math.sin(r) * 18}L${80 + Math.cos(r) * 26} ${22 + Math.sin(r) * 26}"/>`; }).join('')}
+    ${HILLS}
+    <path class="k" d="M72 72l2-22q6-4 12 0l2 22z"/><circle class="k" cx="80" cy="44" r="5"/>
+    <path class="k" d="M74 52L62 40M86 52l12-12" stroke="#0b0806" stroke-width="3"/>
+    <path class="w" d="M76 38q4-4 8 0" fill="none" stroke="#e6dccb" stroke-width="1.2"/>
+    ${GROUND}`,
+
+  outrage: `${HILLS}${SMOKE(52, 36)}
+    <path class="k" d="M30 70V48l14-10 14 10v22z"/><path class="e" d="M32 48q4-12 8-4q3-8 7 0q3-6 8 4z"/>
+    <path class="k" d="M98 72l3-20q6-4 12 0l3 20z"/><circle class="k" cx="107" cy="46" r="5"/>
+    <path class="k" d="M112 52l14-16" stroke="#0b0806" stroke-width="2.4"/><path class="w" d="M124 30l6 0-2 8z"/>
+    <path class="b" d="M100 38l-6-6M114 38l6-6M107 36v-8" stroke="#9a1e14" stroke-width="2" opacity=".9"/>
+    ${GROUND}`,
+
+  /* ---- City sites ---- */
+  silo: `${HILLS}
+    <path class="k" d="M58 70V30h44v40z"/><path class="k" d="M54 30v-6h8v6h8v-6h8v6h8v-6h8v6h8v-6h8v6"/>
+    <path class="k" d="M66 22l26-10 4 4-26 10z"/><path class="k" d="M66 22l-4 6M92 12l2-6" stroke="#0b0806" stroke-width="2"/>
+    <path class="ln" d="M66 18q14-10 30-4" opacity=".8"/>
+    <path class="w" d="M96 13l22-8-20 12z"/>
+    <rect class="y" x="76" y="40" width="8" height="10"/><path class="e" d="M74 70V58a6 6 0 0 1 12 0v12z"/>
+    ${GROUND}`,
+
+  robotics: `${HILLS}
+    <ellipse class="s" cx="80" cy="64" rx="34" ry="8"/><path class="s" d="M46 64V56h68v8z"/>
+    <ellipse class="k" cx="80" cy="56" rx="30" ry="6"/>
+    <path class="y" d="M66 54q14-40 28 0z" opacity=".25"/>
+    <ellipse class="y" cx="80" cy="56" rx="22" ry="3.5"/>
+    ${SPARKS([[80, 36, 2], [72, 28, 1.4], [88, 22, 1.6], [80, 14, 1.2], [92, 40, 1], [68, 42, 1]]).replace(/class="e"/g, 'class="y"')}
+    ${GROUND}`,
+
+  radio: `${MOON(30, 20, 7)}${HILLS}
+    <path class="k" d="M72 70l2-50h12l2 50z"/><path class="k" d="M68 22l12-10 12 10z"/>
+    <rect class="y" x="78" y="28" width="4" height="8"/>
+    <path class="k" d="M88 18l18-4v8l-18 0z"/><path class="k" d="M106 12l14-4v16l-14-4z"/>
+    <path class="ln-y" d="M124 10q6 6 0 12M130 6q10 10 0 20" opacity=".8"/>
+    <path class="b" d="M81 12h12l-3 3 3 3H81z"/>
+    ${GROUND}`,
+
+  arms: `${HILLS}${SMOKE(118, 26)}
+    <path class="k" d="M24 70V40h92v30z"/><path class="k" d="M112 40V24h12v46h-8z"/>
+    <path class="k" d="M24 40l18-10v10l18-10v10l18-10v10l18-10v10"/>
+    <rect class="e" x="36" y="50" width="20" height="12"/><rect class="e" x="72" y="50" width="20" height="12"/>
+    ${[132, 140, 148].map(x => `<path class="k" d="M${x} 70V44" stroke="#0b0806" stroke-width="1.4"/><path class="w" d="M${x - 2} 45l2-7 2 7z"/>`).join('')}
+    <path class="w" d="M128 70l12-8 12 8z" opacity=".7"/>
+    ${GROUND}`,
+
+  bank: `${HILLS}
+    <path class="s" d="M36 70V36h88v34z"/><path class="k" d="M30 38l50-22 50 22z"/>
+    ${[46, 62, 92, 108].map(x => `<rect class="k" x="${x}" y="40" width="6" height="26"/>`).join('')}
+    <rect class="k" x="74" y="48" width="12" height="18"/>
+    <circle class="y" cx="80" cy="30" r="4"/>
+    ${[[20, 66], [26, 66], [23, 61], [136, 66], [142, 66], [139, 61]].map(([x, y]) => `<ellipse class="y" cx="${x}" cy="${y}" rx="4" ry="2"/>`).join('')}
+    ${GROUND}`,
+
+  pplant: `${HILLS}
+    <path class="k" d="M40 70V34h80v36z"/><path class="k" d="M52 34V14h10v20zM98 34V18h10v16z"/>
+    <path class="e" d="M57 14q-6-10 0-14q2 6 4 4q2 6-4 10z"/><path class="e" d="M103 18q-6-8 0-12q2 6 4 4q2 4-4 8z"/>
+    <path class="e" d="M60 70V52a20 20 0 0 1 40 0v18z"/><path class="y" d="M68 70V56a12 12 0 0 1 24 0v14z"/>
+    <path class="k" d="M64 52h32M64 58h32M64 64h32" stroke="#0b0806" stroke-width="1.5" opacity=".7"/>
+    ${GROUND}`,
+
+  /* ---- City events ---- */
+  airstrike: `<path class="m" d="M0 30q20-24 50-14q20-16 50-4q30-12 60 6v-18H0z"/>
+    <path class="p" d="M30 26q20 10 40 0q20-10 40 0" fill="none" stroke="#a6d63f" stroke-width="2" opacity=".6"/>
+    <path class="y" d="M46 24l-8 14h6l-8 16 16-20h-6l6-10z"/><path class="y" d="M112 22l-8 14h6l-8 16 16-20h-6l6-10z"/>
+    ${HILLS}
+    <path class="k" d="M24 70V54h20v16zM96 70V50h22v20z"/>
+    ${SPARKS([[36, 54, 1.4], [104, 50, 1.4], [40, 58, 1], [112, 54, 1]])}
+    ${GROUND}`,
+
+  bioweapon: `${MOON(120, 18, 8)}${HILLS}
+    <path class="p" d="M10 64q20-24 40-10q20-20 40-4q20-18 60 0v20H10z" opacity=".35"/>
+    <path class="p" d="M20 66q20-14 40-6q20-12 40-2q20-10 50 4" fill="none" stroke="#a6d63f" stroke-width="2" opacity=".6"/>
+    <path class="k" d="M40 70V54l10-8 10 8v16zM96 70V50l12-8 12 8v20z"/>
+    <path class="w" d="M74 62a6 6 0 1 1 12 0v4h-12z"/><circle class="k" cx="78" cy="61" r="1.4"/><circle class="k" cx="82" cy="61" r="1.4"/>
+    ${GROUND}`,
+
+  archaeology: `${HILLS}
+    <path class="k" d="M0 70h60l8 10h24l8-10h60v14H0z"/>
+    <path class="m" d="M60 70l8 10h24l8-10z" opacity=".6"/>
+    <path class="w" d="M70 76q4-4 8 0q4-4 8 0" fill="none" stroke="#e6dccb" stroke-width="2"/>
+    <path class="y" d="M80 72l4 2-4 2-4-2z"/>
+    <path class="k" d="M110 70l14-30" stroke="#0b0806" stroke-width="2.4"/><path class="k" d="M118 38q10-4 16 2q-8-1-14 2z"/>
+    <path class="k" d="M30 70l3-18q5-4 10 0l3 18z"/><circle class="k" cx="38" cy="47" r="4"/>
+    ${GROUND.replace('V84 H0Z', 'V70 H0Z')}`,
+
+  ruthless: `${HILLS}
+    <path class="s" d="M50 70l6-18h48l6 18z"/>
+    <path class="b" d="M60 52h40v4H60z"/><path class="b" d="M66 56v8q1 3 2 0v-8zM90 56v6q1 3 2 0v-6z"/>
+    <path class="k" d="M70 34q10-16 20 0v12H70z"/><circle class="b" cx="80" cy="30" r="4"/>
+    <path class="k" d="M98 44l18-22" stroke="#0b0806" stroke-width="3"/><path class="w" d="M114 18l8-2-2 8z"/>
+    ${GROUND}`,
+
+  oil: `${HILLS}${SMOKE(40, 30)}${SMOKE(118, 26)}
+    <path class="k" d="M10 70l10-26 6 6 8-14 8 34z"/><path class="k" d="M120 70l6-18 6 4 6-12 8 26z"/>
+    <path class="m" d="M48 70q16-10 32-2q16-8 32 2z"/>
+    <path class="k" d="M60 70l8-26M68 44l12 26M76 52h12" stroke="#0b0806" stroke-width="2"/>
+    <path class="e" d="M90 70q2-10 6-6q2-6 6 0q2-4 4 6z"/>
+    ${GROUND}`,
+
+  dilemma: `${HILLS}
+    <path class="k" d="M78 70V26h4v44z"/><path class="k" d="M44 30h72" stroke="#0b0806" stroke-width="3"/>
+    <path class="k" d="M50 30l-8 16h16zM110 30l-8 16h16z" fill="none" stroke="#0b0806" stroke-width="1.4"/>
+    <path class="k" d="M40 46q10 6 20 0zM100 46q10 6 20 0z"/>
+    <path class="k" d="M44 44V36h12v8zM104 44l2-8 4 4 4-4 2 8z" />
+    <path class="b" d="M42 54q8 4 16 0" fill="none" stroke="#9a1e14" stroke-width="2"/>
+    <circle class="y" cx="80" cy="22" r="4"/>
+    ${GROUND}`,
+
+  surgical: `${MOON(124, 18, 9)}
+    <path class="k" d="M0 70V34h44v36zM116 70V30h44v40z"/><path class="k" d="M44 70V44h28v26z"/>
+    <path class="k" d="M84 20q4-6 10-4l4 6-6 4z"/><circle class="k" cx="90" cy="14" r="4"/>
+    <path class="m" d="M82 22q8-6 16 0l4 18H78z"/>
+    <path class="k" d="M84 40l-6 30M96 40l6 30" stroke="#0b0806" stroke-width="2.6"/>
+    <path class="w" d="M100 24l14-6-12 10z"/><path class="w" d="M80 26l-10 4 8 2z" opacity=".8"/>
+    <path class="b" d="M114 18q2 4 0 6" fill="none" stroke="#9a1e14" stroke-width="1.6"/>
+    <path class="k" d="M0 70h160v14H0z"/>`,
+
+  /* ---- City attachments and reaction ---- */
+  compnet: `${HILLS}
+    <path class="k" d="M30 70l20-34 4 2-20 34z"/><path class="k" d="M46 32q8-6 14 2q-8-2-12 2z"/>
+    <path class="k" d="M108 70l-4-40h6l4 40z"/><path class="k" d="M98 28h22l-2 6h-18z"/>
+    <path class="k" d="M66 70l14-28 4 2-14 28z"/><path class="k" d="M78 40l10-6 2 4-10 6z"/>
+    ${SPARKS([[56, 30, 1.6], [92, 34, 1.4], [114, 24, 1.6], [62, 22, 1], [104, 18, 1.1], [86, 26, 0.9]]).replace(/class="e"/g, 'class="y"')}
+    <path class="ln-y" d="M56 30q20-14 36 4M92 34q10-16 22-10" stroke-dasharray="2 4" opacity=".7"/>
+    ${GROUND}`,
+
+  sanctions: `${HILLS}
+    <path class="k" d="M50 70V40l30-16 30 16v30z"/><path class="e" d="M70 70V54h20v16z" opacity=".5"/>
+    <path class="b" d="M40 70V30h80v40" fill="none" stroke="#9a1e14" stroke-width="2.5" stroke-dasharray="6 4"/>
+    <path class="w" d="M58 46l44 18M102 46L58 64" stroke="#e6dccb" stroke-width="3" opacity=".75"/>
+    <circle class="b" cx="80" cy="18" r="5"/><path class="w" d="M77 18h6" stroke="#e6dccb" stroke-width="2"/>
+    ${GROUND}`,
+
+  trade: `${HILLS}
+    <path class="k" d="M64 70V40q0-10 8-10h6v-8q0-6 4-6t4 6v20h4v-14q0-4 4-4t4 4v16q6-2 8 4l-6 18v14z"/>
+    <path class="b" d="M60 24l8 6M56 34h8M60 44l8-4" stroke="#9a1e14" stroke-width="2.5" stroke-linecap="round"/>
+    <path class="w" d="M108 30l20-14M112 40h22M108 50l20 10" stroke="#e6dccb" stroke-width="2" opacity=".6" stroke-linecap="round"/>
+    ${GROUND}`,
+
+  /* ---- Empire sites ---- */
+  ark: `<circle class="y" cx="80" cy="22" r="18" opacity=".35"/>${HILLS}
+    <path class="k" d="M30 70V46h100v24z"/><path class="k" d="M44 46V30h72v16z"/><path class="k" d="M60 30V14h40v16z"/>
+    <path class="k" d="M74 14l6-12 6 12z"/>
+    ${[50, 66, 94, 110].map(x => `<rect class="y" x="${x}" y="36" width="4" height="6"/>`).join('')}${[36, 54, 72, 90, 108, 122].map(x => `<rect class="y" x="${x - 2}" y="52" width="4" height="6"/>`).join('')}
+    <path class="e" d="M72 70V58a8 8 0 0 1 16 0v12z"/><circle class="y" cx="80" cy="22" r="3"/>
+    ${GROUND}`,
+
+  doomsday: `${HILLS}
+    <path class="k" d="M20 70q10-30 40-36q20-4 30 6l10-4 6 6-10 6q4 10-6 20z"/>
+    <path class="k" d="M88 36l12-14 4 6-8 12z"/><path class="k" d="M76 32l4-16 4 12z"/>
+    <circle class="e" cx="98" cy="34" r="2"/>
+    <path class="e" d="M104 42q20-8 56-4q-30 6-56 10z"/><path class="y" d="M104 44q20-4 50-2q-26 3-50 6z"/>
+    ${SPARKS([[150, 40, 1.6], [140, 44, 1.2], [156, 36, 1]])}
+    ${GROUND}`,
+
+  forcefield: `${HILLS}
+    <path class="y" d="M24 70a56 56 0 0 1 112 0" fill="none" stroke="#ffc66b" stroke-width="2" opacity=".85"/>
+    <path class="y" d="M30 70a50 50 0 0 1 100 0z" opacity=".12"/>
+    <path class="k" d="M56 70V48h48v22z"/><path class="k" d="M52 48l28-14 28 14z"/>
+    <rect class="y" x="76" y="54" width="8" height="10"/>
+    <path class="e" d="M120 28l-10 10" stroke="#ff7a1f" stroke-width="2"/><circle class="e" cx="118" cy="30" r="3"/>
+    ${SPARKS([[112, 36, 1.2], [116, 40, 0.9], [108, 32, 0.9]]).replace(/class="e"/g, 'class="y"')}
+    ${GROUND}`,
+
+  alienweapon: `${HILLS}
+    <path class="k" d="M40 70l8-24h64l8 24z"/><path class="k" d="M56 46l6-16h36l6 16z"/>
+    <circle class="p" cx="80" cy="34" r="8" opacity=".9"/><circle class="k" cx="80" cy="34" r="3"/>
+    <path class="k" d="M58 56h44" stroke="#0b0806" stroke-width="2"/>
+    ${[46, 62, 98, 114].map(x => `<circle class="e" cx="${x}" cy="62" r="2"/>`).join('')}
+    <path class="ln" d="M80 26V10M70 12l10 6 10-6" opacity=".8"/>
+    ${SPARKS([[80, 8, 1.4], [72, 14, 1], [88, 14, 1]]).replace(/class="e"/g, 'class="p"')}
+    ${GROUND}`,
+
+  replicator: `${HILLS}
+    <path class="s" d="M28 70l8-20h36l8 20z"/><path class="s" d="M80 70l8-20h36l8 20z" opacity=".7"/>
+    <path class="w" d="M76 20v44" stroke="#e6dccb" stroke-width="2.5"/>
+    <path class="k" d="M44 50V38l10-8 10 8v12zM96 50V38l10-8 10 8v12z"/>
+    <path class="y" d="M50 50v-6h8v6zM102 50v-6h8v6z"/>
+    <path class="e" d="M70 18q6-8 12 0" fill="none" stroke="#ff7a1f" stroke-width="2"/>
+    ${SPARKS([[76, 30, 1.4], [76, 46, 1.2], [76, 58, 1]])}
+    ${GROUND}`,
+
+  /* ---- Empire events and attachment ---- */
+  mindcontrol: `<circle class="p" cx="80" cy="30" r="22" opacity=".15"/>${HILLS}
+    <path class="p" d="M80 30m-16 0a16 16 0 1 0 32 0a16 16 0 1 0 -32 0M80 30m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" fill="none" stroke="#a6d63f" stroke-width="1.6"/>
+    <circle class="p" cx="80" cy="30" r="3"/>
+    ${[[34, 0], [52, 2], [108, 1], [126, 3]].map(([x, d]) => `<path class="k" d="M${x - 6} 72l2-18q4-3 8 0l2 18z"/><circle class="k" cx="${x}" cy="${49 + d}" r="4"/><circle class="p" cx="${x + 1.5}" cy="${48 + d}" r="1"/>`).join('')}
+    <path class="ln-y" d="M80 46L40 52M80 46L56 54M80 46l26 6M80 46l44 6" stroke="#a6d63f" stroke-dasharray="2 3" opacity=".7"/>
+    ${GROUND}`,
+
+  assimilation: `${HILLS}
+    <path class="k" d="M60 70V40l20-14 20 14v30z"/><path class="e" d="M74 70V56h12v14z"/>
+    <path class="k" d="M80 26V4" stroke="#0b0806" stroke-width="1.6"/><path class="b" d="M81 4h16l-4 5 4 5H81z"/>
+    <path class="w" d="M60 20l-14-4M100 20l14-4" stroke="#e6dccb" stroke-width="1" opacity=".4"/>
+    ${[[24, 0], [38, 2], [122, 1], [136, 2]].map(([x, d]) => `<path class="k" d="M${x - 5} 72l2-16q3-3 6 0l2 16z"/><circle class="k" cx="${x}" cy="${51 + d}" r="3.5"/><path class="k" d="M${x + (x < 80 ? 5 : -5)} 70l${x < 80 ? 6 : -6} -24" stroke="#0b0806" stroke-width="1.4"/>`).join('')}
+    ${GROUND}`,
+
+  brainemu: `<circle class="y" cx="80" cy="34" r="22"/>${[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map(a => { const r = a * Math.PI / 180; return `<path class="ln-y" d="M${80 + Math.cos(r) * 26} ${34 + Math.sin(r) * 26}L${80 + Math.cos(r) * 36} ${34 + Math.sin(r) * 36}"/>`; }).join('')}
+    ${HILLS}
+    <path class="k" d="M20 70V52l10-8 10 8v18zM44 70V48l12-10 12 10v22zM92 70V48l12-10 12 10v22zM120 70V52l10-8 10 8v18z"/>
+    ${[28, 54, 100, 128].map(x => `<rect class="y" x="${x}" y="56" width="4" height="6"/>`).join('')}
+    ${GROUND}`,
+
+  nanobots: `${HILLS}
+    <path class="k" d="M50 70V42l14-6v-8l16-6 16 6v8l14 6v28z" opacity=".95"/>
+    <path class="m" d="M50 42h60" stroke="#231912" stroke-width="2"/>
+    ${Array.from({ length: 26 }, (_, i) => { const x = 50 + ((i * 37) % 64), y = 20 + ((i * 23) % 44); return `<rect class="${i % 3 ? 's' : 'e'}" x="${x + (i % 5) * 6 - 10}" y="${y - (i % 4) * 4}" width="${2 + (i % 3)}" height="${2 + (i % 2)}"/>`; }).join('')}
+    <path class="w" d="M110 30q16-10 30 4" fill="none" stroke="#e6dccb" stroke-width="1" opacity=".5" stroke-dasharray="2 3"/>
+    ${GROUND}`,
+
+  sentient: `<circle class="y" cx="80" cy="36" r="24" opacity=".2"/>${HILLS}
+    <path class="k" d="M50 62l6-22h48l6 22z"/>
+    <path class="m" d="M54 44q13-6 26 0q13-6 26 0v14q-13-6-26 0q-13-6-26 0z"/>
+    <path class="ln" d="M80 44v14"/>
+    <ellipse class="y" cx="80" cy="30" rx="10" ry="6"/><circle class="k" cx="80" cy="30" r="3.4"/><circle class="w" cx="81" cy="29" r="1"/>
+    <path class="y" d="M66 28q14-14 28 0" fill="none" stroke="#ffc66b" stroke-width="1.4"/>
+    ${SPARKS([[60, 22, 1.2], [100, 20, 1.2], [70, 14, 0.9], [92, 12, 0.9]]).replace(/class="e"/g, 'class="y"')}
     ${GROUND}`
 };
 

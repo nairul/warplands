@@ -71,6 +71,7 @@ button:focus-visible,[data-site]:focus-visible{outline:2px solid var(--brass);ou
 .art .b{fill:#9a1e14}.art .p{fill:#a6d63f;filter:drop-shadow(0 0 2px #9bd13a)}.art .w{fill:#e6dccb}.art .sm{fill:none;stroke:rgba(10,8,6,.55);stroke-width:3.5;stroke-linecap:round}
 .art .ln{fill:none;stroke:#0b0806;stroke-width:1}.art .ln-y{fill:none;stroke:#ffc66b;stroke-width:2;stroke-linecap:round}
 .site .art{height:58px}
+.art [fill="none"]{fill:none}
 .card .lv{font-family:var(--display);font-weight:800;font-size:12px;opacity:.9;min-width:18px}
 .card .nm{font-family:var(--display);font-weight:600;font-size:13.5px;line-height:1.1;flex:1;min-width:0;text-wrap:balance}
 .card .ty{display:inline-flex;align-items:center;gap:3px;background:rgba(0,0,0,.18);border-radius:10px;padding:2px 6px 2px 4px;font-weight:700;font-size:13px}
@@ -210,6 +211,12 @@ button.ab:disabled{opacity:.75}
 .card .hpline{font-size:12px;color:var(--ink-soft)}
 .fly-dot{position:fixed;z-index:41;pointer-events:none;width:15px;height:15px;border:1.5px solid #cfe1ff;box-shadow:0 0 10px 2px rgba(110,170,255,.95), inset 0 -2px 0 rgba(0,0,0,.25)}
 .ghost-site{position:fixed;z-index:38;pointer-events:none}
+/* Your Turn announcement */
+.yourturn{position:fixed;inset:0;z-index:46;pointer-events:none;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 50% 50%, rgba(255,150,40,.22) 0%, rgba(0,0,0,.55) 70%)}
+.yt-text{font-family:var(--display);font-weight:800;font-size:clamp(40px, 9vw, 96px);text-transform:uppercase;letter-spacing:.18em;color:#ffd27a;
+  text-shadow:0 3px 0 #2a1608, 0 0 24px rgba(255,140,30,.85), 0 0 60px rgba(255,90,20,.55);white-space:nowrap}
+.yt-streak{position:absolute;left:0;right:0;top:50%;height:3px;margin-top:-1.5px;background:linear-gradient(90deg,transparent,#ffd27a 30%,#fff3d6 50%,#ffd27a 70%,transparent);box-shadow:0 0 18px #ff9a1f}
 /* Damage projectiles */
 #fxsvg{position:fixed;left:0;top:0;z-index:39;pointer-events:none;overflow:visible}
 .fx-num{font-family:var(--display);font-weight:800;font-size:26px;paint-order:stroke;stroke:#1a0804;stroke-width:4px}

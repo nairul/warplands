@@ -35,6 +35,10 @@ const SOUNDS={
   upgrade:(ctx,out,t)=>{[392,587.33,783.99].forEach((f,i)=>{tone(ctx,out,t+i*0.09,f,f,0.12,0.24,'square');tone(ctx,out,t+i*0.09,f/2,f/2,0.12,0.1,'triangle')});
     [783.99,987.77,1174.66].forEach(f=>tone(ctx,out,t+0.3,f,f*1.003,0.7,0.12,'triangle'));tone(ctx,out,t+0.3,392,392,0.7,0.12,'triangle');
     for(let i=0;i<6;i++)tone(ctx,out,t+0.34+i*0.06,2349+i*180,2349+i*180,0.09,0.035,'sine')},
+  /* Your turn: a low gong with a rising two-note call on top */
+  yourturn:(ctx,out,t)=>{tone(ctx,out,t,98,92,1.4,0.32,'sine');tone(ctx,out,t,196,190,1.0,0.12,'triangle');tone(ctx,out,t,293.7,290,0.8,0.06,'sine');
+    noise(ctx,out,t,0.25,0.12,'bandpass',600,300,2);
+    tone(ctx,out,t+0.18,587.33,587.33,0.22,0.16,'triangle');tone(ctx,out,t+0.36,880,880,0.5,0.16,'triangle');tone(ctx,out,t+0.36,1760,1760,0.3,0.04,'sine')},
   /* Defeat: a slow, sagging descent */
   lose:(ctx,out,t)=>{[392,369.99,349.23].forEach((f,i)=>tone(ctx,out,t+i*0.34,f,f*0.99,0.3,0.28,'triangle'));
     tone(ctx,out,t+1.02,329.63,293.66,1.1,0.3,'triangle');tone(ctx,out,t+1.02,164.81,146.83,1.1,0.16,'sine')}
@@ -640,7 +644,7 @@ const CARDS=[
   /* ---------- LEVEL II · EXPANSION SET ---------- */
   {id:'mortar',name:'Siege Tower',set:'exp',level:2,type:'site',cost:2,integrity:3,count:2,worth:2.5,
    abilities:[
-    {need:4,actions:0,text:'Do 1 damage.',run:c=>hit(c,1,'Siege Tower'),ai:c=>bestOpp(c,1)},
+    {need:3,actions:0,text:'Do 1 damage.',run:c=>hit(c,1,'Siege Tower'),ai:c=>bestOpp(c,1)},
     {need:5,actions:1,text:'Do 1 damage each to 2 different sites.',can:()=>allSites().length>=2,
      run:async c=>{
        const a=await pickSite(c.pi,{prompt:'Siege Tower: choose the first site (1 damage).',filter:s=>!c.me.ai||s.owner!==c.pi,aiScore:s=>dmgValue(s,1)});if(!a)return;
@@ -742,7 +746,7 @@ const CARDS=[
    ai:c=>{const n=c.opp.sites.filter(s=>s.followers>0).length;return n?bestAlloc(c.opp.sites,n,2,dmgValue).v:-1}},
 
   /* ---------- LEVEL III · CORE SET ---------- */
-  {id:'silo',name:'Ballista Tower',set:'core',level:3,type:'site',cost:1,integrity:5,count:2,worth:4,
+  {id:'silo',name:'Ballista Tower',set:'core',level:3,type:'site',cost:1,integrity:4,count:2,worth:4,
    abilities:[
     {need:2,actions:2,text:'Do 2 damage to a single site.',run:c=>hit(c,2,'Ballista Tower'),ai:c=>bestOpp(c,2)},
     {need:2,actions:2,text:'Do 1 damage each to 2 different sites.',can:()=>allSites().length>=2,
@@ -1771,6 +1775,7 @@ function render(){
   drawAnims();
   if(oldRects){followerAnims(oldRects);placeAnims(oldRects);if(ARROWS.q.length)playArrows(oldRects)}
   if(UPS.q.length) playUps();
+  yourTurnCheck();
   equalizeCards();
 }
 
@@ -2003,6 +2008,24 @@ function emberBurst(x,y,col){
     const ang=-Math.PI/2+(Math.random()-0.5)*Math.PI*1.4,d=40+Math.random()*90;
     c.animate([{transform:'translate(0,0)',opacity:1},{transform:`translate(${Math.cos(ang)*d}px,${Math.sin(ang)*d-30}px)`,opacity:0}],{duration:900+Math.random()*600,delay:Math.random()*150,easing:'cubic-bezier(.2,.7,.4,1)',fill:'both'}).onfinish=()=>c.remove();
   }
+}
+/* ---- "Your Turn": a full-screen flash, big text and a gong when your turn begins ---- */
+const YT={seen:null};
+function yourTurnCheck(){
+  if(!G||G.over){YT.seen=null;return}
+  const vi=viewer(),me=G.players[vi];
+  const key=G.turnCount+':'+G.turn;
+  if(YT.seen===key)return;
+  const first=YT.seen===null;YT.seen=key;
+  if(G.turn!==vi||me.ai||(first&&G.turnCount>1))return;
+  sfx('yourturn');
+  if(typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const o=document.createElement('div');o.className='yourturn';o.setAttribute('aria-hidden','true');
+  o.innerHTML='<div class="yt-streak"></div><div class="yt-text">Your Turn</div>';
+  document.body.appendChild(o);
+  o.animate([{opacity:0},{opacity:1,offset:.12},{opacity:1,offset:.7},{opacity:0}],{duration:1700,easing:'ease-out',fill:'forwards'}).onfinish=()=>o.remove();
+  o.querySelector('.yt-text').animate([{transform:'scale(1.6)',letterSpacing:'.5em',filter:'blur(6px)'},{transform:'scale(1)',letterSpacing:'.18em',filter:'blur(0)',offset:.22},{transform:'scale(1.04)',letterSpacing:'.2em'}],{duration:1700,easing:'cubic-bezier(.2,.8,.2,1)',fill:'forwards'});
+  o.querySelector('.yt-streak').animate([{transform:'scaleX(0)',opacity:0},{transform:'scaleX(1)',opacity:1,offset:.25},{transform:'scaleX(1.1)',opacity:0}],{duration:1300,easing:'ease-out',fill:'forwards'});
 }
 /* ---- Every card is the same height: the tallest card on the table sets it ---- */
 function equalizeCards(){
