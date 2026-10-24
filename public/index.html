@@ -37,7 +37,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 button:disabled{cursor:default}
 button:focus-visible,[data-site]:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 
-#app{max-width:1180px;margin:0 auto;padding-block:10px 120px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:14px}
+#app{max-width:1560px;margin:0 auto;padding-block:10px 120px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:14px}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .brand{font-family:var(--display);font-weight:800;letter-spacing:.12em;font-size:22px;color:var(--brass);text-shadow:0 1px 0 #000,0 0 14px rgba(255,120,30,.35)}
 .turnline{font-size:14px;color:var(--muted)}
@@ -84,7 +84,7 @@ button:focus-visible,[data-site]:focus-visible{outline:2px solid var(--brass);ou
 
 .hand .card{cursor:default}
 .hand .card.playable{cursor:pointer}
-.hand .card.playable:hover{transform:translateY(-3px)}
+.hand .card.playable:hover{}
 .hand .card:not(.playable){opacity:.72}
 .hand .card{transition:transform .12s}
 
@@ -144,7 +144,7 @@ button.ab:disabled{opacity:.75}
 .label{font-size:11.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
 
 /* Prompt bar */
-.prompt{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--grain), linear-gradient(180deg,#e2ad5a,#b97a2a);border-top:3px solid #2a1a0c;color:var(--brass-ink);padding-block:12px calc(12px + env(safe-area-inset-bottom, 0px));padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));box-shadow:0 -6px 20px rgba(0,0,0,.4)}
+.prompt{position:relative;background:var(--grain), linear-gradient(180deg,#e2ad5a,#b97a2a);border-top:3px solid #2a1a0c;color:var(--brass-ink);padding-block:12px calc(12px + env(safe-area-inset-bottom, 0px));padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));box-shadow:0 -6px 20px rgba(0,0,0,.4)}
 .prompt .in{max-width:1180px;margin:0 auto;display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between}
 .prompt p{margin:0;font-weight:600;font-size:15px;max-width:65ch}
 .prompt .opts{display:flex;gap:8px;flex-wrap:wrap}
@@ -252,6 +252,63 @@ button.ab:disabled{opacity:.75}
 /* Leave room to scroll the board clear of the chat box */
 body.chat-on #app{padding-bottom:90px}
 body.chat-open #app{padding-bottom:300px}
+/* ===== One-screen table: board on the left, stacks and log in a rail, hand docked at the bottom ===== */
+.table{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:14px;align-items:start}
+.board{display:flex;flex-direction:column;gap:12px;min-width:0}
+.zone{padding:10px 14px;gap:6px}
+.zone .label{display:none}
+.rail{display:flex;flex-direction:column;gap:10px;position:sticky;top:10px;max-height:calc(100vh - 300px)}
+.rail .stacks{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.rail .stack{min-height:84px;padding:6px 4px}
+.rail .stack .rn{font-size:20px}
+.rail .stack .hint{font-size:11px}
+.rail .sideinfo{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+.rail .log{flex:1 1 auto;height:auto;min-height:0;max-height:none}
+/* compact sites on the board */
+.site.mini{width:150px;gap:4px;padding-bottom:6px}
+.site.mini .art{height:52px}
+.site.mini .nm{font-size:12.5px}
+.site.mini .band{padding:4px 6px}
+.site.mini .body{justify-content:flex-start;gap:4px}
+.site.mini .abs{padding:0 5px;gap:3px}
+.ab.mini{padding:3px 5px;font-size:11px;gap:4px;align-items:center}
+.ab.mini .abt{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.2}
+.ab.mini .rq{font-size:10.5px;line-height:15px;padding:0 3px}
+.chips{display:flex;flex-wrap:wrap;gap:3px;padding:0 5px}
+.chip{font-size:10.5px;line-height:1.2;background:var(--grain),#2a1b10;color:var(--paper);border:1px solid #0d0806;border-radius:3px;padding:2px 5px}
+.chip.bad{background:var(--grain),#5a120c}
+.chip.dim{background:rgba(60,40,20,.18);color:var(--ink-soft);border-color:rgba(60,40,20,.3)}
+.site.mini .foot{padding:4px 6px 0}
+.site.mini .tokens{max-width:86px}
+.site.mini .dot{width:9px;height:9px}
+.site.mini .integ i{width:7px;height:10px}
+.fort{font-size:10px;font-weight:700;margin-right:2px}
+.slot{min-height:150px}
+/* hover preview */
+.zoom{position:fixed;z-index:44;pointer-events:none;filter:drop-shadow(0 18px 30px rgba(0,0,0,.7))}
+.zoom .card{width:230px}
+.zoom .art{height:84px}
+.zoom-foot{font-size:12px;color:var(--ink-soft);padding:2px 10px 0}
+/* hand dock */
+.dockwrap{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;flex-direction:column;pointer-events:none}
+.dockwrap>*{pointer-events:auto}
+.dock{height:200px;border-top:3px solid transparent;padding:6px 16px 0;overflow:visible;
+  background:var(--grain) padding-box, linear-gradient(180deg,rgba(32,24,18,.97),rgba(14,10,8,.99)) padding-box, var(--iron) border-box;box-shadow:0 -10px 30px rgba(0,0,0,.6)}
+.dock-bar{display:flex;justify-content:center;min-height:36px}
+.dock-bar .controls{justify-content:center}
+.dock .hand{display:flex;justify-content:center;align-items:flex-start;gap:10px;padding:6px 0 0;height:150px}
+.dock .hand.crowded{gap:0;padding-left:40px}
+.dock .hand.crowded .card{margin-left:-40px}
+.dock .hand .card{transition:transform .16s ease-out, box-shadow .16s;position:relative;opacity:1}
+.dock .hand .card:not(.playable):not(.target){filter:saturate(.75) brightness(.9)}
+.dock .hand .card:hover,.dock .hand .card:focus-visible,.dock .hand .card.target{transform:translateY(calc(-1 * var(--lift, 140px)));z-index:10;box-shadow:0 18px 40px rgba(0,0,0,.75)}
+.dock .hand .card.target{animation:none;outline:3px solid var(--brass);outline-offset:2px}
+.dock .hand .empty{padding-top:30px}
+.prompt{box-shadow:0 -6px 20px rgba(0,0,0,.4)}
+@media (max-width:900px){
+  .table{grid-template-columns:minmax(0,1fr)}
+  .rail{position:static;max-height:none}
+}
 @media (max-width:760px){
   .mid{grid-template-columns:minmax(0,1fr)}
   .card{width:162px}.site{width:162px}
@@ -269,11 +326,16 @@ body.chat-open #app{padding-bottom:300px}
     <div class="turnline" id="turnline"></div>
     <div class="seg"><button class="ghost" id="soundBtn" aria-pressed="true">Sound on</button><button class="ghost" id="menuBtn">Menu</button></div>
   </div>
-  <section class="zone" id="oppZone"></section>
-  <section class="mid" id="mid"></section>
-  <section class="zone" id="meZone"></section>
+  <div class="table">
+    <div class="board">
+      <section class="zone" id="oppZone"></section>
+      <section class="zone" id="meZone"></section>
+    </div>
+    <aside class="mid rail" id="mid"></aside>
+  </div>
 </div>
-<div class="prompt" id="prompt" hidden></div>
+<div class="dockwrap" id="dockwrap"><div class="prompt" id="prompt" hidden></div><div class="dock" id="handDock" hidden></div></div>
+<div class="zoom" id="zoom" hidden aria-hidden="true"></div>
 <aside class="chat" id="chat" hidden aria-label="Chat"></aside>
 <div class="overlay" id="overlay" hidden></div>
 <script type="module">

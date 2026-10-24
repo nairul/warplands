@@ -1606,10 +1606,11 @@ function handCardHTML(card,pi){
   const title=pick?'Choose '+d.name:ok?'Play '+d.name:d.type==='reaction'?'Reactions are offered to you automatically when their condition happens':'Not enough actions';
   return `<button class="card ${eraCls(d)} ${ok?'playable':''} ${pick?'target':''}" ${pick?`data-pick="${card.uid}"`:`data-play="${card.uid}"`} ${ok||pick?'':'aria-disabled="true"'} title="${esc(title)}">${bandHTML(d)}${artHTML(d)}${kindHTML(d)}${body}</button>`;
 }
-function siteHTML(s,vi){
-  const d=s.card.def, mine=s.owner===vi&&!G.players[s.owner].ai;
-  const target=UI.prompt&&UI.prompt.kind==='site'&&UI.prompt.set.has(s.uid)&&!G.players[UI.prompt.pi].ai;
-  const live=mine&&humanTurn()&&!UI.busy&&!UI.prompt;
+function siteHTML(s,vi,full){
+  if(!full) return siteMini(s,vi);
+  const d=s.card.def, mine=false;
+  const target=false;
+  const live=false;
   const abs=(d.abilities||[]).map((ab,i)=>{
     if(ab.passive) return `<div class="ab passive">${reqHTML(ab,s)}<span>${esc(ab.text)}<span class="auto">Automatic</span></span></div>`;
     const ready=live&&abilityReady(s.owner,s,i);
@@ -1621,7 +1622,7 @@ function siteHTML(s,vi){
   const integB=Array.from({length:integ(s)},(_,i)=>`<i class="${i<shownDmg?'hit':''}"></i>`).join('');
   const atts=s.attachments.map(a=>`<div class="att" title="${esc(a.def.text)}"><b>${esc(a.def.name)}</b> · ${esc(a.def.text)}</div>`).join('');
   const used=s.usedTurn===G.turnCount&&G.turn===s.owner&&(d.abilities||[]).length;
-  return `<div class="card site ${eraCls(d)} ${target?'target':''}" data-suid="${s.uid}" ${target?`data-site="${s.uid}" tabindex="0" role="button" aria-label="Choose ${esc(d.name)}"`:''}>
+  return `<div class="card site ${eraCls(d)}">
     ${bandHTML(d)}${artHTML(d)}${kindHTML(d)}
     <div class="body">
     ${d.text?`<div class="tx">${esc(d.text)}</div>`:''}
@@ -1633,6 +1634,48 @@ function siteHTML(s,vi){
     <div class="foot"><div class="tokens" title="${s.followers} followers">${toks}<span class="n">${s.followers}</span></div>
     <div class="integ" title="Damage ${s.damage} of ${integ(s)} integrity${isFort(s)?' · fortified':''}">${isFort(s)?'<span style="font-size:11px;font-weight:700;margin-right:2px" title="Fortified">F</span>':''}${integB}</div></div>
   </div>`;
+}
+/* Compact site for the board: name, art strip, ability buttons, Zealots and damage.
+   Hovering it shows the full card (see showZoom). */
+function siteMini(s,vi){
+  const d=s.card.def, mine=s.owner===vi&&!G.players[s.owner].ai;
+  const target=UI.prompt&&UI.prompt.kind==='site'&&UI.prompt.set.has(s.uid)&&!G.players[UI.prompt.pi].ai;
+  const live=mine&&humanTurn()&&!UI.busy&&!UI.prompt;
+  const used=s.usedTurn===G.turnCount&&G.turn===s.owner&&(d.abilities||[]).length;
+  const abs=(d.abilities||[]).map((ab,i)=>{
+    const t=esc(ab.text);
+    if(ab.passive) return `<div class="ab mini passive" title="${t}">${reqHTML(ab,s)}<span class="abt">${t}</span></div>`;
+    const ready=live&&abilityReady(s.owner,s,i);
+    return mine&&!target?`<button class="ab mini" data-ab="${s.uid}:${i}" ${ready?'':'disabled'} title="${t}">${reqHTML(ab,s)}<span class="abt">${t}</span></button>`
+               :`<div class="ab mini" title="${t}">${reqHTML(ab,s)}<span class="abt">${t}</span></div>`;
+  }).join('');
+  const toks=Array.from({length:Math.min(s.followers,10)},()=>'<span class="dot"></span>').join('');
+  const shownDmg=Math.max(0,s.damage-(PEND.get(s.uid)||0));
+  const integB=Array.from({length:integ(s)},(_,i)=>`<i class="${i<shownDmg?'hit':''}"></i>`).join('');
+  const chips=[...s.attachments.map(a=>`<span class="chip ${HARMFUL.includes(a.def.id)?'bad':''}" title="${esc(a.def.text)}">${esc(a.def.name)}</span>`),
+    s.tucked.length?`<span class="chip">${s.tucked.length} tucked</span>`:'',used?'<span class="chip dim">Used</span>':'',
+    d.text&&!(d.abilities||[]).length&&!d.start?`<span class="chip dim" title="${esc(d.text)}">${isFort(s)?'Fortified':'Effect'}</span>`:''].join('');
+  return `<div class="card site mini ${eraCls(d)} ${target?'target':''}" data-suid="${s.uid}" ${target?`data-site="${s.uid}" tabindex="0" role="button" aria-label="Choose ${esc(d.name)}"`:''}>
+    ${bandHTML(d)}${artHTML(d)}
+    <div class="body">${abs?`<div class="abs">${abs}</div>`:''}${chips?`<div class="chips">${chips}</div>`:''}</div>
+    <div class="foot"><div class="tokens" title="${s.followers} followers">${toks}<span class="n">${s.followers}</span></div>
+    <div class="integ" title="Damage ${s.damage} of ${integ(s)} integrity${isFort(s)?' · fortified':''}">${isFort(s)?'<span class="fort" title="Fortified">F</span>':''}${integB}</div></div>
+  </div>`;
+}
+/* Hover preview of the full site card */
+function showZoom(el){
+  const z=$('zoom');if(!z||!G)return;
+  const uid=+el.dataset.suid,st=allSites().find(x=>x.uid===uid);if(!st){z.hidden=true;return}
+  z.innerHTML=term(siteHTML(st,viewer(),true));
+  const b=z.firstElementChild;if(b){const st2=allSites().find(x=>x.uid===uid);
+    b.querySelector('.foot')?.remove();
+    const extra=document.createElement('div');extra.className='zoom-foot';
+    extra.innerHTML=term(`${st2.followers} followers · damage ${st2.damage}/${integ(st2)}${isFort(st2)?' · fortified':''}`);b.appendChild(extra)}
+  z.hidden=false;
+  const r=el.getBoundingClientRect(),w=z.offsetWidth,h=z.offsetHeight;
+  let x=r.right+12;if(x+w>innerWidth-8)x=r.left-w-12;if(x<8)x=8;
+  let y=r.top;if(y+h>innerHeight-8)y=innerHeight-h-8;if(y<8)y=8;
+  z.style.left=x+'px';z.style.top=y+'px';
 }
 function zoneHTML(pi,bottom){
   const p=G.players[pi], active=G.turn===pi&&!G.over, vi=viewer();
@@ -1649,7 +1692,11 @@ function zoneHTML(pi,bottom){
   const sites=SP?p.sites.map((s,i)=>slotBtn(i)+siteHTML(s,vi)).join('')+slotBtn(p.sites.length)
                 :(p.sites.map(s=>siteHTML(s,vi)).join('')||'<div class="empty">No sites.</div>');
   const sitesRow=`<div class="label">Sites</div><div class="row">${sites}</div>`;
-  if(!bottom) return h+sitesRow;
+  return h+sitesRow;
+}
+/* The hand dock pinned to the bottom of the screen: action buttons and your hand, fanned */
+function dockHTML(pi){
+  const p=G.players[pi];
   let ctl='';
   if(humanTurn()&&G.turn===pi){
     const free=!UI.busy&&!UI.prompt, uc=UPGRADE_COST[p.level];
@@ -1662,8 +1709,8 @@ function zoneHTML(pi,bottom){
   } else if(!G.over){
     ctl=`<div class="controls"><span class="stat">Waiting for ${esc(G.players[G.turn].name)}…</span></div>`;
   }
-  const hand=showHand?(p.hand.map(c=>handCardHTML(c,pi)).join('')||'<div class="empty">Your hand is empty.</div>'):'';
-  return h+sitesRow+ctl+(showHand?`<div class="label">Hand</div><div class="row hand">${hand}</div>`:'');
+  const hand=p.hand.map(c=>handCardHTML(c,pi)).join('')||'<div class="empty">Your hand is empty.</div>';
+  return `<div class="dock-bar">${ctl}</div><div class="hand ${p.hand.length>8?'crowded':''}">${hand}</div>`;
 }
 function midHTML(){
   const vi=viewer(), me=G.players[vi], canDraw=humanTurn()&&!UI.busy&&!UI.prompt&&me.actions>=1;
@@ -1751,7 +1798,7 @@ function render(){
   chatSync();
   const ov=$('overlay');
   const inLobby=ONLINE.active&&ONLINE.lobby&&(!G||G.mode!=='online');
-  if(!G||inLobby){ov.hidden=false;ov.innerHTML=term(UI.menu||!inLobby?menuHTML():lobbyHTML());if(!G){$('turnline').innerHTML='';return}}
+  if(!G||inLobby){const dk=$('handDock');if(dk)dk.hidden=true;ov.hidden=false;ov.innerHTML=term(UI.menu||!inLobby?menuHTML():lobbyHTML());if(!G){$('turnline').innerHTML='';return}}
   const vi=viewer(), cur=G.players[G.turn];
   const net=G.mode==='online'?` · Room ${esc(ONLINE.code||'')}${ONLINE.status&&ONLINE.status!=='Connected'?' · '+esc(ONLINE.status):''}`:'';
   const waitP=G.mode==='online'&&G.waiting!=null&&G.waiting!==ONLINE.seat?G.players[G.waiting]:null;
@@ -1761,6 +1808,8 @@ function render(){
   $('oppZone').classList.toggle('active',G.turn===1-vi&&!G.over);
   $('mid').innerHTML=term(midHTML());
   $('meZone').innerHTML=term(zoneHTML(vi,true));
+  const dock=$('handDock'),me=G.players[vi];
+  if(dock){dock.hidden=!!me.ai;if(!me.ai)dock.innerHTML=term(dockHTML(vi))}
   $('meZone').classList.toggle('active',G.turn===vi&&!G.over);
   const pr=$('prompt');
   const showPrompt=UI.prompt&&!G.players[UI.prompt.pi].ai;
@@ -1784,10 +1833,10 @@ function render(){
 function snapRects(){
   const m={};
   for(const e of document.querySelectorAll('[data-suid]'))m['s'+e.dataset.suid]=e.getBoundingClientRect();
-  for(const e of document.querySelectorAll('#meZone [data-play],#meZone [data-pick]'))m['c'+(e.dataset.play||e.dataset.pick)]=e.getBoundingClientRect();
+  for(const e of document.querySelectorAll('#handDock [data-play],#handDock [data-pick]'))m['c'+(e.dataset.play||e.dataset.pick)]=e.getBoundingClientRect();
   for(const e of document.querySelectorAll('[data-buid]'))m['c'+e.dataset.buid]=e.getBoundingClientRect();
   for(const e of document.querySelectorAll('[data-suid] .tokens')){const u=e.closest('[data-suid]').dataset.suid;m['t'+u]=e.getBoundingClientRect()}
-  for(const z of ['meZone','oppZone']){const h=document.querySelector(`#${z} .hand`)||document.querySelector(`#${z} .backs`)||document.querySelector(`#${z} .pname`);if(h)m['h'+z]=h.getBoundingClientRect()}
+  for(const z of ['meZone','oppZone']){const h=(z==='meZone'?document.querySelector('#handDock .hand'):null)||document.querySelector(`#${z} .backs`)||document.querySelector(`#${z} .pname`);if(h)m['h'+z]=h.getBoundingClientRect()}
   return m;
 }
 function zoneRect(pi){const z=document.querySelector(pi===viewer()?'#meZone .pname':'#oppZone .pname');return z?z.getBoundingClientRect():null}
@@ -2029,12 +2078,18 @@ function yourTurnCheck(){
 }
 /* ---- Every card is the same height: the tallest card on the table sets it ---- */
 function equalizeCards(){
-  const cards=[...document.querySelectorAll('#app .card')];
-  if(!cards.length) return;
-  for(const c of cards) c.style.minHeight='';
-  const h=Math.max(...cards.map(c=>c.offsetHeight));
-  for(const c of cards) c.style.minHeight=h+'px';
+  for(const sel of ['#app .card','#handDock .card']){
+    const cards=[...document.querySelectorAll(sel)];
+    if(!cards.length) continue;
+    for(const c of cards) c.style.minHeight='';
+    const h=Math.max(...cards.map(c=>c.offsetHeight));
+    for(const c of cards) c.style.minHeight=h+'px';
+    if(sel==='#handDock .card'){const d=$('handDock');if(d)d.style.setProperty('--lift',Math.max(0,h-DOCK_PEEK)+'px')}
+  }
+  const dw=$('dockwrap'),app=$('app');
+  if(dw&&app) app.style.paddingBottom=(dw.offsetHeight+18)+'px';
 }
+const DOCK_PEEK=150;
 /* ---- Zealot animation: dots fly between sites when they move, and in from the hand when gained ---- */
 function followerAnims(old){
   if(!G){FLY.fol=null;return}
@@ -2102,7 +2157,7 @@ function sparkle(r){
                 {transform:`translate(${x+ox}px,${y+oy}px) scale(0) rotate(90deg)`,opacity:0}],{duration:650+Math.random()*250,delay,easing:'ease-out',fill:'both'}).onfinish=()=>sp.remove();
   }
 }
-function handEl(uid){return document.querySelector(`#meZone [data-play="${uid}"],#meZone [data-pick="${uid}"]`)}
+function handEl(uid){return document.querySelector(`#handDock [data-play="${uid}"],#handDock [data-pick="${uid}"]`)}
 function flyCard(k,src,delay){
   const mine=!!handEl(k.uid), tgt=mine?handEl(k.uid):document.querySelector(`#oppZone [data-buid="${k.uid}"]`);
   if(!src||!tgt)return;
@@ -2155,7 +2210,7 @@ function chatSync(){
   el.classList.toggle('closed',!CHAT.open);
   el.querySelector('.chat-head').setAttribute('aria-expanded',String(CHAT.open));
   const b=el.querySelector('.chat-badge');b.hidden=CHAT.open||!CHAT.unread;b.textContent=CHAT.unread;
-  const pr=$('prompt');el.style.bottom=(pr&&!pr.hidden?pr.offsetHeight+10:16)+'px';
+  const dw=$('dockwrap');el.style.bottom=((dw?dw.offsetHeight:0)+10)+'px';
 }
 function chatIn(m){
   if(m.t==='chatlog'){CHAT.msgs=m.msgs||[];CHAT.code=ONLINE.code;chatList();chatSync();return}
@@ -2477,6 +2532,8 @@ if(HAS_DOM){
     if(e.key==='Escape'&&UI.prompt&&UI.prompt.cancellable)UI.prompt.resolve(null);
   });
   addEventListener('resize',()=>{if(G)equalizeCards()});
+  document.addEventListener('mouseover',e=>{const el=e.target.closest&&e.target.closest('#app [data-suid]');const z=$('zoom');if(el)showZoom(el);else if(z&&!z.hidden)z.hidden=true});
+  document.addEventListener('scroll',()=>{const z=$('zoom');if(z)z.hidden=true},true);
   render();
   if(/^https?:$/.test(location.protocol)) fetch('/api/ping').then(r=>r.ok?r.json():null).then(j=>{
     if(!j||!j.warplands) return;
