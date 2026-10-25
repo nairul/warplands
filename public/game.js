@@ -1720,7 +1720,7 @@ const humanTurn=()=>G&&!G.over&&!G.players[G.turn].ai&&G.turn===viewer();
 function handSummary(p){const n={};for(const k of p.hand)n[k.def.level]=(n[k.def.level]||0)+1;return [1,2,3,4].filter(l=>n[l]).map(l=>`${n[l]} Level ${ROMAN[l]}`).join(', ')||'No cards'}
 function reqHTML(ab,site){
   const n=site?effNeed(site,ab):ab.need;
-  return `<span class="req">${ab.infinite?'<span class="rq inf" title="Works on any turn">∞</span>':''}<span class="rq f" title="Followers needed on this site${n<ab.need?' (lowered by Academy)':''}">${n}●</span>${ab.actions?`<span class="rq a" title="Actions to spend">${ab.actions}◆</span>`:''}</span>`;
+  return `<span class="req">${ab.infinite?'<span class="rq inf" title="Works on any turn">∞</span>':''}<span class="rq f" title="Followers needed on this site${n<ab.need?' (lowered by Academy)':''}">${n}</span>${ab.actions?`<span class="rq a" title="Actions to spend">${ab.actions}◆</span>`:''}</span>`;
 }
 const eraCls=d=>d.start?'era-h':'era-'+d.level;
 const artHTML=d=>ART[d.id]?`<div class="art" aria-hidden="true"><svg viewBox="0 0 160 84" preserveAspectRatio="xMidYMid slice">${ART[d.id]}</svg></div>`:'';
