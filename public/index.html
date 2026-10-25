@@ -108,6 +108,7 @@ button.ab:disabled{opacity:.75}
   background:radial-gradient(circle at 35% 30%,#7fb0ff,var(--follower) 55%,#23468a);color:#fff;font-weight:800;font-size:16px;font-variant-numeric:tabular-nums;
   border:2px solid #0d1c38;box-shadow:0 1px 3px rgba(0,0,0,.6),inset 0 -2px 0 rgba(0,0,0,.25);text-shadow:0 1px 1px rgba(0,0,0,.6)}
 .zc.zero{filter:saturate(.25) brightness(.7)}
+.killfx{position:fixed;z-index:60;pointer-events:none;font-family:var(--body);font-weight:800;font-size:22px;color:#ff4a3a;text-shadow:0 0 6px rgba(0,0,0,.9),0 2px 0 #2a0703;transform:translate(-50%,0)}
 /* Fortified site: a crenellated stone wall rings the Zealot disc */
 .tokens.fort{position:relative;padding:9px;margin:-5px 0 -3px -9px}
 .tokens.fort::before{content:'';position:absolute;inset:0;border-radius:50%;
@@ -396,6 +397,8 @@ body.chat-open #app{padding-bottom:300px}
 :root{--dockH:122px}
 .dock .hand .card .kind{padding-top:3px;padding-bottom:3px}
 .dock .hand .card .art{margin-top:0}
+.dock .hand .card.site.mini{flex:0 0 auto;width:176px;min-width:0;max-width:none}
+.dock .hand .ab.mini .abt{display:block;-webkit-line-clamp:unset;overflow:visible}
 .rail .stack .rn{font-size:24px}
 .stack .cnt{font-size:14.5px}
 .discard,.log{font-size:14.5px}

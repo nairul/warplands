@@ -62,7 +62,7 @@ function sfx(kind,n){
 /* ---- Damage projectiles: where each hit comes from, and the queue the browser draws ---- */
 let CUR_SRC=null, SND_CAP=null;
 const ARROWS={q:[],until:0};
-const PEND=new Map(), GHOSTS=new Map();
+const PEND=new Map(), PENDZ=new Map(), GHOSTS=new Map();
 async function withSrc(src,fn){const prev=CUR_SRC;CUR_SRC=src;try{return await fn()}finally{CUR_SRC=prev}}
 const UPS={q:[]};
 const REV={q:[],until:0};
@@ -1007,6 +1007,7 @@ function mkSite(card,owner){return{uid:card.uid,card,owner,followers:0,damage:0,
 function mkCtx(pi,extra){return Object.assign({pi,me:G.players[pi],opp:G.players[1-pi],oppi:1-pi},extra)}
 
 function newGame(mode,setChoice){
+  PEND.clear();PENDZ.clear();
   uidc=1;
   /* One mode only: every level's cards are shuffled together and dealt to the stack size. */
   const choice='random';
@@ -1177,7 +1178,7 @@ async function damage(src,site,n,opt={}){
     if(n<=0||!inPlay(site)) return;
   }
   const kill=(opt.structural||isFort(site))?0:Math.min(n,site.followers);
-  SND_CAP=fxArrow({s:CUR_SRC||{pi:src},t:site.uid,st:!!opt.structural,n});
+  SND_CAP=fxArrow({s:CUR_SRC||{pi:src},t:site.uid,st:!!opt.structural,n,k:kill});
   try{
     site.followers-=kill; site.damage+=n; noteKill(site.owner,kill,site);
     log(`${n}${opt.structural?' structural':''} damage to ${poss(owner)} ${site.card.def.name}${kill?` (${kill} follower${kill>1?'s':''} killed)`:''}.`);
@@ -1749,10 +1750,15 @@ function handCardHTML(card,pi){
   const pick=UI.prompt&&UI.prompt.kind==='hand'&&UI.prompt.pi===pi&&UI.prompt.set.has(card.uid);
   const ok=!pick&&humanTurn()&&!UI.busy&&!UI.prompt&&canPlay(pi,card);
   let body;
-  if(d.type==='site') body=`<div class="body">${d.text?`<div class="tx">${cardText(d.text)}</div>`:''}${(d.abilities||[]).length?`<div class="abs">${abListHTML(d)}</div>`:''}</div><div class="hpline">${hpHTML(d.integrity||3,d.integrity||3)}</div>`;
+  if(d.type==='site'){
+    /* a site in hand is drawn exactly like it will look on the board: same text, ability rows, Zealot disc and HP square */
+    const tx=(d.text||'').replace(/^\s*Fortified\.\s*/,'');
+    const abs=(d.abilities||[]).map(ab=>`<div class="ab mini${ab.passive?' passive':''}" title="${esc(ab.text)}">${reqHTML(ab)}<span class="abt">${cardText(ab.text)}</span></div>`).join('');
+    body=`<div class="body">${tx?`<div class="tx">${cardText(tx)}</div>`:''}${abs?`<div class="abs">${abs}</div>`:''}</div><div class="foot">${zcHTML(0,!!d.fortified)}<div class="attl"></div>${hpHTML(d.integrity||3,d.integrity||3)}</div>`;
+  }
   else body=`<div class="body"><div class="tx">${cardText(d.text)}</div></div>`;
   const title=pick?'Choose '+d.name:ok?'Play '+d.name:d.type==='reaction'?'Reactions are offered to you automatically when their condition happens':!hasEffect(pi,card)?'No valid target right now':'Not enough actions';
-  return `<button class="card ${eraCls(d)} ${ok?'playable':''} ${pick?'target':''}" ${pick?`data-pick="${card.uid}"`:`data-play="${card.uid}"`} ${ok||pick?'':'aria-disabled="true"'} title="${esc(title)}">${bandHTML(d)}${kindHTML(d)}${artHTML(d)}${body}</button>`;
+  return `<button class="card ${d.type==='site'?'site mini ':''}${eraCls(d)} ${ok?'playable':''} ${pick?'target':''}" ${pick?`data-pick="${card.uid}"`:`data-play="${card.uid}"`} ${ok||pick?'':'aria-disabled="true"'} title="${esc(title)}">${bandHTML(d)}${kindHTML(d)}${artHTML(d)}${body}</button>`;
 }
 function siteHTML(s,vi,full){
   if(!full) return siteMini(s,vi);
@@ -1777,7 +1783,7 @@ function siteHTML(s,vi,full){
     ${s.tucked.length?`<div class="tuck">${s.tucked.length} card${s.tucked.length>1?'s':''} tucked underneath</div>`:''}
     ${atts?`<div class="atts">${atts}</div>`:''}
     </div>
-    <div class="foot">${zcHTML(s.followers,isFort(s))}
+    <div class="foot">${zcHTML(shownZ(s),isFort(s))}
     ${hpHTML(integ(s)-shownDmg,integ(s))}</div>
   </div>`;
 }
@@ -1804,7 +1810,7 @@ function siteMini(s,vi){
   return `<div class="card site mini ${eraCls(d)} ${target?'target':''}" data-suid="${s.uid}" ${target?`data-site="${s.uid}" tabindex="0" role="button" aria-label="Choose ${esc(d.name)}"`:''}>
     ${bandHTML(d)}${artHTML(d)}
     <div class="body">${miniTx?`<div class="tx">${cardText(miniTx)}</div>`:''}${abs?`<div class="abs">${abs}</div>`:''}${chips?`<div class="chips">${chips}</div>`:''}</div>
-    <div class="foot">${zcHTML(s.followers,isFort(s))}<div class="attl">${attl}</div>
+    <div class="foot">${zcHTML(shownZ(s),isFort(s))}<div class="attl">${attl}</div>
     ${hpHTML(integ(s)-shownDmg,integ(s))}</div>
   </div>`;
 }
@@ -1937,7 +1943,7 @@ function render(){
   if(!HAS_DOM||(G&&G.sim)) return;
   const oldRects=G&&!G.sim?snapRects():null;
   if(oldRects&&ARROWS.q.length&&!(typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches)){
-    for(const d of ARROWS.q){if(d.pend)continue;d.pend=true;PEND.set(d.t,(PEND.get(d.t)||0)+d.n);
+    for(const d of ARROWS.q){if(d.pend)continue;d.pend=true;PEND.set(d.t,(PEND.get(d.t)||0)+d.n);if(d.k)PENDZ.set(d.t,(PENDZ.get(d.t)||0)+d.k);
       if(!oldRects['html'+d.t]){const e=document.querySelector(`[data-suid="${d.t}"]`);if(e){oldRects['html'+d.t]=e.outerHTML;oldRects['z'+d.t]=rowZoom(e)}}}
   }
   chatSync();
@@ -2098,19 +2104,34 @@ function crumble(uid,col){
 }
 /* Show the damage a projectile carried, once it lands (or if its animation is skipped) */
 /* Zealot count as one blue disc; HP as one red square showing current/max. */
+/* Zealots killed by damage still in flight are shown until the projectile lands */
+function shownZ(s){return s.followers+(PENDZ.get(s.uid)||0)}
 function zcHTML(n,fort){return `<div class="tokens${fort?' fort':''}" title="${n} Zealot${n===1?'':'s'}${fort?' · Fortified site':''}"><span class="zc${n?'':' zero'}">${n}</span></div>`}
 function hpHTML(cur,max){cur=Math.max(0,cur);return `<div class="integ" title="${cur} of ${max} HP"><span class="hpbox${cur<max?' hurt':''}"><b>${cur}</b>/${max}</span></div>`}
 function settle(d){
   if(d.settled)return;d.settled=true;
   if(!d.pend)return;
   const left=(PEND.get(d.t)||0)-d.n;if(left>0)PEND.set(d.t,left);else PEND.delete(d.t);
+  if(d.k){const lz=(PENDZ.get(d.t)||0)-d.k;if(lz>0)PENDZ.set(d.t,lz);else PENDZ.delete(d.t)}
   const el=document.querySelector(`[data-suid="${d.t}"]`);if(!el||!G)return;
   const st=allSites().find(x=>x.uid===d.t);if(!st)return;
+  if(d.k){const z=shownZ(st);if(FLY.fol&&FLY.fol.has(d.t))FLY.fol.get(d.t).n=z;setZ(el,z);killFx(el,d.k)}
   const shown=Math.max(0,st.damage-(PEND.get(d.t)||0));
   const box=el.querySelector('.hpbox');if(!box)return;
   const mx=integ(st),cur=Math.max(0,mx-shown),b=box.querySelector('b');
   if(b&&b.textContent!==String(cur)){b.textContent=cur;box.classList.toggle('hurt',cur<mx);
     box.animate([{transform:'scale(1.6)',filter:'brightness(2.2)'},{transform:'scale(1)',filter:'brightness(1)'}],{duration:420,easing:'ease-out'})}
+}
+function setZ(el,n){const c=el.querySelector('.zc');if(!c)return;c.textContent=n;c.classList.toggle('zero',!n);const t=el.querySelector('.tokens');if(t)t.title=`${n} Zealot${n===1?'':'s'}`}
+/* Zealots killed: the disc flashes red and shrinks back, and a red "−N" rises from it */
+function killFx(el,n){
+  const c=el.querySelector('.zc');if(!c)return;
+  c.animate([{transform:'scale(1.6)',filter:'brightness(1.6) sepia(1) saturate(6) hue-rotate(-50deg)'},{transform:'scale(1)',filter:'none'}],{duration:520,easing:'ease-out'});
+  const r=c.getBoundingClientRect();if(!r.width)return;
+  const f=document.createElement('div');f.className='killfx';f.setAttribute('aria-hidden','true');f.textContent='−'+n;
+  Object.assign(f.style,{left:(r.left+r.width/2)+'px',top:(r.top)+'px'});document.body.appendChild(f);
+  f.animate([{transform:'translate(-50%,0) scale(.7)',opacity:0},{transform:'translate(-50%,-14px) scale(1.15)',opacity:1,offset:.25},{transform:'translate(-50%,-38px) scale(1)',opacity:0}],{duration:1100,easing:'ease-out'}).onfinish=()=>f.remove();
+  setTimeout(()=>f.remove(),1500);
 }
 function flyArrow(d,a,b,dur){
   const svg=fxLayer(),NS='http://www.w3.org/2000/svg';
@@ -2336,19 +2357,20 @@ const DOCK_PEEK=60;
 /* ---- Zealot animation: dots fly between sites when they move, and in from the hand when gained ---- */
 function followerAnims(old){
   if(!G){FLY.fol=null;return}
-  const now=new Map();for(const p of G.players)for(const st of p.sites)now.set(st.uid,{n:st.followers,pi:p.i});
+  const now=new Map();for(const p of G.players)for(const st of p.sites)now.set(st.uid,{n:shownZ(st),pi:p.i});
   const prev=FLY.fol;FLY.fol=now;
   if(!prev||G.turnCount<(FLY.folTurn||0)){FLY.folTurn=G.turnCount;return}
   FLY.folTurn=G.turnCount;
   if(typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const ups=[],downs=[];
   for(const [u,v] of now){const was=prev.get(u);if(!was)continue;const d=v.n-was.n;if(d>0)ups.push({u,pi:v.pi,n:d});else if(d<0)downs.push({u,pi:v.pi,n:-d})}
-  if(!ups.length) return;
   /* Pair Zealots that left a site with sites that gained them: same player first (relocation), then across (steals) */
   const moves=[];
   const pair=same=>{for(const up of ups)for(const dn of downs){if(!up.n)break;if(!dn.n||(same?dn.pi!==up.pi:dn.pi===up.pi))continue;const k=Math.min(up.n,dn.n);moves.push({from:'t'+dn.u,to:up.u,n:k});up.n-=k;dn.n-=k}};
   pair(true);pair(false);
   for(const up of ups) if(up.n) moves.push({from:'h'+(up.pi===viewer()?'meZone':'oppZone'),to:up.u,n:up.n,hand:true});
+  /* Zealots that vanished without moving anywhere were killed (or sacrificed) */
+  for(const dn of downs) if(dn.n){const el=document.querySelector(`[data-suid="${dn.u}"]`);if(el&&!(FLY.hiddenSites&&FLY.hiddenSites.has(dn.u)))killFx(el,dn.n)}
   /* every destination animates at the same time, so a split relocation shows each stream */
   for(const m of moves){
     const a=old[m.from];
