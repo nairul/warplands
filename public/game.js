@@ -1800,10 +1800,6 @@ function showZoom(el){
   const z=$('zoom');if(!z||!G)return;
   const uid=+el.dataset.suid,st=allSites().find(x=>x.uid===uid);if(!st){z.hidden=true;return}
   z.innerHTML=term(siteHTML(st,viewer(),true));
-  const b=z.firstElementChild;if(b){const st2=allSites().find(x=>x.uid===uid);
-    b.querySelector('.foot')?.remove();
-    const extra=document.createElement('div');extra.className='zoom-foot';
-    extra.innerHTML=term(`${st2.followers} followers · damage ${st2.damage}/${integ(st2)}${isFort(st2)?' · fortified':''}`);b.appendChild(extra)}
   z.hidden=false;
   const r=el.getBoundingClientRect(),w=z.offsetWidth,h=z.offsetHeight;
   let x=r.right+12;if(x+w>innerWidth-8)x=r.left-w-12;if(x<8)x=8;
