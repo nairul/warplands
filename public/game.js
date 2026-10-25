@@ -1781,7 +1781,7 @@ function siteHTML(s,vi,full){
     <div class="body">
     ${d.text&&d.text.replace(/^\s*Fortified\.\s*/,'')?`<div class="tx">${cardText(d.text.replace(/^\s*Fortified\.\s*/,''))}</div>`:''}
     ${abs?`<div class="abs">${abs}</div>`:''}
-    ${used?'<div class="used">Ability used this turn</div>':''}
+    
     ${s.tucked.length?`<div class="tuck">${s.tucked.length} card${s.tucked.length>1?'s':''} tucked underneath</div>`:''}
     ${atts?`<div class="atts">${atts}</div>`:''}
     </div>
@@ -1807,7 +1807,7 @@ function siteMini(s,vi){
   /* the wall ring on the Zealot disc already says 'Fortified', so drop that sentence from the text */
   const miniTx=(d.text||'').replace(/^\s*Fortified\.\s*/,'');
   const attl=s.attachments.map(a=>`<span class="chip ${HARMFUL.includes(a.def.id)?'bad':''}" title="${esc(a.def.name)}: ${esc(a.def.text)}">${esc(a.def.name)}</span>`).join('');
-  const chips=[s.tucked.length?`<span class="chip">${s.tucked.length} tucked</span>`:'',used?'<span class="chip dim">Used</span>':'',
+  const chips=[s.tucked.length?`<span class="chip">${s.tucked.length} tucked</span>`:'','',
 ''].join('');
   return `<div class="card site mini ${eraCls(d)} ${target?'target':''}" data-suid="${s.uid}" ${target?`data-site="${s.uid}" tabindex="0" role="button" aria-label="Choose ${esc(d.name)}"`:''}>
     ${bandHTML(d)}${artHTML(d)}
