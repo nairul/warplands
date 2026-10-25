@@ -838,7 +838,7 @@ const CARDS=[
      run:async c=>{c.pay();const n=tuckN(c.site);c.me.actions+=n;log(`${c.me.name} gain${s_(c.me)} ${n} action${n>1?'s':''} from the Treasury.`)},
      ai:c=>tuckN(c.site)*1.2}]},
   {id:'pplant',name:'Arcane Furnace',set:'exp',level:3,type:'site',cost:1,integrity:3,count:1,worth:2.4,
-   text:"When Arcane Furnace is destroyed, Arcane Furnace's owner chooses 2 sites they own. Both sites take 1 structural damage for each card tucked under Arcane Furnace.",
+   text:"When destroyed, its owner chooses 2 of their sites. Both take 1 structural damage for each card tucked under Arcane Furnace.",
    abilities:[{need:2,actions:2,text:'Play a discarded event for no actions. Then tuck that event under Arcane Furnace.',can:c=>G.discard.some(k=>k.def.type==='event'),
      run:async c=>{
        const k=await pickDiscard(c,'Arcane Furnace: choose a discarded event to play.',k=>k.def.type==='event',k=>cardValue(c.pi,k));if(!k)return;
