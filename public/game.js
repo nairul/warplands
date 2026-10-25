@@ -1800,6 +1800,7 @@ function showZoom(el){
   const z=$('zoom');if(!z||!G)return;
   const uid=+el.dataset.suid,st=allSites().find(x=>x.uid===uid);if(!st){z.hidden=true;return}
   z.innerHTML=term(siteHTML(st,viewer(),true));
+  {const c=z.firstElementChild,k=rowZoom(el);if(c&&k>1)c.style.zoom=k}
   z.hidden=false;
   const r=el.getBoundingClientRect(),w=z.offsetWidth,h=z.offsetHeight;
   let x=r.right+12;if(x+w>innerWidth-8)x=r.left-w-12;if(x<8)x=8;
@@ -1924,7 +1925,7 @@ function render(){
   const oldRects=G&&!G.sim?snapRects():null;
   if(oldRects&&ARROWS.q.length&&!(typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches)){
     for(const d of ARROWS.q){if(d.pend)continue;d.pend=true;PEND.set(d.t,(PEND.get(d.t)||0)+d.n);
-      if(!oldRects['html'+d.t]){const e=document.querySelector(`[data-suid="${d.t}"]`);if(e)oldRects['html'+d.t]=e.outerHTML}}
+      if(!oldRects['html'+d.t]){const e=document.querySelector(`[data-suid="${d.t}"]`);if(e){oldRects['html'+d.t]=e.outerHTML;oldRects['z'+d.t]=rowZoom(e)}}}
   }
   chatSync();
   const ov=$('overlay');
@@ -1955,6 +1956,7 @@ function render(){
   else if(G.over&&!UI.closedOver) o=overHTML();
   ov.hidden=!o; ov.innerHTML=term(o);
   chatSync();
+  equalizeCards();
   drawAnims();
   if(oldRects){if(REV.q.length)playReveals(oldRects);followerAnims(oldRects);placeAnims(oldRects);if(ARROWS.q.length)playArrows(oldRects)}
   if(UPS.q.length) playUps();
@@ -1990,7 +1992,7 @@ function playArrows(old){
     const src=d.s.site!=null?siteRect(d.s.site,old):d.s.card!=null?(old['c'+d.s.card]||zoneRect(d.s.pi)):zoneRect(d.s.pi);
     const tgt=siteRect(d.t,old);
     if(reduce||!src||!tgt){if(d.snd)sfx(d.snd);settle(d);continue}
-    if(!document.querySelector(`[data-suid="${d.t}"]`)&&old['html'+d.t]&&!GHOSTS.has(d.t)) makeGhost(d.t,old['html'+d.t],tgt);
+    if(!document.querySelector(`[data-suid="${d.t}"]`)&&old['html'+d.t]&&!GHOSTS.has(d.t)) makeGhost(d.t,old['html'+d.t],tgt,old['z'+d.t]||1);
     const delay=t0-now;
     const dist=Math.hypot(src.left-tgt.left,src.top-tgt.top);
     const dur=Math.min(820,420+dist*0.35);
@@ -2055,10 +2057,11 @@ function revealCard(d,def,old,reduce,dur){
   setTimeout(()=>{if(f.isConnected)f.remove()},dur+600);
 }
 /* A destroyed site lingers as a copy until the projectile that destroys it lands */
-function makeGhost(uid,html,r){
+function rowZoom(el){const r=el&&el.closest('.row');return r&&parseFloat(r.style.zoom)||1}
+function makeGhost(uid,html,r,z=1){
   const g=document.createElement('div');g.className='ghost-site';g.setAttribute('aria-hidden','true');
   Object.assign(g.style,{left:r.left+'px',top:r.top+'px',width:r.width+'px',height:r.height+'px'});
-  g.innerHTML=html;const c=g.firstElementChild;if(c){c.removeAttribute('data-suid');c.removeAttribute('data-site');c.style.visibility='visible';c.style.margin='0';c.style.width='100%';c.style.height='100%'}
+  g.innerHTML=html;const c=g.firstElementChild;if(c){c.removeAttribute('data-suid');c.removeAttribute('data-site');c.style.visibility='visible';c.style.margin='0';c.style.zoom=z;c.style.width=r.width/z+'px';c.style.height=r.height/z+'px';c.style.maxWidth='none';c.style.minHeight='0'}
   document.body.appendChild(g);GHOSTS.set(uid,g);
   setTimeout(()=>{if(GHOSTS.get(uid)===g){g.remove();GHOSTS.delete(uid)}},6000);
 }
@@ -2209,6 +2212,7 @@ function flySite(st,el,a,flip){
   const lv=st.card.def.level;
   f.innerHTML=`<div class="fly-inner"><div class="fly-face fly-back era-${st.card.def.start?'h':lv}"><span>${ROMAN[lv]}</span></div><div class="fly-face fly-front">${el.outerHTML}</div></div>`;
   const fr=f.querySelector('.fly-front>*');fr.style.visibility='visible';fr.removeAttribute('data-suid');fr.removeAttribute('data-site');
+  {const z=rowZoom(el);if(z!==1){fr.style.zoom=z;fr.style.setProperty('width',b.width/z+'px','important');fr.style.height=b.height/z+'px';fr.style.maxWidth='none';fr.style.minHeight='0'}}
   const bs=f.querySelector('.fly-back span');bs.style.fontSize=Math.max(9,Math.min(44,b.width*0.24))+'px';
   if(!flip)f.querySelector('.fly-back').remove();
   document.body.appendChild(f);
@@ -2273,6 +2277,7 @@ function yourTurnCheck(){
 }
 /* ---- Every card is the same height: the tallest card on the table sets it ---- */
 function equalizeCards(){
+  for(const r of document.querySelectorAll('.board .zone .row')) r.style.zoom='';
   for(const sel of ['#app .card','#handDock .card']){
     const cards=[...document.querySelectorAll(sel)];
     if(!cards.length) continue;
@@ -2283,6 +2288,26 @@ function equalizeCards(){
   }
   const dw=$('dockwrap'),app=$('app');
   if(dw&&app) app.style.paddingBottom=(dw.offsetHeight+18)+'px';
+  fitBoard();
+}
+/* When the board is sparse, scale both rows of sites up (same factor for both) to use the empty space.
+   Only scales while every site is still at its full width, so card heights stay equal. */
+function fitBoard(){
+  const rows=[...document.querySelectorAll('.board .zone .row')].filter(r=>r.querySelector('.site.mini'));
+  for(const r of rows) r.style.zoom='';
+  if(!rows.length) return;
+  let z=1.8;
+  for(const r of rows){
+    const kids=[...r.children].filter(k=>k.offsetParent);if(!kids.length) continue;
+    const cs=getComputedStyle(r),zone=r.closest('.zone'),zcs=getComputedStyle(zone);
+    const rr=r.getBoundingClientRect(),zr=zone.getBoundingClientRect();
+    const first=kids[0].getBoundingClientRect(),last=kids[kids.length-1].getBoundingClientRect();
+    const needW=last.right-first.left+parseFloat(cs.paddingLeft)+parseFloat(cs.paddingRight)+2;
+    const availH=zr.bottom-parseFloat(zcs.borderBottomWidth)-parseFloat(zcs.paddingBottom)-rr.top;
+    z=Math.min(z,r.clientWidth/needW,availH/r.scrollHeight);
+  }
+  z=Math.floor(z*50)/50;
+  if(z>1.02) for(const r of rows) r.style.zoom=z;
 }
 const DOCK_PEEK=60;
 /* ---- Zealot animation: dots fly between sites when they move, and in from the hand when gained ---- */
