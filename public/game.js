@@ -1732,15 +1732,16 @@ function kindHTML(d){
   return `<div class="kind"><span>${d.start?'Starting site':TYPE_NAME[d.type]}</span>${right}</div>`;
 }
 /* Card and ability text with the words Zealot(s) and Mana replaced by their icons */
-const IC_Z='<span class="ic z" role="img" aria-label="Zealot"></span>', IC_M='<span class="ic m" role="img" aria-label="Mana">◆</span>';
+const IC_Z='<span class="ic z" role="img" aria-label="Zealot"></span>', IC_M='<span class="ic m" role="img" aria-label="Mana">◆</span>', IC_C='<span class="ic c" role="img" aria-label="card"></span>';
 function cardText(t){
   /* swap words for placeholder marks first, then marks for icons, so no icon is matched twice */
   return esc(t)
     .replace(/\ban action\b/g,'1 \u0002').replace(/\bno actions\b/g,'no \u0002')
     .replace(/\b(\d+) fewer actions?\b/g,'$1 less \u0002').replace(/\bfewer actions?\b/g,'less \u0002')
     .replace(/\b[Aa]ctions?\b/g,'\u0002').replace(/\bMana\b/g,'\u0002')
+    .replace(/\b([Dd]raw) (?:a|1) card\b/g,'$1 \u0003').replace(/\b([Dd]raw) (a total of )?(\d+) cards?\b/g,'$1 $2$3 \u0003').replace(/\b([Dd]raw) cards\b/g,'$1 \u0003')
     .replace(/\b[Ff]ollowers?\b/g,'\u0001').replace(/\bZealots?\b/g,'\u0001')
-    .replace(/\u0001/g,IC_Z).replace(/\u0002/g,IC_M);
+    .replace(/\u0001/g,IC_Z).replace(/\u0002/g,IC_M).replace(/\u0003/g,IC_C);
 }
 function abListHTML(d){return (d.abilities||[]).map(ab=>`<div class="ab ${ab.passive?'passive':''}">${reqHTML(ab)}<span>${cardText(ab.text)}${ab.passive?'<span class="auto">Automatic</span>':''}</span></div>`).join('')}
 function handCardHTML(card,pi){
