@@ -1798,10 +1798,10 @@ function siteMini(s,vi){
     const shownDmg=Math.max(0,s.damage-(PEND.get(s.uid)||0));
   const attl=s.attachments.map(a=>`<span class="chip ${HARMFUL.includes(a.def.id)?'bad':''}" title="${esc(a.def.name)}: ${esc(a.def.text)}">${esc(a.def.name)}</span>`).join('');
   const chips=[s.tucked.length?`<span class="chip">${s.tucked.length} tucked</span>`:'',used?'<span class="chip dim">Used</span>':'',
-    d.text&&!(d.abilities||[]).length&&!d.start&&!isFort(s)?`<span class="chip dim" title="${esc(d.text)}">Effect</span>`:''].join('');
+''].join('');
   return `<div class="card site mini ${eraCls(d)} ${target?'target':''}" data-suid="${s.uid}" ${target?`data-site="${s.uid}" tabindex="0" role="button" aria-label="Choose ${esc(d.name)}"`:''}>
     ${bandHTML(d)}${artHTML(d)}
-    <div class="body">${abs?`<div class="abs">${abs}</div>`:''}${chips?`<div class="chips">${chips}</div>`:''}</div>
+    <div class="body">${d.text?`<div class="tx">${cardText(d.text)}</div>`:''}${abs?`<div class="abs">${abs}</div>`:''}${chips?`<div class="chips">${chips}</div>`:''}</div>
     <div class="foot">${zcHTML(s.followers,isFort(s))}<div class="attl">${attl}</div>
     ${hpHTML(integ(s)-shownDmg,integ(s))}</div>
   </div>`;
