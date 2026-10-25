@@ -2339,6 +2339,7 @@ function equalizeCards(){
     for(const c of cards) c.style.minHeight=h+'px';
   }
   /* Hand cards keep their natural height (only the top strip shows until hovered); each one lifts just enough to show itself */
+  fitNames('#handDock .card .nm');
   for(const c of document.querySelectorAll('#handDock .card')){c.style.minHeight='';c.style.setProperty('--lift',Math.max(0,c.offsetHeight-DOCK_PEEK)+'px')}
   const dw=$('dockwrap'),app=$('app');
   if(dw&&app) app.style.paddingBottom=(dw.offsetHeight+18)+'px';
@@ -2355,6 +2356,14 @@ function probeSiteH(cards){
   const c=w.firstElementChild;c.removeAttribute('data-suid');
   Object.assign(c.style,{position:'absolute',visibility:'hidden',left:'0',top:'0',width:ref.offsetWidth+'px',maxWidth:'none',flex:'none'});
   ref.parentElement.appendChild(c);const h=c.offsetHeight;c.remove();return h;
+}
+/* Shrink a card name's font just enough to keep it on one line */
+function fitNames(sel){
+  for(const nm of document.querySelectorAll(sel)){
+    nm.style.fontSize='';nm.style.whiteSpace='nowrap';
+    let f=parseFloat(getComputedStyle(nm).fontSize);
+    while(nm.scrollWidth>nm.clientWidth+0.5&&f>9){f-=0.5;nm.style.fontSize=f+'px'}
+  }
 }
 function fitBoard(){
   const rows=[...document.querySelectorAll('.board .zone .row')].filter(r=>r.querySelector('.site.mini'));
