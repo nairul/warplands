@@ -1725,7 +1725,7 @@ function reqHTML(ab,site){
 const eraCls=d=>d.start?'era-h':'era-'+d.level;
 const artHTML=d=>ART[d.id]?`<div class="art" aria-hidden="true"><svg viewBox="0 0 160 84" preserveAspectRatio="xMidYMid slice">${ART[d.id]}</svg></div>`:'';
 function bandHTML(d){
-  return `<div class="band"><span class="lv">${ROMAN[d.level]}</span><span class="nm">${esc(d.name)}</span><span class="ty" title="${TYPE_NAME[d.type]}${d.start||d.type==='reaction'?'':', costs '+d.cost+' action'+(d.cost===1?'':'s')}">${ICONS[d.type]}${d.start||d.type==='reaction'?'':d.cost}</span></div>`;
+  return `<div class="band"><span class="nm">${esc(d.name)}</span><span class="ty" title="${TYPE_NAME[d.type]}${d.start||d.type==='reaction'?'':', costs '+d.cost+' action'+(d.cost===1?'':'s')}">${ICONS[d.type]}${d.start||d.type==='reaction'?'':d.cost}</span></div>`;
 }
 function kindHTML(d){
   const right=d.placeholder?'<span class="ph">placeholder</span>':'';
