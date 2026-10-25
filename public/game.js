@@ -1738,7 +1738,7 @@ function handCardHTML(card,pi){
   const pick=UI.prompt&&UI.prompt.kind==='hand'&&UI.prompt.pi===pi&&UI.prompt.set.has(card.uid);
   const ok=!pick&&humanTurn()&&!UI.busy&&!UI.prompt&&canPlay(pi,card);
   let body;
-  if(d.type==='site') body=`<div class="body">${d.text?`<div class="tx">${cardText(d.text)}</div>`:''}${(d.abilities||[]).length?`<div class="abs">${abListHTML(d)}</div>`:''}</div><div class="hpline"><div class="integ" title="${d.integrity||3} HP${d.fortified?' · fortified':''}">${d.fortified?'<span class="fort" title="Fortified">F</span>':''}${'<i></i>'.repeat(d.integrity||3)}</div></div>`;
+  if(d.type==='site') body=`<div class="body">${d.text?`<div class="tx">${cardText(d.text)}</div>`:''}${(d.abilities||[]).length?`<div class="abs">${abListHTML(d)}</div>`:''}</div><div class="hpline">${hpHTML(d.integrity||3,d.integrity||3,d.fortified)}</div>`;
   else body=`<div class="body"><div class="tx">${cardText(d.text)}</div></div>`;
   const title=pick?'Choose '+d.name:ok?'Play '+d.name:d.type==='reaction'?'Reactions are offered to you automatically when their condition happens':'Not enough actions';
   return `<button class="card ${eraCls(d)} ${ok?'playable':''} ${pick?'target':''}" ${pick?`data-pick="${card.uid}"`:`data-play="${card.uid}"`} ${ok||pick?'':'aria-disabled="true"'} title="${esc(title)}">${bandHTML(d)}${kindHTML(d)}${artHTML(d)}${body}</button>`;
@@ -1754,9 +1754,7 @@ function siteHTML(s,vi,full){
     return mine&&!target?`<button class="ab" data-ab="${s.uid}:${i}" ${ready?'':'disabled'}>${reqHTML(ab,s)}<span>${cardText(ab.text)}</span></button>`
                :`<div class="ab">${reqHTML(ab,s)}<span>${cardText(ab.text)}</span></div>`;
   }).join('');
-  const toks=Array.from({length:Math.min(s.followers,10)},()=>'<span class="dot"></span>').join('');
-  const shownDmg=Math.max(0,s.damage-(PEND.get(s.uid)||0));
-  const integB=Array.from({length:integ(s)},(_,i)=>`<i class="${i<shownDmg?'hit':''}"></i>`).join('');
+    const shownDmg=Math.max(0,s.damage-(PEND.get(s.uid)||0));
   const atts=s.attachments.map(a=>`<div class="att" title="${esc(a.def.text)}"><b>${esc(a.def.name)}</b> · ${esc(a.def.text)}</div>`).join('');
   const used=s.usedTurn===G.turnCount&&G.turn===s.owner&&(d.abilities||[]).length;
   return `<div class="card site ${eraCls(d)}">
@@ -1768,8 +1766,8 @@ function siteHTML(s,vi,full){
     ${s.tucked.length?`<div class="tuck">${s.tucked.length} card${s.tucked.length>1?'s':''} tucked underneath</div>`:''}
     ${atts?`<div class="atts">${atts}</div>`:''}
     </div>
-    <div class="foot"><div class="tokens" title="${s.followers} followers">${toks}<span class="n">${s.followers}</span></div>
-    <div class="integ" title="Damage ${s.damage} of ${integ(s)} integrity${isFort(s)?' · fortified':''}">${isFort(s)?'<span style="font-size:11px;font-weight:700;margin-right:2px" title="Fortified">F</span>':''}${integB}</div></div>
+    <div class="foot">${zcHTML(s.followers)}
+    ${hpHTML(integ(s)-shownDmg,integ(s),isFort(s))}</div>
   </div>`;
 }
 /* Compact site for the board: name, art strip, ability buttons, Zealots and damage.
@@ -1786,17 +1784,15 @@ function siteMini(s,vi){
     return mine&&!target?`<button class="ab mini" data-ab="${s.uid}:${i}" ${ready?'':'disabled'} title="${t}">${reqHTML(ab,s)}<span class="abt">${ti}</span></button>`
                :`<div class="ab mini" title="${t}">${reqHTML(ab,s)}<span class="abt">${ti}</span></div>`;
   }).join('');
-  const toks=Array.from({length:Math.min(s.followers,10)},()=>'<span class="dot"></span>').join('');
-  const shownDmg=Math.max(0,s.damage-(PEND.get(s.uid)||0));
-  const integB=Array.from({length:integ(s)},(_,i)=>`<i class="${i<shownDmg?'hit':''}"></i>`).join('');
+    const shownDmg=Math.max(0,s.damage-(PEND.get(s.uid)||0));
   const chips=[...s.attachments.map(a=>`<span class="chip ${HARMFUL.includes(a.def.id)?'bad':''}" title="${esc(a.def.text)}">${esc(a.def.name)}</span>`),
     s.tucked.length?`<span class="chip">${s.tucked.length} tucked</span>`:'',used?'<span class="chip dim">Used</span>':'',
     d.text&&!(d.abilities||[]).length&&!d.start?`<span class="chip dim" title="${esc(d.text)}">${isFort(s)?'Fortified':'Effect'}</span>`:''].join('');
   return `<div class="card site mini ${eraCls(d)} ${target?'target':''}" data-suid="${s.uid}" ${target?`data-site="${s.uid}" tabindex="0" role="button" aria-label="Choose ${esc(d.name)}"`:''}>
     ${bandHTML(d)}${artHTML(d)}
     <div class="body">${abs?`<div class="abs">${abs}</div>`:''}${chips?`<div class="chips">${chips}</div>`:''}</div>
-    <div class="foot"><div class="tokens" title="${s.followers} followers">${toks}<span class="n">${s.followers}</span></div>
-    <div class="integ" title="Damage ${s.damage} of ${integ(s)} integrity${isFort(s)?' · fortified':''}">${isFort(s)?'<span class="fort" title="Fortified">F</span>':''}${integB}</div></div>
+    <div class="foot">${zcHTML(s.followers)}
+    ${hpHTML(integ(s)-shownDmg,integ(s),isFort(s))}</div>
   </div>`;
 }
 /* Hover preview of the full site card */
@@ -2089,6 +2085,9 @@ function crumble(uid,col){
   dust.animate([{opacity:0,transform:'scale(.6)'},{opacity:1,transform:'scale(1)',offset:.4},{opacity:0,transform:'scale(1.3)'}],{duration:1000,delay:250,fill:'both'}).onfinish=()=>dust.remove();
 }
 /* Show the damage a projectile carried, once it lands (or if its animation is skipped) */
+/* Zealot count as one blue disc; HP as one red square showing current/max. */
+function zcHTML(n){return `<div class="tokens" title="${n} Zealot${n===1?'':'s'}"><span class="zc${n?'':' zero'}">${n}</span></div>`}
+function hpHTML(cur,max,fort){cur=Math.max(0,cur);return `<div class="integ" title="${cur} of ${max} HP${fort?' · fortified':''}">${fort?'<span class="fort" title="Fortified">F</span>':''}<span class="hpbox${cur<max?' hurt':''}"><b>${cur}</b>/${max}</span></div>`}
 function settle(d){
   if(d.settled)return;d.settled=true;
   if(!d.pend)return;
@@ -2096,7 +2095,10 @@ function settle(d){
   const el=document.querySelector(`[data-suid="${d.t}"]`);if(!el||!G)return;
   const st=allSites().find(x=>x.uid===d.t);if(!st)return;
   const shown=Math.max(0,st.damage-(PEND.get(d.t)||0));
-  el.querySelectorAll('.integ i').forEach((b,i)=>{const was=b.classList.contains('hit');b.classList.toggle('hit',i<shown);if(!was&&i<shown)b.animate([{transform:'scale(1.9)',filter:'brightness(2)'},{transform:'scale(1)',filter:'brightness(1)'}],{duration:380,easing:'ease-out'})});
+  const box=el.querySelector('.hpbox');if(!box)return;
+  const mx=integ(st),cur=Math.max(0,mx-shown),b=box.querySelector('b');
+  if(b&&b.textContent!==String(cur)){b.textContent=cur;box.classList.toggle('hurt',cur<mx);
+    box.animate([{transform:'scale(1.6)',filter:'brightness(2.2)'},{transform:'scale(1)',filter:'brightness(1)'}],{duration:420,easing:'ease-out'})}
 }
 function flyArrow(d,a,b,dur){
   const svg=fxLayer(),NS='http://www.w3.org/2000/svg';

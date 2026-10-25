@@ -104,8 +104,15 @@ button.ab:disabled{opacity:.75}
 .tokens{display:flex;flex-wrap:wrap;gap:3px;align-items:center;max-width:100px}
 .tokens .n{font-weight:700;font-size:14px;margin-left:3px;font-variant-numeric:tabular-nums}
 .integ{display:flex;gap:3px;align-items:center}
-.integ i{width:9px;height:12px;border:1.5px solid var(--ink-soft);border-radius:2px;display:inline-block}
-.integ i.hit{background:var(--damage);border-color:var(--damage)}
+.zc{min-width:30px;height:30px;padding:0 4px;box-sizing:border-box;border-radius:15px;display:inline-flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 35% 30%,#7fb0ff,var(--follower) 55%,#23468a);color:#fff;font-weight:800;font-size:16px;font-variant-numeric:tabular-nums;
+  border:2px solid #0d1c38;box-shadow:0 1px 3px rgba(0,0,0,.6),inset 0 -2px 0 rgba(0,0,0,.25);text-shadow:0 1px 1px rgba(0,0,0,.6)}
+.zc.zero{filter:saturate(.25) brightness(.7)}
+.hpbox{height:30px;min-width:44px;padding:0 6px;box-sizing:border-box;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;gap:1px;
+  background:linear-gradient(180deg,#d85a4c,var(--damage) 55%,#7e221a);color:#fff;font-weight:700;font-size:13px;font-variant-numeric:tabular-nums;
+  border:2px solid #2a0a06;box-shadow:0 1px 3px rgba(0,0,0,.6),inset 0 -2px 0 rgba(0,0,0,.25);text-shadow:0 1px 1px rgba(0,0,0,.6)}
+.hpbox b{font-size:17px;font-weight:800}
+.hpbox.hurt b{color:#ffe1a8}
 .atts{display:flex;flex-direction:column;gap:3px;padding:0 6px}
 .att{font-size:11.5px;background:var(--grain),#2a1b10;color:var(--paper);border:1px solid #0d0806;border-radius:3px;padding:3px 6px;line-height:1.25}
 .att b{font-family:var(--display);font-weight:600;letter-spacing:.03em}
@@ -213,7 +220,6 @@ button.ab:disabled{opacity:.75}
 /* Equal-height cards: keep the footer and HP line at the bottom */
 .card .body{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;gap:6px}
 .card .hpline{display:flex;justify-content:flex-end;padding:4px 8px 0;border-top:1px solid rgba(40,25,10,.3)}
-.card .hpline .integ i{width:9px;height:12px}
 .fly-dot{position:fixed;z-index:41;pointer-events:none;width:15px;height:15px;border:1.5px solid #cfe1ff;box-shadow:0 0 10px 2px rgba(110,170,255,.95), inset 0 -2px 0 rgba(0,0,0,.25)}
 .ghost-site{position:fixed;z-index:38;pointer-events:none}
 /* Your Turn announcement */
@@ -302,8 +308,6 @@ body.chat-open #app{padding-bottom:300px}
 .chip.dim{background:rgba(60,40,20,.18);color:var(--ink-soft);border-color:rgba(60,40,20,.3)}
 .site.mini .foot{padding:4px 6px 0}
 .site.mini .tokens{max-width:86px}
-.site.mini .dot{width:9px;height:9px}
-.site.mini .integ i{width:7px;height:10px}
 .fort{font-size:10px;font-weight:700;margin-right:2px}
 .slot{min-height:150px}
 /* hover preview */
@@ -348,8 +352,6 @@ body.chat-open #app{padding-bottom:300px}
 .site.mini .art{height:54px}
 .site.mini .nm{font-size:13.5px}
 .site.mini .tokens{max-width:100px}
-.site.mini .dot{width:10px;height:10px}
-.site.mini .integ i{width:8px;height:11px}
 /* ===== Use the full window height: bigger board cards and text, a taller hand peek,
    and player areas that stretch down to the dock ===== */
 .table{height:calc(100vh - var(--dockH, 240px) - 76px);min-height:520px}
@@ -370,9 +372,6 @@ body.chat-open #app{padding-bottom:300px}
 .chip{font-size:13.5px}
 .site.mini .foot{padding:5px 8px 0}
 .site.mini .tokens{max-width:116px}
-.site.mini .dot{width:11px;height:11px}
-.site.mini .tokens .n{font-size:16px}
-.site.mini .integ i{width:9px;height:12px}
 .slot{width:54px}
 .card .tx{font-size:14.5px}
 .ab{font-size:14px}
