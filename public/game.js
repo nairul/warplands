@@ -520,16 +520,16 @@ const CARDS=[
    ai:c=>c.opp.sites.map(s=>dmgValue(s,1)).sort((a,b)=>b-a).slice(0,3).reduce((a,b)=>a+b,0)},
   {id:'radicalism',name:'Heresy',level:1,type:'event',cost:2,count:2,text:"Do damage to an opponent's site, where the damage dealt equals their level.",
    play:c=>hit(c,c.opp.level,'Heresy',{opp:true}),ai:c=>bestOpp(c,c.opp.level)},
-  {id:'fertility',name:'Blessing of the Harvest',level:1,type:'event',cost:1,count:2,
+  {id:'fertility',name:'Harvest Blessing',level:1,type:'event',cost:1,count:2,
    text:'Gain 1 follower each on up to 3 sites you own. OR Gain followers on a single site equal to the number of occupied sites an opponent owns.',
    play:async c=>{
      const occ=c.opp.sites.filter(s=>s.followers>0).length, a=Math.min(3,c.me.sites.filter(canGain).length);
-     const mode=await pickOption(c.pi,{prompt:'Blessing of the Harvest: choose one.',options:[{label:'1 follower each on up to 3 of your sites',value:'a'},{label:`${occ} follower${occ===1?'':'s'} on one site`,value:'b'}],aiChoose:()=>occ>a?'b':'a',cancellable:true});
+     const mode=await pickOption(c.pi,{prompt:'Harvest Blessing: choose one.',options:[{label:'1 follower each on up to 3 of your sites',value:'a'},{label:`${occ} follower${occ===1?'':'s'} on one site`,value:'b'}],aiChoose:()=>occ>a?'b':'a',cancellable:true});
      if(!mode)return;
      if(mode==='a'){
-       const picked=await pickUpTo(c,3,{prompt:(i)=>`Blessing of the Harvest: choose your site ${i+1} of up to 3 (1 follower each).`,filter:s=>s.owner===c.pi&&canGain(s),aiScore:placeScore,auto:c.me.sites.filter(canGain).length===1});
+       const picked=await pickUpTo(c,3,{prompt:(i)=>`Harvest Blessing: choose your site ${i+1} of up to 3 (1 follower each).`,filter:s=>s.owner===c.pi&&canGain(s),aiScore:placeScore,auto:c.me.sites.filter(canGain).length===1});
        if(!picked||!picked.length)return;c.pay();for(const s of picked)gainF(s,1);log(`${c.me.name} gain${s_(c.me)} ${picked.length} follower${picked.length>1?'s':''}.`);
-     } else await gainOnOwn(c,occ,'Blessing of the Harvest');
+     } else await gainOnOwn(c,occ,'Harvest Blessing');
    },
    ai:c=>Math.max(Math.min(3,c.me.sites.filter(canGain).length),c.opp.sites.filter(s=>s.followers>0).length)},
   {id:'fodder',name:'Peasant Levy',level:1,type:'reaction',cost:0,count:1,
