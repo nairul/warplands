@@ -2288,14 +2288,14 @@ function yourTurnCheck(){
 /* ---- Every card is the same height: the tallest card on the table sets it ---- */
 function equalizeCards(){
   for(const r of document.querySelectorAll('.board .zone .row')) r.style.zoom='';
-  for(const sel of ['#app .card','#handDock .card']){
-    const cards=[...document.querySelectorAll(sel)];
-    if(!cards.length) continue;
+  const cards=[...document.querySelectorAll('#app .card')];
+  if(cards.length){
     for(const c of cards) c.style.minHeight='';
     const h=Math.max(...cards.map(c=>c.offsetHeight));
     for(const c of cards) c.style.minHeight=h+'px';
-    if(sel==='#handDock .card'){const d=$('handDock');if(d)d.style.setProperty('--lift',Math.max(0,h-DOCK_PEEK)+'px')}
   }
+  /* Hand cards keep their natural height (only the top strip shows until hovered); each one lifts just enough to show itself */
+  for(const c of document.querySelectorAll('#handDock .card')){c.style.minHeight='';c.style.setProperty('--lift',Math.max(0,c.offsetHeight-DOCK_PEEK)+'px')}
   const dw=$('dockwrap'),app=$('app');
   if(dw&&app) app.style.paddingBottom=(dw.offsetHeight+18)+'px';
   fitBoard();
