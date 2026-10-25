@@ -1721,7 +1721,7 @@ const humanTurn=()=>G&&!G.over&&!G.players[G.turn].ai&&G.turn===viewer();
 function handSummary(p){const n={};for(const k of p.hand)n[k.def.level]=(n[k.def.level]||0)+1;return [1,2,3,4].filter(l=>n[l]).map(l=>`${n[l]} Level ${ROMAN[l]}`).join(', ')||'No cards'}
 function reqHTML(ab,site){
   const n=site?effNeed(site,ab):ab.need;
-  return `<span class="req">${ab.infinite?'<span class="rq inf" title="Works on any turn">∞</span>':''}<span class="rq f" title="Followers needed on this site${n<ab.need?' (lowered by Academy)':''}">${n}</span>${ab.actions?`<span class="rq a" title="Actions to spend">${ab.actions}◆</span>`:''}</span>`;
+  return `<span class="req">${ab.infinite?'<span class="rq inf" title="Works on any turn">∞</span>':''}<span class="rq f" title="Followers needed on this site${n<ab.need?' (lowered by Academy)':''}">${n}</span>${ab.actions?`<span class="rq a" title="Mana to spend"><b>${ab.actions}</b></span>`:''}</span>`;
 }
 const eraCls=d=>d.start?'era-h':'era-'+d.level;
 const artHTML=d=>ART[d.id]?`<div class="art" aria-hidden="true"><svg viewBox="0 0 160 84" preserveAspectRatio="xMidYMid slice">${ART[d.id]}</svg></div>`:'';
@@ -1732,6 +1732,8 @@ function bandHTML(d){
 function kindHTML(d){return ''}
 /* Card and ability text with the words Zealot(s) and Mana replaced by their icons */
 const IC_Z='<span class="ic z" role="img" aria-label="Zealot"></span>', IC_M='<span class="ic m" role="img" aria-label="Mana">◆</span>', IC_C='<span class="ic c" role="img" aria-label="card"></span>';
+const ZN=n=>`<span class="ic zn" role="img" aria-label="${n} Zealot${n==1?'':'s'}">${n}</span>`;
+const MN=n=>`<span class="ic mn" role="img" aria-label="${n} Mana"><b>${n}</b></span>`;
 function cardText(t){
   /* swap words for placeholder marks first, then marks for icons, so no icon is matched twice */
   return esc(t)
@@ -1740,6 +1742,8 @@ function cardText(t){
     .replace(/\b[Aa]ctions?\b/g,'\u0002').replace(/\bMana\b/g,'\u0002')
     .replace(/\b([Dd]raw) (?:a|1) card\b/g,'$1 \u0003').replace(/\b([Dd]raw) (a total of )?(\d+) cards?\b/g,'$1 $2$3 \u0003').replace(/\b([Dd]raw) cards\b/g,'$1 \u0003')
     .replace(/\b[Ff]ollowers?\b/g,'\u0001').replace(/\bZealots?\b/g,'\u0001')
+    /* a count right before a Zealot or Mana icon goes inside it: "1 Mana" -> a black diamond with 1 in it */
+    .replace(/\b(\d+|a) \u0001/g,(m,n)=>ZN(n==='a'?1:n)).replace(/\b(\d+) \u0002/g,(m,n)=>MN(n))
     .replace(/\u0001/g,IC_Z).replace(/\u0002/g,IC_M).replace(/\u0003/g,IC_C);
 }
 function abListHTML(d){return (d.abilities||[]).map(ab=>`<div class="ab ${ab.passive?'passive':''}">${reqHTML(ab)}<span>${cardText(ab.text)}${ab.passive?'<span class="auto">Automatic</span>':''}</span></div>`).join('')}
