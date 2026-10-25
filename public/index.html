@@ -108,10 +108,20 @@ button.ab:disabled{opacity:.75}
   background:radial-gradient(circle at 35% 30%,#7fb0ff,var(--follower) 55%,#23468a);color:#fff;font-weight:800;font-size:16px;font-variant-numeric:tabular-nums;
   border:2px solid #0d1c38;box-shadow:0 1px 3px rgba(0,0,0,.6),inset 0 -2px 0 rgba(0,0,0,.25);text-shadow:0 1px 1px rgba(0,0,0,.6)}
 .zc.zero{filter:saturate(.25) brightness(.7)}
+/* Fortified site: a crenellated stone wall rings the Zealot disc */
+.tokens.fort{position:relative;padding:9px;margin:-9px 0 -9px -9px}
+.tokens.fort::before{content:'';position:absolute;inset:0;border-radius:50%;
+  background:repeating-conic-gradient(from -12.86deg,#e3d7b9 0 25.71deg,transparent 25.71deg 51.43deg);
+  -webkit-mask:radial-gradient(circle closest-side,transparent 70%,#000 71%,#000 99%,transparent 100%);mask:radial-gradient(circle closest-side,transparent 70%,#000 71%,#000 99%,transparent 100%);
+  filter:drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 1px 1px rgba(0,0,0,.6))}
+.tokens.fort .zc{position:relative;box-shadow:0 0 0 4px #b3a78c,0 0 0 5px #6d6350,0 1px 4px rgba(0,0,0,.7),inset 0 -2px 0 rgba(0,0,0,.25)}
+.card .hpline .fortl{margin-right:auto;font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:#4a4033;border:1.5px solid #6d6350;border-radius:3px;padding:1px 5px;background:repeating-linear-gradient(90deg,rgba(0,0,0,.08) 0 6px,transparent 6px 12px)}
 .hpbox{height:30px;min-width:44px;padding:0 6px;box-sizing:border-box;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;gap:1px;
   background:linear-gradient(180deg,#d85a4c,var(--damage) 55%,#7e221a);color:#fff;font-weight:700;font-size:13px;font-variant-numeric:tabular-nums;
   border:2px solid #2a0a06;box-shadow:0 1px 3px rgba(0,0,0,.6),inset 0 -2px 0 rgba(0,0,0,.25);text-shadow:0 1px 1px rgba(0,0,0,.6)}
 .hpbox b{font-size:17px;font-weight:800}
+.foot .attl{flex:1 1 0;min-width:0;display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:3px}
+.foot .attl .chip{font-size:12px;padding:2px 4px;letter-spacing:-.1px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hpbox.hurt b{color:#ffe1a8}
 .atts{display:flex;flex-direction:column;gap:3px;padding:0 6px}
 .att{font-size:11.5px;background:var(--grain),#2a1b10;color:var(--paper);border:1px solid #0d0806;border-radius:3px;padding:3px 6px;line-height:1.25}
@@ -219,7 +229,7 @@ button.ab:disabled{opacity:.75}
 .lvlup-band b{font-family:var(--display);font-weight:800;font-size:40px;letter-spacing:.14em;line-height:1;text-transform:uppercase;text-shadow:0 2px 0 rgba(0,0,0,.25)}
 /* Equal-height cards: keep the footer and HP line at the bottom */
 .card .body{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;gap:6px}
-.card .hpline{display:flex;justify-content:flex-end;padding:4px 8px 0;border-top:1px solid rgba(40,25,10,.3)}
+.card .hpline{display:flex;justify-content:flex-end;align-items:center;padding:4px 8px 0;border-top:1px solid rgba(40,25,10,.3)}
 .fly-dot{position:fixed;z-index:41;pointer-events:none;width:15px;height:15px;border:1.5px solid #cfe1ff;box-shadow:0 0 10px 2px rgba(110,170,255,.95), inset 0 -2px 0 rgba(0,0,0,.25)}
 .ghost-site{position:fixed;z-index:38;pointer-events:none}
 /* Your Turn announcement */
@@ -353,7 +363,8 @@ body.chat-open #app{padding-bottom:300px}
 .site.mini .tokens{max-width:100px}
 /* ===== Use the full window height: bigger board cards and text, a taller hand peek,
    and player areas that stretch down to the dock ===== */
-.table{height:calc(100vh - var(--dockH, 240px) - 76px);min-height:520px}
+.table{height:calc(100vh - var(--dockH, 240px) - 76px);min-height:520px;grid-template-rows:minmax(0,1fr)}
+.board .zone{overflow:hidden}
 .board{height:100%}
 .board .zone{flex:1 1 0;min-height:0}
 .rail{max-height:100%}
