@@ -1567,55 +1567,90 @@ async function runAI(){
 const mkCard=id=>({uid:uidc++,def:DEF[id]});
 function tutSetup(){
   const [me,op]=G.players;
-  me.hand=['church','catapult','farm','fertility','castle'].map(mkCard);
-  op.hand=['siege','temple','farm','mission','fanaticism'].map(mkCard);
+  me.hand=['plague','siege','castle','farm','ram'].map(mkCard);
+  op.hand=['church','temple','plague','farm','mission'].map(mkCard);
   /* no reaction cards anywhere near the scripted turns */
   for(const l of [1,2]) G.stacks[l]=G.stacks[l].filter(k=>k.def.type!=='reaction');
-  const spark=mkCard('siege');G.stacks[1].push(spark);
-  G.tut={step:0,spark:spark.uid,chapel:me.hand[0].uid,free:false};
+  /* top of the Hamlet stack: your Trebuchet, then the opponent's draw */
+  G.stacks[1].push(mkCard('fertility'));
+  const treb=mkCard('catapult');G.stacks[1].push(treb);
+  const h=id=>me.hand.find(k=>k.def.id===id).uid;
+  G.tut={step:0,free:false,treb:treb.uid,spark:h('siege'),fields:h('farm'),keep:h('castle')};
   G.log=[];log('Tutorial: you go first.');
 }
 async function tutOpponent(pi){
   const p=G.players[pi],me=G.players[1-pi],wait=ms=>sleep(ms);
+  const step=async ms=>{await flush();checkGameOver();render();await wait(ms)};
   await wait(1300);
   if(!G.tut.free&&G.turnCount===2){
-    const spark=p.hand.find(k=>k.def.id==='siege');if(spark){await playCard(pi,spark);await flush();checkGameOver();render();await wait(2600)}
-    const altar=p.hand.find(k=>k.def.id==='temple');if(altar&&!G.over){await playCard(pi,altar);await flush();render();await wait(1800)}
-    if(!G.over){await actGain(pi);await flush();render();await wait(1500)}
+    /* turn 1: draw a card, build a Chapel */
+    await actDraw(pi,1);await step(1500);
+    const ch=p.hand.find(k=>k.def.id==='church');if(ch&&!G.over){await playCard(pi,ch);await step(1800)}
   } else if(!G.tut.free&&G.turnCount===4){
-    for(let i=0;i<2&&!G.over;i++){await actGain(pi);await flush();render();await wait(1400)}
-    if(!G.over&&drawableLevels(pi).length){await actDraw(pi,1);render();await wait(1200)}
+    /* turn 2: staff the Chapel, use it on Warpland, build an Altar, curse your Warpland with Witch's Rot */
+    const home=p.sites.find(x=>x.card.def.start),chapel=p.sites.find(x=>x.card.def.id==='church');
+    if(home&&chapel&&home.followers>2){
+      const counts=Object.fromEntries(p.sites.map(x=>[x.uid,x.followers]));counts[home.uid]-=2;counts[chapel.uid]+=2;
+      actRelocate(pi,counts);await step(1600);
+      chapel.usedTurn=G.turnCount;log(`${p.name} activates Chapel.`);gainF(home,1);log(`${p.name} gains a Zealot on Warpland.`);await step(1600);
+    }
+    const altar=p.hand.find(k=>k.def.id==='temple');if(altar&&!G.over){await playCard(pi,altar);await step(1700)}
+    const rot=p.hand.find(k=>k.def.id==='plague'),myHome=me.sites.find(x=>x.card.def.start);
+    if(rot&&myHome&&!G.over&&p.actions>=1){
+      fxReveal(pi,rot,myHome.uid);p.actions-=1;p.hand.splice(p.hand.indexOf(rot),1);log(`${p.name} plays Witch's Rot.`);
+      await attach(rot,myHome,pi);await step(2600);
+    }
   } else {
     /* easy opponent: no lookahead, picks among a few decent options at random, often stops early */
     let guard=0;
     while(!G.over&&G.turn===pi&&guard++<6){
       const opts=aiOptions(pi,true).filter(o=>o.score>0.6).sort((a,b)=>b.score-a.score).slice(0,4);
       if(!opts.length||Math.random()<0.25)break;
-      await opts[Math.floor(Math.random()*opts.length)].exec();await flush();checkGameOver();render();await wait(1800);
+      await opts[Math.floor(Math.random()*opts.length)].exec();await step(1800);
     }
   }
   if(!G.over&&G.turn===pi) await endTurn();
 }
-const tutMe=()=>G.players[0], tutChapel=()=>tutMe().sites.find(x=>x.card.uid===G.tut.chapel);
-/* the opponent's Altar is the Spark target; any opponent site if the Altar is gone */
-const tutAltarSel=()=>{const a=G.players[1].sites.find(x=>x.card.def.id==='temple');return a?`#oppZone [data-site="${a.uid}"]`:'#oppZone [data-site]'};
+const tutMe=()=>G.players[0];
+const tutSiteOf=(pi,pred)=>G.players[pi].sites.find(pred);
+const tutTreb=()=>tutSiteOf(0,x=>x.card.uid===G.tut.treb);
+const tutFields=()=>tutSiteOf(0,x=>x.card.uid===G.tut.fields);
+const siteSel=st=>st?`[data-site="${st.uid}"]`:'#__none';
+const oppHomeSel=()=>siteSel(tutSiteOf(1,x=>x.card.def.start));
+const oppChapelSel=()=>siteSel(tutSiteOf(1,x=>x.card.def.id==='church'));
+/* the relocation must move exactly 3 Zealots from Warpland onto Trebuchet */
+function tutRelocOK(){
+  const R=UI.relocate,t=tutTreb(),home=tutSiteOf(0,x=>x.card.def.start);if(!R||!t||!home)return false;
+  return tutMe().sites.every(x=>R.counts[x.uid]===R.orig[x.uid]+(x===t?3:x===home?-3:0));
+}
+const END_TURN={hl:'[data-act="end"]',allow:['[data-act="end"]']};
 const TUT_STEPS=[
   {title:'Welcome to Warplands',text:'You and your opponent each lead a band of <b>Zealots</b>. Build sites, cast events and grow from a humble <b>Hamlet</b> into an <b>Empire</b>.<br><br><b>How to win:</b> wipe out every one of your opponent’s Zealots, or hold more Zealots than them when three of the four draw stacks run dry.',cont:true},
   {title:'Your Warpland',text:'This is your starting site, <b>Warpland</b>. It holds your first 10 Zealots (the blue dots). Its <b>HP</b> boxes fill red as it takes damage; when they are all red, the site is destroyed along with everyone on it.',hl:'#meZone [data-suid]',cont:true},
-  {title:'Mana',text:'Each turn you get <b>Mana</b> (the gold dots) to spend on actions. You have 3. Spend 1 to add a Zealot: click <b>Gain Zealot</b>.',hl:'[data-act="gain"],.pips',allow:['[data-act="gain"]','[data-site]','#prompt button'],done:()=>totalF(tutMe())>=11},
-  {title:'Building a site',text:'Cards in your hand cost Mana to play. Sites stay on the table and give you abilities. Play <b>Chapel</b> (2 Mana), then click a glowing gap to choose where it goes in your row.',hl:()=>`[data-play="${G.tut.chapel}"],[data-slot]`,allow:()=>[`[data-play="${G.tut.chapel}"]`,'[data-slot]','#prompt button'],done:()=>!!tutChapel()},
-  {title:'Ending your turn',text:'You are out of Mana. Click <b>End turn</b> and watch what your opponent does.',hl:'[data-act="end"]',allow:['[data-act="end"]'],done:()=>G.turn===1},
+  {title:'Mana',text:'Everything you do costs <b>Mana</b>, shown by the gold dots above your hand. You get <b>3 Mana</b> at the start of every turn, and whatever you don’t spend is lost when your turn ends. Each card shows its cost in its top corner.',hl:'.pips',cont:true},
+  {title:'Drawing cards',text:'Your hand holds the cards you can play. To get more, spend <b>1 Mana</b> to draw a card from one of the four <b>draw stacks</b> on the right: Hamlet, Township, City and Empire. Higher stacks hold stronger cards.',hl:'.rail .stacks',cont:true},
+  {title:'Draw a Hamlet card',text:'You can only draw from your current level or lower, and you start at <b>Hamlet</b>. The higher stacks stay locked until you upgrade. Click the <b>Hamlet</b> stack to draw a card.',hl:'[data-draw="1"]',allow:['[data-draw="1"]','#prompt button'],done:()=>tutMe().hand.some(k=>k.uid===G.tut.treb)},
+  {title:'Sites',text:'You drew a <b>Trebuchet</b>, a <b>site</b>. Sites are buildings: once played they stay on the table in your row, can hold Zealots, and have <b>abilities</b> you can use turn after turn. Like Warpland, each has HP and can be destroyed.',hl:()=>`[data-play="${G.tut.treb}"]`,cont:true},
+  {title:'Play Trebuchet',text:'Spend <b>2 Mana</b> to play the Trebuchet: click it in your hand, then click a glowing gap to choose where it goes in your row.',hl:()=>`[data-play="${G.tut.treb}"],[data-slot]`,allow:()=>[`[data-play="${G.tut.treb}"]`,'[data-slot]','#prompt button'],done:()=>!!tutTreb()},
+  {title:'Site abilities',text:'Each ability shows what it needs: the <b>blue badge</b> is how many Zealots must be standing on the site, and the <b>dark badge</b> is its Mana cost. Trebuchet’s first ability needs <b>3 Zealots</b> on it and <b>1 Mana</b> to do 1 damage. Each site can use one ability per turn.',hl:()=>tutTreb()?`[data-suid="${tutTreb().uid}"]`:'',cont:true},
+  {title:'Out of Mana!',text:'You’ve spent all 3 Mana, and Trebuchet has no Zealots on it yet, so there is nothing left to do this turn. You’ll use the Trebuchet next turn. Click <b>End turn</b>.',...END_TURN,done:()=>G.turn===1},
   {title:'Opponent’s turn',text:'Your opponent is taking its turn…',wait:true,done:()=>G.turn===0&&G.turnCount>=3&&!UI.busy},
-  {title:'You took damage',text:'Your opponent cast <b>Spark</b>, an <b>event</b>: a one-time effect that is discarded after use. Damage kills Zealots on the site it hits and fills its HP boxes. Your opponent also built an <b>Altar</b>.',hl:'#meZone [data-suid]',cont:true},
-  {title:'Drawing cards',text:'Spend 1 Mana to draw a card from a draw stack. Right now you can only draw from <b>Hamlet</b>, your current level. Click the Hamlet stack.',hl:'[data-draw="1"]',allow:['[data-draw="1"]','#prompt button'],done:()=>tutMe().hand.some(k=>k.uid===G.tut.spark)},
-  {title:'Staffing a site',text:'A site’s abilities need Zealots standing on it. Chapel’s ability needs <b>2</b> (the blue badge). Click <b>Relocate</b> (1 Mana) and move 2 Zealots from Warpland onto Chapel.',hl:'[data-act="relocate"]',allow:['[data-act="relocate"]','#overlay button'],done:()=>{const c=tutChapel();return c&&c.followers>=2}},
-  {title:'Using an ability',text:'Chapel is staffed. Its ability costs no Mana: click it to gain a Zealot on any of your sites. Each site can use one ability per turn.',hl:()=>`[data-ab="${tutChapel()?tutChapel().uid:0}:0"]`,allow:()=>[`[data-ab="${tutChapel()?tutChapel().uid:0}:0"]`,'[data-site]','#prompt button'],done:()=>{const c=tutChapel();return c&&c.usedTurn===G.turnCount}},
-  {title:'Casting an event',text:'You drew a <b>Spark</b>. Play it (1 Mana) and target the opponent’s <b>Altar</b> to do 2 damage.',hl:()=>`[data-play="${G.tut.spark}"],${tutAltarSel()}`,allow:()=>[`[data-play="${G.tut.spark}"]`,tutAltarSel(),'#prompt button'],done:()=>!tutMe().hand.some(k=>k.uid===G.tut.spark)},
-  {title:'End your turn',text:'Out of Mana again. Click <b>End turn</b>.',hl:'[data-act="end"]',allow:['[data-act="end"]'],done:()=>G.turn===1},
+  {title:'What your opponent did',text:'Your opponent spent 1 Mana to <b>draw a card</b>, then 2 Mana to build a <b>Chapel</b>, a site whose ability adds Zealots once it has 2 Zealots on it. Your Mana is back to 3.',hl:'#oppZone [data-suid]',cont:true},
+  {title:'Relocating',text:'Zealots can move between your sites. <b>Relocate</b> costs 1 Mana and lets you shift any number of Zealots from your sites onto your other sites in one go. This is how you staff a site so its abilities can be used.',hl:'[data-act="relocate"]',cont:true},
+  {title:'Put Zealots on Trebuchet',text:'Click <b>Relocate</b>, take <b>exactly 3</b> Zealots from Warpland and add them to Trebuchet, then confirm.',hl:'[data-act="relocate"]',allow:['[data-act="relocate"]','#overlay button'],relocExact:true,done:()=>{const t=tutTreb();return t&&t.followers>=3}},
+  {title:'Use Trebuchet',text:'Trebuchet has its 3 Zealots. Click its first ability (<b>Do 1 damage</b>, 1 Mana) and target your opponent’s <b>Warpland</b>.',hl:()=>`[data-ab="${tutTreb()?tutTreb().uid:0}:0"],${oppHomeSel()}`,allow:()=>[`[data-ab="${tutTreb()?tutTreb().uid:0}:0"]`,oppHomeSel(),'#prompt button'],done:()=>{const t=tutTreb();return t&&t.usedTurn===G.turnCount}},
+  {title:'Damage',text:'Each point of <b>damage</b> fills one HP box and kills one Zealot on that site. Two exceptions: <b>Fortified</b> sites and <b>Structural</b> damage hurt the site without killing its Zealots. And when a site’s last HP box fills, it is <b>destroyed</b> and every Zealot on it dies.',hl:'#oppZone [data-suid]',cont:true},
+  {title:'Play Fields',text:'Spend your last Mana to play <b>Fields</b> (1 Mana) and choose a spot for it in your row.',hl:()=>`[data-play="${G.tut.fields}"],[data-slot]`,allow:()=>[`[data-play="${G.tut.fields}"]`,'[data-slot]','#prompt button'],done:()=>!!tutFields()},
+  {title:'Tucking',text:'Some sites let you <b>tuck</b> a card from your hand underneath them. A tucked card is out of play for good, but it powers the site: Fields gains you a Zealot each time you tuck, and its second ability grows with every card tucked under it.',hl:()=>tutFields()?`[data-suid="${tutFields().uid}"]`:'',cont:true},
+  {title:'Use Fields',text:'Fields’ first ability needs no Zealots and no Mana. Click it, choose <b>Stone Keep</b> as the card to tuck, then place the new Zealot on <b>Fields</b>.',hl:()=>`[data-ab="${tutFields()?tutFields().uid:0}:0"],[data-pick="${G.tut.keep}"],${siteSel(tutFields())}`,allow:()=>[`[data-ab="${tutFields()?tutFields().uid:0}:0"]`,`[data-pick="${G.tut.keep}"]`,siteSel(tutFields()),'#prompt button'],done:()=>{const f=tutFields();return f&&f.usedTurn===G.turnCount}},
+  {title:'Out of Mana!',text:'You’re out of Mana and every site that can act has acted, so your turn is done. Click <b>End turn</b>.',...END_TURN,done:()=>G.turn===1},
   {title:'Opponent’s turn',text:'Your opponent is taking its turn…',wait:true,done:()=>G.turn===0&&G.turnCount>=5&&!UI.busy},
-  {title:'Upgrading',text:'Upgrading to <b>Township</b> costs 2 Mana and unlocks the Township draw stack, full of stronger cards. Click <b>Upgrade to Township</b>.',hl:'[data-act="upgrade"]',allow:['[data-act="upgrade"]'],done:()=>tutMe().level>=2},
-  {title:'Reactions and attachments',text:'Two more card types:<br>• <b>Reactions</b> are played on your opponent’s turn when their trigger happens, for example when one of your sites is about to take damage. The game asks you when one can be used.<br>• <b>Attachments</b> stick to a site, for good or ill, and keep working turn after turn.<br><br>Hover any site to read its full card.',cont:true},
-  {title:'Your turn now',text:'That’s the basics. Finish the game against this easy opponent. Good luck!',cont:true,last:true}
+  {title:'What your opponent did',text:'Your opponent relocated 2 Zealots onto its Chapel, used the Chapel to add a Zealot to its Warpland, and built an <b>Altar</b>.<br><br>Then it played <b>Witch’s Rot</b> on your Warpland. Witch’s Rot is an <b>attachment</b>: a card that sticks to a site and keeps working turn after turn. This one kills 1 Zealot on your Warpland at the start of each of your turns (it already took one) until the site is empty.',hl:'#meZone .chip.bad',cont:true},
+  {title:'Event cards',text:'<b>Events</b> are one-time effects: you pay their Mana, the effect happens right away, and the card goes to the discard pile. They are a fast way to deal damage, gain Zealots or disrupt your opponent.',hl:()=>`[data-play="${G.tut.spark}"]`,cont:true},
+  {title:'Play Spark',text:'Play <b>Spark</b> (1 Mana) and send its 2 damage at your opponent’s <b>Chapel</b>.',hl:()=>`[data-play="${G.tut.spark}"],${oppChapelSel()}`,allow:()=>[`[data-play="${G.tut.spark}"]`,oppChapelSel(),'#prompt button'],done:()=>!tutMe().hand.some(k=>k.uid===G.tut.spark)},
+  {title:'Upgrading',text:'<b>Upgrading</b> raises your level and unlocks the next draw stack. It costs <b>2 Mana</b> from Hamlet to Township, <b>3</b> from Township to City, and <b>4</b> from City to Empire. Higher levels bring far stronger cards.',hl:'[data-act="upgrade"]',cont:true},
+  {title:'Upgrade to Township',text:'Spend your last <b>2 Mana</b>: click <b>Upgrade to Township</b>.',hl:'[data-act="upgrade"]',allow:['[data-act="upgrade"]'],done:()=>tutMe().level>=2},
+  {title:'Tutorial over',text:'That’s everything you need to know. Hover any site to read its full card. Now finish the game against this easy opponent. Good luck!',cont:true,last:true}
 ];
 const tutStep=()=>G&&G.tut&&!G.tut.free?TUT_STEPS[G.tut.step]:null;
 const val=(x)=>typeof x==='function'?x():x;
@@ -1626,8 +1661,10 @@ function tutTick(){
   if(st.done&&st.done()){G.tut.step++;return tutTick()}
   coach.hidden=false;
   const dw=$('dockwrap');coach.style.bottom=((dw?dw.offsetHeight:200)+14)+'px';
-  coach.innerHTML=term(`<div class="coach-n">Tutorial · step ${G.tut.step+1} of ${TUT_STEPS.length}</div><h3>${st.title}</h3><p>${st.text}</p>
-    <div class="coach-btns">${st.cont?`<button class="btn primary" data-tut="next">${st.last?'Start playing':'Continue'}</button>`:''}<button class="ghost" data-tut="skip">Skip tutorial</button></div>`);
+  const shown=TUT_STEPS.filter(x=>!x.wait),n=shown.indexOf(st);
+  coach.innerHTML=term(`<div class="coach-n">${st.wait?'Tutorial':`Tutorial · step ${n+1} of ${shown.length}`}</div><h3>${st.title}</h3><p>${st.text}</p>
+    ${st.cont?`<div class="coach-btns"><button class="btn primary" data-tut="next">${st.last?'Keep playing':'Continue'}</button></div>`:''}
+    ${st.relocExact&&UI.relocate?`<p class="coach-warn">${tutRelocOK()?'That’s it: confirm.':'Move exactly 3 Zealots from Warpland onto Trebuchet.'}</p>`:''}`);
   document.querySelectorAll('.tut-hl').forEach(e=>e.classList.remove('tut-hl'));
   if(st.hl) document.querySelectorAll(val(st.hl)).forEach(e=>e.classList.add('tut-hl'));
 }
@@ -2633,7 +2670,9 @@ if(HAS_DOM){
   document.addEventListener('pointerdown',()=>{if(SFX.on)audioCtx()});
   document.addEventListener('keydown',()=>{if(SFX.on)audioCtx()});
   document.addEventListener('click',e=>{
-    if(G&&G.tut&&!G.tut.free&&!tutAllows(e.target)){e.stopPropagation();e.preventDefault();const c=$('coach');if(c)c.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:260});}
+    const tst=G&&G.tut&&!G.tut.free?TUT_STEPS[G.tut.step]:null;
+    const badReloc=tst&&tst.relocExact&&e.target.closest('[data-rlok]')&&!tutRelocOK();
+    if(G&&G.tut&&!G.tut.free&&(badReloc||!tutAllows(e.target))){e.stopPropagation();e.preventDefault();const c=$('coach');if(c)c.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:260});}
   },true);
   document.addEventListener('click',e=>{
     if(e.target.closest('#soundBtn')){SFX.on=!SFX.on;try{localStorage.setItem('tb-sound',SFX.on?'on':'off')}catch(err){}if(SFX.on){audioCtx();setTimeout(()=>sfx('place',1),30)}syncSound();return}
@@ -2648,7 +2687,6 @@ if(HAS_DOM){
     if(ds.copycode){const c=ONLINE.code||'';(navigator.clipboard?navigator.clipboard.writeText(c):Promise.reject()).then(()=>{t.textContent='Copied'}).catch(()=>{t.textContent=c});return}
     if(ds.new){if(ONLINE.active)onlineLeave();UI.closedOver=false;if(ds.new==='tutorial')newGame('ai','tutorial');else newGame(ds.new);return}
     if(ds.tut==='next'){tutAdvance();return}
-    if(ds.tut==='skip'){if(G&&G.tut){G.tut.free=true;render()}return}
     if(ds.resume){UI.menu=false;render();return}
     if(ds.menu){UI.menu=true;UI.closedOver=false;render();return}
     if(ds.close){UI.closedOver=true;render();return}
