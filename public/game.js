@@ -1334,8 +1334,18 @@ async function pickSlot(pi,def,forced){
 }
 function canPlay(pi,card){
   const p=G.players[pi];
-  return !G.over&&G.turn===pi&&card.def.type!=='reaction'&&card.def.cost<=p.actions;
+  return !G.over&&G.turn===pi&&card.def.type!=='reaction'&&card.def.cost<=p.actions&&hasEffect(pi,card);
 }
+/* Events that would do nothing right now can't be played (they'd just waste the card and Mana). */
+const NO_EFFECT={
+  pillage:(me,opp)=>allSites().some(s=>s.followers===0&&(!me.ai||s.owner!==me.i))||allSites().some(s=>s.tucked.length),
+  revolt:(me,opp)=>opp.sites.some(s=>s.followers>0),
+  bioweapon:(me,opp)=>opp.hand.length>0&&totalF(opp)>0,
+  archaeology:(me,opp)=>{for(let l=1;l<me.level;l++)if(G.stacks[l].length)return true;return G.discard.length>0},
+  dilemma:(me,opp)=>opp.sites.length>=2,
+  nanobots:()=>allSites().some(s=>s.damage>0),
+};
+function hasEffect(pi,card){const f=NO_EFFECT[card.def.id];return !f||f(G.players[pi],G.players[1-pi])}
 async function playCard(pi,card,o={}){
   const p=G.players[pi],d=card.def;
   if(o.free){if(G.over||d.type==='reaction'||!p.hand.includes(card))return false}
@@ -1740,7 +1750,7 @@ function handCardHTML(card,pi){
   let body;
   if(d.type==='site') body=`<div class="body">${d.text?`<div class="tx">${cardText(d.text)}</div>`:''}${(d.abilities||[]).length?`<div class="abs">${abListHTML(d)}</div>`:''}</div><div class="hpline">${hpHTML(d.integrity||3,d.integrity||3,d.fortified)}</div>`;
   else body=`<div class="body"><div class="tx">${cardText(d.text)}</div></div>`;
-  const title=pick?'Choose '+d.name:ok?'Play '+d.name:d.type==='reaction'?'Reactions are offered to you automatically when their condition happens':'Not enough actions';
+  const title=pick?'Choose '+d.name:ok?'Play '+d.name:d.type==='reaction'?'Reactions are offered to you automatically when their condition happens':!hasEffect(pi,card)?'No valid target right now':'Not enough actions';
   return `<button class="card ${eraCls(d)} ${ok?'playable':''} ${pick?'target':''}" ${pick?`data-pick="${card.uid}"`:`data-play="${card.uid}"`} ${ok||pick?'':'aria-disabled="true"'} title="${esc(title)}">${bandHTML(d)}${kindHTML(d)}${artHTML(d)}${body}</button>`;
 }
 function siteHTML(s,vi,full){
