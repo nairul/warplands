@@ -1683,7 +1683,7 @@ function tutAdvance(){const st=tutStep();if(!st)return;if(st.last){G.tut.free=tr
 /* While a step is waiting for a specific action, only that action's controls respond */
 function tutAllows(t){
   const st=tutStep();if(!st)return true;
-  if(t.closest('#coach,#soundBtn,#menuBtn,.chat'))return true;
+  if(t.closest('#coach,#soundBtn,#menuBtn,.chat,[data-discard],#discardView'))return true;
   if(UI.menu&&t.closest('#overlay'))return true;
   const allow=st.allow?val(st.allow):[];
   return allow.some(sel=>t.closest(sel));
@@ -1880,8 +1880,21 @@ function midHTML(){
   const last=G.discard[G.discard.length-1];
   const empty=[1,2,3,4].filter(l=>!G.stacks[l].length).length;
   return `<div class="stacks">${stacks}</div><div class="sideinfo">
-    <div class="discard">Discard: <b>${G.discard.length}</b>${last?` · top: ${esc(last.def.name)}`:''} · Empty stacks: <b>${empty}</b>/3 to end</div>
-    <ul class="log">${G.log.slice(0,40).map(l=>`<li>${esc(l)}</li>`).join('')}</ul></div>`;
+    <button class="discard" data-discard="1" title="Search the discard pile">Discard: <b>${G.discard.length}</b>${last?` · top: ${esc(last.def.name)}`:''}<span class="dv">View</span></button>
+    <div class="ends">Empty stacks: <b>${empty}</b>/3 to end</div></div>
+    <ul class="log">${G.log.slice(0,40).map(l=>`<li>${esc(l)}</li>`).join('')}</ul>`;
+}
+/* The discard pile, in the order cards were discarded (oldest first). Anyone can open it at any time. */
+function syncDiscard(){
+  let el=$('discardView');
+  if(!el){el=document.createElement('div');el.id='discardView';el.className='dview';el.hidden=true;document.body.appendChild(el)}
+  const open=!!(UI.dview&&G);el.hidden=!open;if(open)el.innerHTML=term(discardViewHTML());
+}
+function discardViewHTML(){
+  const n=G.discard.length;
+  const rows=G.discard.map((k,i)=>{const d=k.def;return `<li class="${eraCls(d)}"><span class="no">${i+1}</span><span class="sw"></span><span class="dn">${esc(d.name)}</span><span class="dt">${ICONS[d.type]||''}${LEVEL_NAME[d.level]} ${TYPE_NAME[d.type].toLowerCase()}</span></li>`}).join('');
+  return `<div class="dv-box" role="dialog" aria-label="Discard pile"><div class="dv-head"><b>Discard pile</b><span>${n} card${n===1?'':'s'} · oldest first</span><button class="dv-x" data-dclose="1" aria-label="Close">✕</button></div>
+    ${n?`<ol class="dv-list">${rows}</ol>`:'<p class="dv-empty">Nothing has been discarded yet.</p>'}</div>`;
 }
 function promptHTML(){
   const p=UI.prompt;
@@ -1981,6 +1994,7 @@ function render(){
   else if(G.over&&!UI.closedOver) o=overHTML();
   ov.hidden=!o; ov.innerHTML=term(o);
   chatSync();
+  syncDiscard();
   equalizeCards();
   drawAnims();
   if(oldRects){if(REV.q.length)playReveals(oldRects);followerAnims(oldRects);placeAnims(oldRects);if(ARROWS.q.length)playArrows(oldRects)}
@@ -2760,6 +2774,8 @@ if(HAS_DOM){
     if(G&&G.tut&&!G.tut.free&&(badReloc||!tutAllows(e.target))){e.stopPropagation();e.preventDefault();const c=$('coach');if(c)c.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:260});}
   },true);
   document.addEventListener('click',e=>{
+    if(e.target.closest('[data-discard]')){UI.dview=!UI.dview;syncDiscard();return}
+    if(e.target.closest('[data-dclose]')||e.target.id==='discardView'){UI.dview=false;syncDiscard();return}
     if(e.target.closest('#soundBtn')){SFX.on=!SFX.on;try{localStorage.setItem('tb-sound',SFX.on?'on':'off')}catch(err){}if(SFX.on){audioCtx();setTimeout(()=>sfx('place',1),30)}syncSound();return}
     const st=e.target.closest('[data-site]');
     const t=(st&&UI.prompt&&UI.prompt.kind==='site')?st:e.target.closest('button,[data-site]'); if(!t) return;
@@ -2806,6 +2822,7 @@ if(HAS_DOM){
   document.addEventListener('keydown',e=>{
     if(e.target.closest&&e.target.closest('#chat'))return;
     if((e.key==='Enter'||e.key===' ')&&e.target.dataset&&e.target.dataset.site){e.preventDefault();e.target.click()}
+    if(e.key==='Escape'&&UI.dview){UI.dview=false;syncDiscard();return}
     if(e.key==='Escape'&&UI.prompt&&UI.prompt.cancellable)UI.prompt.resolve(null);
   });
   addEventListener('resize',()=>{if(G)equalizeCards()});
