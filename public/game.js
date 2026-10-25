@@ -1728,10 +1728,8 @@ const artHTML=d=>ART[d.id]?`<div class="art" aria-hidden="true"><svg viewBox="0 
 function bandHTML(d){
   return `<div class="band"><span class="nm">${esc(d.name)}</span><span class="ty" title="${TYPE_NAME[d.type]}${d.start||d.type==='reaction'?'':', costs '+d.cost+' action'+(d.cost===1?'':'s')}">${ICONS[d.type]}${d.start||d.type==='reaction'?'':d.cost}</span></div>`;
 }
-function kindHTML(d){
-  const right=d.placeholder?'<span class="ph">placeholder</span>':'';
-  return `<div class="kind"><span>${d.start?'Starting site':TYPE_NAME[d.type]}</span>${right}</div>`;
-}
+/* The card type is shown by the icon in the header; no separate type line */
+function kindHTML(d){return ''}
 /* Card and ability text with the words Zealot(s) and Mana replaced by their icons */
 const IC_Z='<span class="ic z" role="img" aria-label="Zealot"></span>', IC_M='<span class="ic m" role="img" aria-label="Mana">◆</span>', IC_C='<span class="ic c" role="img" aria-label="card"></span>';
 function cardText(t){
