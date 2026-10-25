@@ -1738,7 +1738,7 @@ function handCardHTML(card,pi){
   const pick=UI.prompt&&UI.prompt.kind==='hand'&&UI.prompt.pi===pi&&UI.prompt.set.has(card.uid);
   const ok=!pick&&humanTurn()&&!UI.busy&&!UI.prompt&&canPlay(pi,card);
   let body;
-  if(d.type==='site') body=`<div class="body">${d.text?`<div class="tx">${cardText(d.text)}</div>`:''}${(d.abilities||[]).length?`<div class="abs">${abListHTML(d)}</div>`:''}</div><div class="tx hpline">Integrity ${d.integrity||3}</div>`;
+  if(d.type==='site') body=`<div class="body">${d.text?`<div class="tx">${cardText(d.text)}</div>`:''}${(d.abilities||[]).length?`<div class="abs">${abListHTML(d)}</div>`:''}</div><div class="hpline"><div class="integ" title="${d.integrity||3} HP${d.fortified?' · fortified':''}">${d.fortified?'<span class="fort" title="Fortified">F</span>':''}${'<i></i>'.repeat(d.integrity||3)}</div></div>`;
   else body=`<div class="body"><div class="tx">${cardText(d.text)}</div></div>`;
   const title=pick?'Choose '+d.name:ok?'Play '+d.name:d.type==='reaction'?'Reactions are offered to you automatically when their condition happens':'Not enough actions';
   return `<button class="card ${eraCls(d)} ${ok?'playable':''} ${pick?'target':''}" ${pick?`data-pick="${card.uid}"`:`data-play="${card.uid}"`} ${ok||pick?'':'aria-disabled="true"'} title="${esc(title)}">${bandHTML(d)}${artHTML(d)}${kindHTML(d)}${body}</button>`;
@@ -2286,7 +2286,7 @@ function equalizeCards(){
   const dw=$('dockwrap'),app=$('app');
   if(dw&&app) app.style.paddingBottom=(dw.offsetHeight+18)+'px';
 }
-const DOCK_PEEK=150;
+const DOCK_PEEK=190;
 /* ---- Zealot animation: dots fly between sites when they move, and in from the hand when gained ---- */
 function followerAnims(old){
   if(!G){FLY.fol=null;return}

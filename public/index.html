@@ -212,7 +212,8 @@ button.ab:disabled{opacity:.75}
 .lvlup-band b{font-family:var(--display);font-weight:800;font-size:40px;letter-spacing:.14em;line-height:1;text-transform:uppercase;text-shadow:0 2px 0 rgba(0,0,0,.25)}
 /* Equal-height cards: keep the footer and HP line at the bottom */
 .card .body{flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;gap:6px}
-.card .hpline{font-size:12px;color:var(--ink-soft)}
+.card .hpline{display:flex;justify-content:flex-end;padding:4px 8px 0;border-top:1px solid rgba(40,25,10,.3)}
+.card .hpline .integ i{width:9px;height:12px}
 .fly-dot{position:fixed;z-index:41;pointer-events:none;width:15px;height:15px;border:1.5px solid #cfe1ff;box-shadow:0 0 10px 2px rgba(110,170,255,.95), inset 0 -2px 0 rgba(0,0,0,.25)}
 .ghost-site{position:fixed;z-index:38;pointer-events:none}
 /* Your Turn announcement */
@@ -349,6 +350,39 @@ body.chat-open #app{padding-bottom:300px}
 .site.mini .tokens{max-width:100px}
 .site.mini .dot{width:10px;height:10px}
 .site.mini .integ i{width:8px;height:11px}
+/* ===== Use the full window height: bigger board cards and text, a taller hand peek,
+   and player areas that stretch down to the dock ===== */
+.table{height:calc(100vh - var(--dockH, 240px) - 76px);min-height:520px}
+.board{height:100%}
+.board .zone{flex:1 1 0;min-height:0}
+.rail{max-height:100%}
+.pname{font-size:19px}
+.stat{font-size:15.5px}
+.stat b{font-size:18px}
+.site.mini{width:auto;flex:1 1 0;min-width:140px;max-width:208px;gap:5px}
+.site.mini .art{height:66px}
+.site.mini .band{padding:5px 8px}
+.site.mini .nm{font-size:15px}
+.site.mini .band .ty{font-size:14px}
+.site.mini .abs{padding:0 6px;gap:4px}
+.ab.mini{font-size:14.5px;padding:4px 6px;gap:5px}
+.ab.mini .rq,.rq{font-size:13.5px;line-height:19px;padding:0 5px}
+.chip{font-size:13.5px}
+.site.mini .foot{padding:5px 8px 0}
+.site.mini .tokens{max-width:116px}
+.site.mini .dot{width:11px;height:11px}
+.site.mini .tokens .n{font-size:16px}
+.site.mini .integ i{width:9px;height:12px}
+.slot{width:54px}
+.card .tx{font-size:14.5px}
+.ab{font-size:14px}
+.card .nm{font-size:14.5px}
+.dock{height:var(--dockH, 240px)}
+.dock .hand{height:190px}
+.rail .stack .rn{font-size:24px}
+.stack .cnt{font-size:14.5px}
+.discard,.log{font-size:14.5px}
+.turnline{font-size:15.5px}
 @media (max-width:900px){
   .table{grid-template-columns:minmax(0,1fr)}
   .rail{position:static;max-height:none}
