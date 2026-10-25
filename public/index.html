@@ -443,6 +443,11 @@ body.chat-open #app{padding-bottom:300px}
 .card:not(.mini) > .band + .art,.dock .hand .card:not(.mini) > .band + .art{margin-top:-6px}
 .dock .hand .card.mini > .band + .art{margin-top:-5px}
 .dock .hand .card.site.mini{flex:0 0 auto;width:176px;min-width:0;max-width:none}
+/* on board abilities (clamped to 2 lines) icons must fit inside the line so none get cropped */
+.ab.mini .abt{line-height:1.34}
+.ab.mini .abt .ic.dn,.ab.mini .abt .ic.mn{width:1.62em;height:1.62em;margin:0 .02em}
+.ab.mini .abt .ic.dn.bare{width:1.35em;height:1.35em}
+.ab.mini .abt .ic.zn{margin:0 .04em}
 .dock .hand .ab.mini .abt{display:block;-webkit-line-clamp:unset;overflow:visible}
 .rail .stack .rn{font-size:24px}
 .stack .cnt{font-size:14.5px}
