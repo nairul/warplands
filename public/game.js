@@ -1771,7 +1771,7 @@ function siteHTML(s,vi,full){
   return `<div class="card site ${eraCls(d)}">
     ${bandHTML(d)}${artHTML(d)}${kindHTML(d)}
     <div class="body">
-    ${d.text?`<div class="tx">${cardText(d.text)}</div>`:''}
+    ${d.text&&d.text.replace(/^\s*Fortified\.\s*/,'')?`<div class="tx">${cardText(d.text.replace(/^\s*Fortified\.\s*/,''))}</div>`:''}
     ${abs?`<div class="abs">${abs}</div>`:''}
     ${used?'<div class="used">Ability used this turn</div>':''}
     ${s.tucked.length?`<div class="tuck">${s.tucked.length} card${s.tucked.length>1?'s':''} tucked underneath</div>`:''}
@@ -1796,12 +1796,14 @@ function siteMini(s,vi){
                :`<div class="ab mini" title="${t}">${reqHTML(ab,s)}<span class="abt">${ti}</span></div>`;
   }).join('');
     const shownDmg=Math.max(0,s.damage-(PEND.get(s.uid)||0));
+  /* the wall ring on the Zealot disc already says 'Fortified', so drop that sentence from the text */
+  const miniTx=(d.text||'').replace(/^\s*Fortified\.\s*/,'');
   const attl=s.attachments.map(a=>`<span class="chip ${HARMFUL.includes(a.def.id)?'bad':''}" title="${esc(a.def.name)}: ${esc(a.def.text)}">${esc(a.def.name)}</span>`).join('');
   const chips=[s.tucked.length?`<span class="chip">${s.tucked.length} tucked</span>`:'',used?'<span class="chip dim">Used</span>':'',
 ''].join('');
   return `<div class="card site mini ${eraCls(d)} ${target?'target':''}" data-suid="${s.uid}" ${target?`data-site="${s.uid}" tabindex="0" role="button" aria-label="Choose ${esc(d.name)}"`:''}>
     ${bandHTML(d)}${artHTML(d)}
-    <div class="body">${d.text?`<div class="tx">${cardText(d.text)}</div>`:''}${abs?`<div class="abs">${abs}</div>`:''}${chips?`<div class="chips">${chips}</div>`:''}</div>
+    <div class="body">${miniTx?`<div class="tx">${cardText(miniTx)}</div>`:''}${abs?`<div class="abs">${abs}</div>`:''}${chips?`<div class="chips">${chips}</div>`:''}</div>
     <div class="foot">${zcHTML(s.followers,isFort(s))}<div class="attl">${attl}</div>
     ${hpHTML(integ(s)-shownDmg,integ(s))}</div>
   </div>`;
