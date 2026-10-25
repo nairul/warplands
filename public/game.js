@@ -1721,14 +1721,25 @@ function kindHTML(d){
   const right=d.placeholder?'<span class="ph">placeholder</span>':'';
   return `<div class="kind"><span>${d.start?'Starting site':TYPE_NAME[d.type]}</span>${right}</div>`;
 }
-function abListHTML(d){return (d.abilities||[]).map(ab=>`<div class="ab ${ab.passive?'passive':''}">${reqHTML(ab)}<span>${esc(ab.text)}${ab.passive?'<span class="auto">Automatic</span>':''}</span></div>`).join('')}
+/* Card and ability text with the words Zealot(s) and Mana replaced by their icons */
+const IC_Z='<span class="ic z" role="img" aria-label="Zealot"></span>', IC_M='<span class="ic m" role="img" aria-label="Mana">◆</span>';
+function cardText(t){
+  /* swap words for placeholder marks first, then marks for icons, so no icon is matched twice */
+  return esc(t)
+    .replace(/\ban action\b/g,'1 \u0002').replace(/\bno actions\b/g,'no \u0002')
+    .replace(/\b(\d+) fewer actions?\b/g,'$1 less \u0002').replace(/\bfewer actions?\b/g,'less \u0002')
+    .replace(/\b[Aa]ctions?\b/g,'\u0002').replace(/\bMana\b/g,'\u0002')
+    .replace(/\b[Ff]ollowers?\b/g,'\u0001').replace(/\bZealots?\b/g,'\u0001')
+    .replace(/\u0001/g,IC_Z).replace(/\u0002/g,IC_M);
+}
+function abListHTML(d){return (d.abilities||[]).map(ab=>`<div class="ab ${ab.passive?'passive':''}">${reqHTML(ab)}<span>${cardText(ab.text)}${ab.passive?'<span class="auto">Automatic</span>':''}</span></div>`).join('')}
 function handCardHTML(card,pi){
   const d=card.def;
   const pick=UI.prompt&&UI.prompt.kind==='hand'&&UI.prompt.pi===pi&&UI.prompt.set.has(card.uid);
   const ok=!pick&&humanTurn()&&!UI.busy&&!UI.prompt&&canPlay(pi,card);
   let body;
-  if(d.type==='site') body=`<div class="body">${d.text?`<div class="tx">${esc(d.text)}</div>`:''}${(d.abilities||[]).length?`<div class="abs">${abListHTML(d)}</div>`:''}</div><div class="tx hpline">Integrity ${d.integrity||3}</div>`;
-  else body=`<div class="body"><div class="tx">${esc(d.text)}</div></div>`;
+  if(d.type==='site') body=`<div class="body">${d.text?`<div class="tx">${cardText(d.text)}</div>`:''}${(d.abilities||[]).length?`<div class="abs">${abListHTML(d)}</div>`:''}</div><div class="tx hpline">Integrity ${d.integrity||3}</div>`;
+  else body=`<div class="body"><div class="tx">${cardText(d.text)}</div></div>`;
   const title=pick?'Choose '+d.name:ok?'Play '+d.name:d.type==='reaction'?'Reactions are offered to you automatically when their condition happens':'Not enough actions';
   return `<button class="card ${eraCls(d)} ${ok?'playable':''} ${pick?'target':''}" ${pick?`data-pick="${card.uid}"`:`data-play="${card.uid}"`} ${ok||pick?'':'aria-disabled="true"'} title="${esc(title)}">${bandHTML(d)}${artHTML(d)}${kindHTML(d)}${body}</button>`;
 }
@@ -1738,10 +1749,10 @@ function siteHTML(s,vi,full){
   const target=false;
   const live=false;
   const abs=(d.abilities||[]).map((ab,i)=>{
-    if(ab.passive) return `<div class="ab passive">${reqHTML(ab,s)}<span>${esc(ab.text)}<span class="auto">Automatic</span></span></div>`;
+    if(ab.passive) return `<div class="ab passive">${reqHTML(ab,s)}<span>${cardText(ab.text)}<span class="auto">Automatic</span></span></div>`;
     const ready=live&&abilityReady(s.owner,s,i);
-    return mine&&!target?`<button class="ab" data-ab="${s.uid}:${i}" ${ready?'':'disabled'}>${reqHTML(ab,s)}<span>${esc(ab.text)}</span></button>`
-               :`<div class="ab">${reqHTML(ab,s)}<span>${esc(ab.text)}</span></div>`;
+    return mine&&!target?`<button class="ab" data-ab="${s.uid}:${i}" ${ready?'':'disabled'}>${reqHTML(ab,s)}<span>${cardText(ab.text)}</span></button>`
+               :`<div class="ab">${reqHTML(ab,s)}<span>${cardText(ab.text)}</span></div>`;
   }).join('');
   const toks=Array.from({length:Math.min(s.followers,10)},()=>'<span class="dot"></span>').join('');
   const shownDmg=Math.max(0,s.damage-(PEND.get(s.uid)||0));
@@ -1751,7 +1762,7 @@ function siteHTML(s,vi,full){
   return `<div class="card site ${eraCls(d)}">
     ${bandHTML(d)}${artHTML(d)}${kindHTML(d)}
     <div class="body">
-    ${d.text?`<div class="tx">${esc(d.text)}</div>`:''}
+    ${d.text?`<div class="tx">${cardText(d.text)}</div>`:''}
     ${abs?`<div class="abs">${abs}</div>`:''}
     ${used?'<div class="used">Ability used this turn</div>':''}
     ${s.tucked.length?`<div class="tuck">${s.tucked.length} card${s.tucked.length>1?'s':''} tucked underneath</div>`:''}
@@ -1769,11 +1780,11 @@ function siteMini(s,vi){
   const live=mine&&humanTurn()&&!UI.busy&&!UI.prompt;
   const used=s.usedTurn===G.turnCount&&G.turn===s.owner&&(d.abilities||[]).length;
   const abs=(d.abilities||[]).map((ab,i)=>{
-    const t=esc(ab.text);
-    if(ab.passive) return `<div class="ab mini passive" title="${t}">${reqHTML(ab,s)}<span class="abt">${t}</span></div>`;
+    const t=esc(ab.text),ti=cardText(ab.text);
+    if(ab.passive) return `<div class="ab mini passive" title="${t}">${reqHTML(ab,s)}<span class="abt">${ti}</span></div>`;
     const ready=live&&abilityReady(s.owner,s,i);
-    return mine&&!target?`<button class="ab mini" data-ab="${s.uid}:${i}" ${ready?'':'disabled'} title="${t}">${reqHTML(ab,s)}<span class="abt">${t}</span></button>`
-               :`<div class="ab mini" title="${t}">${reqHTML(ab,s)}<span class="abt">${t}</span></div>`;
+    return mine&&!target?`<button class="ab mini" data-ab="${s.uid}:${i}" ${ready?'':'disabled'} title="${t}">${reqHTML(ab,s)}<span class="abt">${ti}</span></button>`
+               :`<div class="ab mini" title="${t}">${reqHTML(ab,s)}<span class="abt">${ti}</span></div>`;
   }).join('');
   const toks=Array.from({length:Math.min(s.followers,10)},()=>'<span class="dot"></span>').join('');
   const shownDmg=Math.max(0,s.damage-(PEND.get(s.uid)||0));
@@ -2025,7 +2036,7 @@ function revealCard(d,def,old,reduce,dur){
   const box={left:cx-W/2,top:cy-H/2};
   const f=document.createElement('div');f.className='flyer reveal';f.setAttribute('aria-hidden','true');
   Object.assign(f.style,{left:box.left+'px',top:box.top+'px',width:W+'px',height:H+'px'});
-  const face=`<div class="card ${eraCls(def)}" style="width:100%;height:100%">${bandHTML(def)}${artHTML(def)}${kindHTML(def)}<div class="body"><div class="tx">${esc(def.text||'')}</div></div></div>`;
+  const face=`<div class="card ${eraCls(def)}" style="width:100%;height:100%">${bandHTML(def)}${artHTML(def)}${kindHTML(def)}<div class="body"><div class="tx">${cardText(def.text||'')}</div></div></div>`;
   f.innerHTML=term(`<div class="fly-inner"><div class="fly-face fly-back era-${def.level}"><span style="font-size:52px">${ROMAN[def.level]}</span></div><div class="fly-face fly-front">${face}</div></div>
     <div class="reveal-cap">${esc(isYou(p)?'You play':p.name+' plays')} <b>${esc(def.name)}</b>${tgtSite?` on ${esc(poss(G.players[tgtSite.owner]))} ${esc(tgtSite.card.def.name)}`:''}</div>`);
   document.body.appendChild(f);

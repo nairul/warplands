@@ -37,7 +37,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 button:disabled{cursor:default}
 button:focus-visible,[data-site]:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 
-#app{max-width:1560px;margin:0 auto;padding-block:10px 120px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:14px}
+#app{max-width:1880px;margin:0 auto;padding-block:10px 120px;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));display:flex;flex-direction:column;gap:14px}
 .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .brand{font-family:var(--display);font-weight:800;letter-spacing:.12em;font-size:22px;color:var(--brass);text-shadow:0 1px 0 #000,0 0 14px rgba(255,120,30,.35)}
 .turnline{font-size:14px;color:var(--muted)}
@@ -326,6 +326,29 @@ body.chat-open #app{padding-bottom:300px}
 .dock .hand .card.target{animation:none;outline:3px solid var(--brass);outline-offset:2px}
 .dock .hand .empty{padding-top:30px}
 .prompt{box-shadow:0 -6px 20px rgba(0,0,0,.4)}
+/* Inline Zealot and Mana icons in card text */
+.ic{display:inline-block;vertical-align:-0.12em;margin:0 .08em}
+.ic.z{width:.82em;height:.82em;border-radius:50%;background:var(--follower);box-shadow:inset 0 -1.5px 0 rgba(0,0,0,.3), 0 0 0 1px rgba(0,0,0,.25)}
+.ic.m{font-size:max(.8em,10px);line-height:1;padding:.18em .28em;border-radius:3px;background:var(--ink);color:#fff;vertical-align:.08em}
+/* Larger small print: nothing on the table is under 12px */
+.ab.mini{font-size:13px;line-height:1.25}
+.ab.mini .rq,.rq{font-size:12.5px;line-height:18px;padding:0 4px}
+.chip{font-size:12.5px;padding:2px 6px}
+.card .kind{font-size:12px}
+.used,.tuck,.label{font-size:12.5px}
+.ab .auto{font-size:12px}
+.fort{font-size:12px}
+.back{font-size:12px}
+.stack .hint,.rail .stack .hint{font-size:12.5px}
+.mk{font-size:12px}
+.coach-n{font-size:12px!important}
+.back{min-width:21px;height:29px;font-size:11.5px}
+.site.mini{width:176px}
+.site.mini .art{height:54px}
+.site.mini .nm{font-size:13.5px}
+.site.mini .tokens{max-width:100px}
+.site.mini .dot{width:10px;height:10px}
+.site.mini .integ i{width:8px;height:11px}
 @media (max-width:900px){
   .table{grid-template-columns:minmax(0,1fr)}
   .rail{position:static;max-height:none}
