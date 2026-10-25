@@ -1733,6 +1733,7 @@ function kindHTML(d){return ''}
 /* Card and ability text with the words Zealot(s) and Mana replaced by their icons */
 const IC_Z='<span class="ic z" role="img" aria-label="Zealot"></span>', IC_M='<span class="ic m" role="img" aria-label="Mana">◆</span>', IC_C='<span class="ic c" role="img" aria-label="card"></span>';
 const ZN=n=>`<span class="ic zn" role="img" aria-label="${n} Zealot${n==1?'':'s'}">${n}</span>`;
+const DN=(n,st)=>`<span class="ic dn${st?' st':''}${n?'':' bare'}" role="img" aria-label="${n?n+' ':''}${st?'structural ':''}damage">${n?`<b>${n}</b>`:''}</span>`;
 const MN=n=>`<span class="ic mn" role="img" aria-label="${n} Mana"><b>${n}</b></span>`;
 function cardText(t){
   /* swap words for placeholder marks first, then marks for icons, so no icon is matched twice */
@@ -1741,10 +1742,13 @@ function cardText(t){
     .replace(/\b(\d+) fewer actions?\b/g,'$1 less \u0002').replace(/\bfewer actions?\b/g,'less \u0002')
     .replace(/\b[Aa]ctions?\b/g,'\u0002').replace(/\bMana\b/g,'\u0002')
     .replace(/\b([Dd]raw) (?:a|1) card\b/g,'$1 \u0003').replace(/\b([Dd]raw) (a total of )?(\d+) cards?\b/g,'$1 $2$3 \u0003').replace(/\b([Dd]raw) cards\b/g,'$1 \u0003')
+    .replace(/\b(\d+) structural damage\b/g,'\u0005$1\u0005').replace(/\b[Ss]tructural damage\b/g,'\u0005\u0005')
+    .replace(/\b(\d+) damage\b/g,'\u0004$1\u0004').replace(/\bdamage\b/g,'\u0004\u0004')
     .replace(/\b[Ff]ollowers?\b/g,'\u0001').replace(/\bZealots?\b/g,'\u0001')
     /* a count right before a Zealot or Mana icon goes inside it: "1 Mana" -> a black diamond with 1 in it */
     .replace(/\b(\d+|a) \u0001/g,(m,n)=>ZN(n==='a'?1:n)).replace(/\b(\d+) \u0002/g,(m,n)=>MN(n))
-    .replace(/\u0001/g,IC_Z).replace(/\u0002/g,IC_M).replace(/\u0003/g,IC_C);
+    .replace(/\u0001/g,IC_Z).replace(/\u0002/g,IC_M).replace(/\u0003/g,IC_C)
+    .replace(/\u0004(\d*)\u0004/g,(m,n)=>DN(n,false)).replace(/\u0005(\d*)\u0005/g,(m,n)=>DN(n,true));
 }
 function abListHTML(d){return (d.abilities||[]).map(ab=>`<div class="ab ${ab.passive?'passive':''}">${reqHTML(ab)}<span>${cardText(ab.text)}${ab.passive?'<span class="auto">Automatic</span>':''}</span></div>`).join('')}
 function handCardHTML(card,pi){
