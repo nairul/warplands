@@ -2424,9 +2424,16 @@ function fitNames(sel){
 function sizeHand(){
   const cards=[...document.querySelectorAll('#handDock .card')];
   const refs=[...document.querySelectorAll('#app .board .site.mini')];
-  let w=176,z=1;
+  let w=176,z=1; /* z is reassigned if the board re-fits */
   if(refs.length){z=Math.min(rowZoom(refs[0]),1.5);w=Math.max(140,Math.min(208,Math.min(...refs.map(r=>r.getBoundingClientRect().width/rowZoom(r)))))}
+  /* same fixed height as the board's cards (board cards are all equalized to one height) */
+  let bh=refs.length?parseFloat(refs[0].style.minHeight)||refs[0].offsetHeight:0;
   for(const c of cards){c.style.zoom=z>1.01?z:'';c.style.width=w+'px';c.style.minHeight=''}
+  /* a card in hand taller than the board's cards raises the shared height for both */
+  const hmax=Math.max(0,...cards.map(c=>c.offsetHeight));
+  if(refs.length&&hmax>bh+0.5){bh=hmax;for(const c of document.querySelectorAll('#app .card'))c.style.minHeight=bh+'px';fitBoard();
+    z=Math.min(rowZoom(refs[0]),1.5);for(const c of cards)c.style.zoom=z>1.01?z:''}
+  for(const c of cards)c.style.minHeight=bh?bh+'px':'';
   fitNames('#handDock .card .nm');
   fanHand();
   for(const c of cards)c.style.setProperty('--lift',Math.max(0,c.offsetHeight-DOCK_PEEK/z)+'px');
@@ -2450,7 +2457,7 @@ function fitBoard(){
   const rows=[...document.querySelectorAll('.board .zone .row')].filter(r=>r.querySelector('.site.mini'));
   for(const r of rows) r.style.zoom='';
   if(!rows.length) return;
-  let z=1.8;
+  let z=1.5; /* same cap as the hand, so board and hand cards are always the same size */
   for(const r of rows){
     const kids=[...r.children].filter(k=>k.offsetParent);if(!kids.length) continue;
     const cs=getComputedStyle(r),zone=r.closest('.zone'),zcs=getComputedStyle(zone);

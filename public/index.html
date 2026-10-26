@@ -340,6 +340,9 @@ button.ab:disabled{opacity:.75}
 .dock .hand .card{transition:transform .16s ease-out, box-shadow .16s;position:relative;opacity:1}
 .dock .hand .card:not(.playable):not(.target){filter:saturate(.75) brightness(.9)}
 .dock .hand .card:hover,.dock .hand .card:focus-visible{transform:translateY(calc(-1 * var(--lift, 140px)));z-index:10;box-shadow:0 18px 40px rgba(0,0,0,.75)}
+/* cards you can play right now (your turn, enough Mana) keep a steady warm glow */
+.dock .hand .card.playable{box-shadow:0 0 0 2px rgba(255,214,130,.9),0 0 12px 3px rgba(255,190,90,.5)}
+.dock .hand .card.playable:hover,.dock .hand .card.playable:focus-visible{box-shadow:0 0 0 2px rgba(255,214,130,.95),0 0 14px 4px rgba(255,190,90,.55),0 18px 40px rgba(0,0,0,.75)}
 /* cards you can choose stay in the hand (so the prompt stays readable), nudged up and outlined; hover one to read it */
 .dock .hand .card.target:not(:hover):not(:focus-visible){transform:translateY(-6px);box-shadow:0 0 0 2px #ffd27a,0 0 14px 3px rgba(255,200,100,.55)}
 .dock .hand .card.target{animation:none;outline:3px solid var(--brass);outline-offset:2px}
@@ -476,7 +479,6 @@ button.ab:disabled{opacity:.75}
 .ic.mn.bare,.ab.mini .abt .ic.mn.bare{width:1.3em;height:1.3em;margin:-.1em .02em}
 .ic.mn.bare::before{inset:.2em}
 .ab.mini .abt .ic.zn{margin:0 .04em}
-.dock .hand .ab.mini .abt{display:block;-webkit-line-clamp:unset;overflow:visible}
 .rail .stack .rn{font-size:24px}
 .stack .cnt{font-size:14.5px}
 .discard,.log{font-size:14.5px}
