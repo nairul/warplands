@@ -1326,13 +1326,8 @@ function slotScore(row,pos,def){
   if(def.id==='healerhut') v+=nb.reduce((a,s)=>a+s.followers,0)*0.2;
   return v+pos*0.01;
 }
-async function pickSlot(pi,def,forced){
-  const row=G.players[pi].sites,n=row.length;
-  if(!n) return 0;
-  const opts=Array.from({length:n+1},(_,i)=>({label:slotLabel(row,i),value:i}));
-  if(G.players[pi].ai) return opts.reduce((b,o)=>slotScore(row,o.value,def)>slotScore(row,b.value,def)?o:b,opts[opts.length-1]).value;
-  return new Promise(res=>{UI.prompt={kind:'slot',pi,text:`Choose where ${def.name} goes in your row.`,def:def.id,slots:n+1,cancellable:!forced,resolve:v=>{UI.prompt=null;res(v);render()}};render()});
-}
+/* Sites always go in the right-most slot of the owner's row */
+async function pickSlot(pi){return G.players[pi].sites.length}
 function canPlay(pi,card){
   const p=G.players[pi];
   return !G.over&&G.turn===pi&&card.def.type!=='reaction'&&card.def.cost<=p.actions&&hasEffect(pi,card);
@@ -1642,16 +1637,16 @@ const TUT_STEPS=[
   {title:'Drawing cards',text:'Your hand holds the cards you can play. To get more, spend <b>1 Mana</b> to draw a card from one of the four <b>draw stacks</b> on the right: Hamlet, Township, City and Empire. Higher stacks hold stronger cards.',hl:'.rail .stacks',cont:true},
   {title:'Draw a Hamlet card',text:'You can only draw from your current level or lower, and you start at <b>Hamlet</b>. The higher stacks stay locked until you upgrade. Click the <b>Hamlet</b> stack to draw a card.',hl:'[data-draw="1"]',allow:['[data-draw="1"]','#prompt button'],done:()=>tutMe().hand.some(k=>k.uid===G.tut.treb)},
   {title:'Sites',text:'You drew a <b>Trebuchet</b>, a <b>site</b>. Sites are buildings: once played they stay on the table in your row, can hold Zealots, and have <b>abilities</b> you can use turn after turn. Like Warpland, each has HP and can be destroyed.',hl:()=>`[data-play="${G.tut.treb}"]`,cont:true},
-  {title:'Play Trebuchet',text:'Spend <b>2 Mana</b> to play the Trebuchet: click it in your hand, then click a glowing gap to choose where it goes in your row.',hl:()=>`[data-play="${G.tut.treb}"],[data-slot]`,allow:()=>[`[data-play="${G.tut.treb}"]`,'[data-slot]','#prompt button'],done:()=>!!tutTreb()},
-  {title:'Site abilities',text:'Each ability shows what it needs: the <b>blue badge</b> is how many Zealots must be standing on the site, and the <b>dark badge</b> is its Mana cost. Trebuchet’s first ability needs <b>3 Zealots</b> on it and <b>1 Mana</b> to do 1 damage. Each site can use one ability per turn.',hl:()=>tutTreb()?`[data-suid="${tutTreb().uid}"]`:'',cont:true},
+  {title:'Play Trebuchet',text:'Spend <b>2 Mana</b> to play the Trebuchet: click it in your hand. New sites always go at the right end of your row.',hl:()=>`[data-play="${G.tut.treb}"],[data-slot]`,allow:()=>[`[data-play="${G.tut.treb}"]`,'[data-slot]','#prompt button'],done:()=>!!tutTreb()},
+  {title:'Site abilities',text:'Each ability shows what it needs: the <b>blue badge</b> is how many Zealots must be standing on the site, and the <b>black diamond</b> is its Mana cost. Trebuchet’s first ability needs <b>3 Zealots</b> on it and <b>1 Mana</b> to do 1 damage. Each site can use one ability per turn.',hl:()=>tutTreb()?`[data-suid="${tutTreb().uid}"]`:'',cont:true},
   {title:'Out of Mana!',text:'You’ve spent all 3 Mana, and Trebuchet has no Zealots on it yet, so there is nothing left to do this turn. You’ll use the Trebuchet next turn. Click <b>End turn</b>.',...END_TURN,done:()=>G.turn===1},
   {title:'Opponent’s turn',text:'Your opponent is taking its turn…',wait:true,done:()=>G.turn===0&&G.turnCount>=3&&!UI.busy},
   {title:'What your opponent did',text:'Your opponent spent 1 Mana to <b>draw a card</b>, then 2 Mana to build a <b>Chapel</b>, a site whose ability adds Zealots once it has 2 Zealots on it. Your Mana is back to 3.',hl:'#oppZone [data-suid]',cont:true},
   {title:'Relocating',text:'Zealots can move between your sites. <b>Relocate</b> costs 1 Mana and lets you shift any number of Zealots from your sites onto your other sites in one go. This is how you staff a site so its abilities can be used.',hl:'[data-act="relocate"]',cont:true},
   {title:'Put Zealots on Trebuchet',text:'Click <b>Relocate</b>, take <b>exactly 3</b> Zealots from Warpland and add them to Trebuchet, then confirm.',hl:'[data-act="relocate"]',allow:['[data-act="relocate"]','#overlay button'],relocExact:true,done:()=>{const t=tutTreb();return t&&t.followers>=3}},
   {title:'Use Trebuchet',text:'Trebuchet has its 3 Zealots. Click its first ability (<b>Do 1 damage</b>, 1 Mana) and target your opponent’s <b>Warpland</b>.',hl:()=>`[data-ab="${tutTreb()?tutTreb().uid:0}:0"],${oppHomeSel()}`,allow:()=>[`[data-ab="${tutTreb()?tutTreb().uid:0}:0"]`,oppHomeSel(),'#prompt button'],done:()=>{const t=tutTreb();return t&&t.usedTurn===G.turnCount}},
-  {title:'Damage',text:'Each point of <b>damage</b> fills one HP box and kills one Zealot on that site. Two exceptions: <b>Fortified</b> sites and <b>Structural</b> damage hurt the site without killing its Zealots. And when a site’s last HP box fills, it is <b>destroyed</b> and every Zealot on it dies.',hl:'#oppZone [data-suid]',cont:true},
-  {title:'Play Fields',text:'Spend your last Mana to play <b>Fields</b> (1 Mana) and choose a spot for it in your row.',hl:()=>`[data-play="${G.tut.fields}"],[data-slot]`,allow:()=>[`[data-play="${G.tut.fields}"]`,'[data-slot]','#prompt button'],done:()=>!!tutFields()},
+  {title:'Damage',text:'Each point of <b>damage</b> takes 1 HP off the site (the red square) and kills one Zealot on it. Two exceptions: <b>Fortified</b> sites and <b>Structural</b> damage hurt the site without killing its Zealots. And when a site’s HP reaches 0, it is <b>destroyed</b> and every Zealot on it dies.',hl:'#oppZone [data-suid]',cont:true},
+  {title:'Play Fields',text:'Spend your last Mana to play <b>Fields</b> (1 Mana). It joins the right end of your row.',hl:()=>`[data-play="${G.tut.fields}"],[data-slot]`,allow:()=>[`[data-play="${G.tut.fields}"]`,'[data-slot]','#prompt button'],done:()=>!!tutFields()},
   {title:'Tucking',text:'Some sites let you <b>tuck</b> a card from your hand underneath them. A tucked card is out of play for good, but it powers the site: Fields gains you a Zealot each time you tuck, and its second ability grows with every card tucked under it.',hl:()=>tutFields()?`[data-suid="${tutFields().uid}"]`:'',cont:true},
   {title:'Use Fields',text:'Fields’ first ability needs no Zealots and no Mana. Click it, choose <b>Stone Keep</b> as the card to tuck, then place the new Zealot on <b>Fields</b>.',hl:()=>`[data-ab="${tutFields()?tutFields().uid:0}:0"],[data-pick="${G.tut.keep}"],${siteSel(tutFields())}`,allow:()=>[`[data-ab="${tutFields()?tutFields().uid:0}:0"]`,`[data-pick="${G.tut.keep}"]`,siteSel(tutFields()),'#prompt button'],done:()=>{const f=tutFields();return f&&f.usedTurn===G.turnCount}},
   {title:'Out of Mana!',text:'You’re out of Mana and every site that can act has acted, so your turn is done. Click <b>End turn</b>.',...END_TURN,done:()=>G.turn===1},
