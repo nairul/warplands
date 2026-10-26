@@ -1425,6 +1425,34 @@ function aiBestFree(pi,except){
   for(const k of G.players[pi].hand){if(k===except)continue;const v=cardValue(pi,k);if(!best||v>best.v)best={k,v}}
   return best;
 }
+/* Threat awareness: how much damage the opponent's sites could do next turn
+   (damage abilities on sites already staffed to fire; nearly-staffed ones count half). */
+const DMG_AB=ab=>!ab.passive&&/damage|kill/i.test(ab.text)&&!/you own/i.test(ab.text);
+function oppThreat(pi){
+  let t=0;
+  for(const s of G.players[1-pi].sites){
+    if(abilBlocked(s)) continue;
+    let best=0;
+    for(const ab of s.card.def.abilities||[]){
+      if(!DMG_AB(ab)) continue;
+      const need=effNeed(s,ab),m=/(\d+)/.exec(ab.text),dmg=m?+m[1]:1;
+      if(s.followers>=need) best=Math.max(best,dmg);
+      else if(s.followers+1>=need) best=Math.max(best,dmg*0.5);
+    }
+    t+=best;
+  }
+  return t;
+}
+/* Defences against that damage: damage reactions in hand, and a working Aegis */
+function myDefence(pi){
+  const p=G.players[pi];
+  let d=p.hand.filter(k=>['escape','misinfo','fodder'].includes(k.def.id)).length*1.5;
+  if(p.sites.some(s=>s.card.def.id==='forcefield'&&!abilBlocked(s)&&s.followers>=effNeed(s,s.card.def.abilities[0]))) d+=4;
+  return d;
+}
+/* Upgrading while the opponent has damage sites ready to fire usually loses: only upgrade when
+   unthreatened, or when there are enough reactions to absorb the hits. */
+function aiSafeToUpgrade(pi){return oppThreat(pi)-myDefence(pi)<1}
 function aiOptions(pi,steady){
   const p=G.players[pi],o=G.players[1-pi],opts=[];
   const j=steady?()=>0:()=>Math.random()*0.15;
@@ -1450,8 +1478,10 @@ function aiOptions(pi,steady){
   const uc=UPGRADE_COST[p.level];
   if(uc&&p.actions>=uc){
     const stuck=drawableLevels(pi).length===0||G.stacks[p.level].length<=1;
-    const sc=stuck?5:p.level===1?(G.turnCount>2?1.25:0.8):p.level===2?1.15:1.5;
-    opts.push({score:sc+j(),exec:async()=>actUpgrade(pi)});
+    if(stuck||aiSafeToUpgrade(pi)){
+      const sc=stuck?5:p.level===1?(G.turnCount>2?1.25:0.8):p.level===2?1.15:1.5;
+      opts.push({score:sc+j(),exec:async()=>actUpgrade(pi)});
+    }
   }
   return opts;
 }
