@@ -2357,12 +2357,10 @@ function equalizeCards(){
     for(const c of cards) c.style.minHeight=h+'px';
   }
   /* Hand cards keep their natural height (only the top strip shows until hovered); each one lifts just enough to show itself */
-  fitNames('#handDock .card .nm');
-  fanHand();
-  for(const c of document.querySelectorAll('#handDock .card')){c.style.minHeight='';c.style.setProperty('--lift',Math.max(0,c.offsetHeight-DOCK_PEEK)+'px')}
   const dw=$('dockwrap'),app=$('app');
   if(dw&&app) app.style.paddingBottom=(dw.offsetHeight+18)+'px';
   fitBoard();
+  sizeHand();
 }
 /* When the board is sparse, scale both rows of sites up (same factor for both) to use the empty space.
    Only scales while every site is still at its full width, so card heights stay equal. */
@@ -2386,18 +2384,32 @@ function fitNames(sel){
 }
 /* When the hand is wider than the screen, overlap the cards just enough to fit (more cards, more overlap).
    Each card still shows a strip you can hover; the hovered card lifts above its neighbours. */
+/* Hand cards are drawn at the same size as the cards on the board: same width, same scale
+   (scale capped so the header still fits in the strip of hand that peeks above the screen edge). */
+function sizeHand(){
+  const cards=[...document.querySelectorAll('#handDock .card')];
+  const refs=[...document.querySelectorAll('#app .board .site.mini')];
+  let w=176,z=1;
+  if(refs.length){z=Math.min(rowZoom(refs[0]),1.5);w=Math.max(140,Math.min(208,Math.min(...refs.map(r=>r.getBoundingClientRect().width/rowZoom(r)))))}
+  for(const c of cards){c.style.zoom=z>1.01?z:'';c.style.width=w+'px';c.style.minHeight=''}
+  fitNames('#handDock .card .nm');
+  fanHand();
+  for(const c of cards)c.style.setProperty('--lift',Math.max(0,c.offsetHeight-DOCK_PEEK/z)+'px');
+}
 function fanHand(){
   const hand=document.querySelector('#handDock .hand');if(!hand)return;
   const cards=[...hand.children].filter(c=>c.classList.contains('card'));
   for(const c of cards)c.style.marginLeft='';
   hand.style.gap='';
   if(cards.length<2)return;
-  const gap=parseFloat(getComputedStyle(hand).columnGap)||10, w=cards[0].offsetWidth;
+  const z=parseFloat(cards[0].style.zoom)||1;
+  const gap=parseFloat(getComputedStyle(hand).columnGap)||10, w=cards[0].getBoundingClientRect().width;
   const avail=hand.clientWidth-8, need=cards.length*w+(cards.length-1)*gap;
   if(need<=avail)return;
   const step=Math.max(14,(avail-w)/(cards.length-1));
   hand.style.gap='0px';
-  cards.forEach((c,i)=>{if(i)c.style.marginLeft=(step-w)+'px'});
+  /* margins inside a scaled card are scaled too, so convert back to the card's own units */
+  cards.forEach((c,i)=>{if(i)c.style.marginLeft=((step-w)/z)+'px'});
 }
 function fitBoard(){
   const rows=[...document.querySelectorAll('.board .zone .row')].filter(r=>r.querySelector('.site.mini'));
@@ -2496,7 +2508,7 @@ function flyCard(k,src,delay){
   Object.assign(f.style,{left:b.left+'px',top:b.top+'px',width:b.width+'px',height:b.height+'px'});
   const lv=k.def.level;
   f.innerHTML=`<div class="fly-inner"><div class="fly-face fly-back era-${lv}"><span>${ROMAN[lv]}</span></div>${mine?`<div class="fly-face fly-front">${tgt.outerHTML}</div>`:''}</div>`;
-  const fr=f.querySelector('.fly-front>*');if(fr){fr.style.visibility='visible';fr.removeAttribute('data-play');fr.removeAttribute('data-pick');fr.style.margin='0'}
+  const fr=f.querySelector('.fly-front>*');if(fr){fr.style.visibility='visible';fr.removeAttribute('data-play');fr.removeAttribute('data-pick');fr.style.margin='0';const z=parseFloat(fr.style.zoom)||1;if(z!==1){fr.style.setProperty('width',b.width/z+'px','important');fr.style.height=b.height/z+'px'}}
   const bs=f.querySelector('.fly-back span');if(bs)bs.style.fontSize=Math.max(9,Math.min(44,b.width*0.24))+'px';
   document.body.appendChild(f);
   const sw=mine?a.width*0.72:Math.min(a.width*0.55,70),sh=mine?sw*(b.height/b.width):sw*1.4;
