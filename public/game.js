@@ -1628,7 +1628,7 @@ function tutRelocOK(){
 }
 const END_TURN={hl:'[data-act="end"]',allow:['[data-act="end"]']};
 const TUT_STEPS=[
-  {title:'Welcome to Warplands',text:'You and your opponent each lead a band of <b>Zealots</b>. Build sites, cast events and grow from a humble <b>Hamlet</b> into an <b>Empire</b>.<br><br><b>How to win:</b> wipe out every one of your opponent’s Zealots, or hold more Zealots than them when three of the four draw stacks run dry.',cont:true},
+  {title:'Welcome to <span class="holo">Warplands</span>',text:'You and your opponent each lead a band of <b>Zealots</b>. Build sites, cast events and grow from a humble <b>Hamlet</b> into an <b>Empire</b>.<br><br><b>How to win:</b> wipe out every one of your opponent’s Zealots, or hold more Zealots than them when three of the four draw stacks run dry.',cont:true},
   {title:'Your Warpland',text:'This is your starting site, <b>Warpland</b>. It holds your first 10 Zealots (the blue dots). Its <b>HP</b> boxes fill red as it takes damage; when they are all red, the site is destroyed along with everyone on it.',hl:'#meZone [data-suid]',cont:true},
   {title:'Mana',text:'Everything you do costs <b>Mana</b>, shown by the gold dots above your hand. You get <b>3 Mana</b> at the start of every turn, and whatever you don’t spend is lost when your turn ends. Each card shows its cost in its top corner.',hl:'.pips',cont:true},
   {title:'Drawing cards',text:'Your hand holds the cards you can play. To get more, spend <b>1 Mana</b> to draw a card from one of the four <b>draw stacks</b> on the right: Hamlet, Township, City and Empire. Higher stacks hold stronger cards.',hl:'.rail .stacks',cont:true},
@@ -1922,7 +1922,7 @@ function setPicker(){
 function menuHTML(){return term(menuHTML0()).replace(/>([^<]+)</g,(m,t)=>'>'+uiIcons(t)+'<')}
 function menuHTML0(){
   return `<div class="panel"><div class="eras"><span style="background:var(--era1)"></span><span style="background:var(--era2)"></span><span style="background:var(--era3)"></span><span style="background:var(--era4)"></span></div>
-    <h1>Warplands</h1>
+    <h1><span class="holo">Warplands</span></h1>
     <p>Lead your followers from a humble hamlet to a sprawling empire. Wipe out your opponent's followers, or hold more of them when three draw stacks run dry.</p>
     <p class="fine">Each game deals a fresh random draw stack for every level: 20 Level I cards, 15 Level II, 10 Level III and 5 Level IV.</p>
     <div class="choices"><button class="btn primary" data-new="ai">Play the computer</button><button class="btn" data-new="tutorial">Tutorial</button>${G&&!G.over?'<button class="btn" data-resume="1">Resume game</button>':''}</div>
