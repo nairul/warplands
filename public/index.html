@@ -422,6 +422,22 @@ body.chat-open #app{padding-bottom:300px}
 .ic.dn.st::before{background:radial-gradient(circle,#ffc15a 0,#f08a1c 45%,#a14a06 100%)}
 .ic.dn.bare{width:1.5em;height:1.5em;margin:-.3em .02em}
 .ic.dn b{position:relative}
+/* Header: type icon (no pill) and the Mana cost as a numbered diamond */
+.card .band .ty{background:none;padding:0}
+.card .band{gap:4px;padding-left:7px;padding-right:5px}
+.card .band .ty svg{width:15px;height:15px}
+.card .band .hcost{display:inline-flex;font-size:14px;line-height:1;margin-left:-1px}
+.card .band .hcost .ic.mn{margin:-.3em -1px;width:1.6em;height:1.6em}
+/* Bottom bar: attachments (plum seal) and tucked cards (grey card) with their count inside */
+.foot .attl{display:flex;align-items:center;gap:6px;justify-content:flex-start;padding-left:4px}
+.ic.an,.ic.tn{position:relative;display:inline-flex;align-items:center;justify-content:center;flex:none;font-weight:800;font-size:14px;line-height:1;color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.65)}
+.ic.an{width:28px;height:28px;cursor:help}
+.ic.an::before{content:'';position:absolute;inset:0;clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);background:linear-gradient(160deg,#b77ad6,#7a3f9e 55%,#4a2063);filter:drop-shadow(0 1px 1px rgba(0,0,0,.5))}
+.ic.tn{width:22px;height:29px;border-radius:3px;background:linear-gradient(160deg,#aa9e86,#8a7e68);border:1.5px solid #4a4032;box-sizing:border-box;box-shadow:0 1px 2px rgba(0,0,0,.45)}
+.ic.an b,.ic.tn b{position:relative}
+/* Hovering the attachment icon: the attachment cards side by side */
+.attzoom{display:flex;gap:10px}
+.attzoom .card{width:200px}
 .req .rq.f{width:22px;height:22px;padding:0;border-radius:50%;justify-content:center;flex:none;font-weight:800;font-size:13.5px;line-height:1;
   background:radial-gradient(circle at 35% 30%,#7fb0ff,var(--follower) 55%,#23468a);border:1.5px solid #0d1c38;box-sizing:border-box;
   box-shadow:0 1px 2px rgba(0,0,0,.45);text-shadow:0 1px 1px rgba(0,0,0,.6);font-variant-numeric:tabular-nums}

@@ -1570,7 +1570,7 @@ async function runAI(){
 const mkCard=id=>({uid:uidc++,def:DEF[id]});
 function tutSetup(){
   const [me,op]=G.players;
-  me.hand=['plague','siege','castle','farm','ram'].map(mkCard);
+  me.hand=['plague','siege','fort','farm','ram'].map(mkCard);
   op.hand=['church','temple','plague','farm','mission'].map(mkCard);
   /* no reaction cards anywhere near the scripted turns */
   for(const l of [1,2]) G.stacks[l]=G.stacks[l].filter(k=>k.def.type!=='reaction');
@@ -1578,7 +1578,7 @@ function tutSetup(){
   G.stacks[1].push(mkCard('fertility'));
   const treb=mkCard('catapult');G.stacks[1].push(treb);
   const h=id=>me.hand.find(k=>k.def.id===id).uid;
-  G.tut={step:0,free:false,treb:treb.uid,spark:h('siege'),fields:h('farm'),keep:h('castle')};
+  G.tut={step:0,free:false,treb:treb.uid,spark:h('siege'),fields:h('farm'),keep:h('fort')};
   G.log=[];log('Tutorial: you go first.');
 }
 async function tutOpponent(pi){
@@ -1645,7 +1645,7 @@ const TUT_STEPS=[
   {title:'Damage',text:'Each point of <b>damage</b> takes 1 HP off the site (the red square) and kills one Zealot on it. Two exceptions: <b>Fortified</b> sites and <b>Structural</b> damage hurt the site without killing its Zealots. And when a site’s HP reaches 0, it is <b>destroyed</b> and every Zealot on it dies.',hl:'#oppZone [data-suid]',cont:true},
   {title:'Play Fields',text:'Spend your last Mana to play <b>Fields</b> (1 Mana). It joins the right end of your row.',hl:()=>`[data-play="${G.tut.fields}"],[data-slot]`,allow:()=>[`[data-play="${G.tut.fields}"]`,'[data-slot]','#prompt button'],done:()=>!!tutFields()},
   {title:'Tucking',text:'Some sites let you <b>tuck</b> a card from your hand underneath them. A tucked card is out of play for good, but it powers the site: Fields gains you a Zealot each time you tuck, and its second ability grows with every card tucked under it.',hl:()=>tutFields()?`[data-suid="${tutFields().uid}"]`:'',cont:true},
-  {title:'Use Fields',text:'Fields’ first ability needs no Zealots and no Mana. Click it, choose <b>Stone Keep</b> as the card to tuck, then place the new Zealot on <b>Fields</b>.',hl:()=>`[data-ab="${tutFields()?tutFields().uid:0}:0"],[data-pick="${G.tut.keep}"],${siteSel(tutFields())}`,allow:()=>[`[data-ab="${tutFields()?tutFields().uid:0}:0"]`,`[data-pick="${G.tut.keep}"]`,siteSel(tutFields()),'#prompt button'],done:()=>{const f=tutFields();return f&&f.usedTurn===G.turnCount}},
+  {title:'Use Fields',text:'Fields’ first ability needs no Zealots and no Mana. Click it, choose <b>Palisade</b> as the card to tuck, then place the new Zealot on <b>Fields</b>.',hl:()=>`[data-ab="${tutFields()?tutFields().uid:0}:0"],[data-pick="${G.tut.keep}"],${siteSel(tutFields())}`,allow:()=>[`[data-ab="${tutFields()?tutFields().uid:0}:0"]`,`[data-pick="${G.tut.keep}"]`,siteSel(tutFields()),'#prompt button'],done:()=>{const f=tutFields();return f&&f.usedTurn===G.turnCount}},
   {title:'Out of Mana!',text:'You’re out of Mana and every site that can act has acted, so your turn is done. Click <b>End turn</b>.',...END_TURN,done:()=>G.turn===1},
   {title:'Opponent’s turn',text:'Your opponent is taking its turn…',wait:true,done:()=>G.turn===0&&G.turnCount>=5&&!UI.busy},
   {title:'What your opponent did',text:'Your opponent relocated 2 Zealots onto its Chapel, used the Chapel to add a Zealot to its Warpland, and built an <b>Altar</b>.<br><br>Then it played <b>Witch’s Rot</b> on your Warpland. Witch’s Rot is an <b>attachment</b>: a card that sticks to a site and keeps working turn after turn. This one kills 1 Zealot on your Warpland at the start of each of your turns (it already took one) until the site is empty.',hl:'#meZone .chip.bad',cont:true},
@@ -1718,7 +1718,8 @@ function reqHTML(ab,site){
 const eraCls=d=>d.start?'era-h':'era-'+d.level;
 const artHTML=d=>ART[d.id]?`<div class="art" aria-hidden="true"><svg viewBox="0 0 160 84" preserveAspectRatio="xMidYMid slice">${ART[d.id]}</svg></div>`:'';
 function bandHTML(d){
-  return `<div class="band"><span class="nm">${esc(d.name)}</span><span class="ty" title="${TYPE_NAME[d.type]}${d.start||d.type==='reaction'?'':', costs '+d.cost+' action'+(d.cost===1?'':'s')}">${ICONS[d.type]}${d.start||d.type==='reaction'?'':d.cost}</span></div>`;
+  const cost=d.start||d.type==='reaction'?'':`<span class="hcost" title="Costs ${d.cost} Mana">${MN(d.cost)}</span>`;
+  return `<div class="band"><span class="nm">${esc(d.name)}</span><span class="ty" title="${TYPE_NAME[d.type]}">${ICONS[d.type]}</span>${cost}</div>`;
 }
 /* The card type is shown by the icon in the header; no separate type line */
 function kindHTML(d){return ''}
@@ -1770,7 +1771,6 @@ function siteHTML(s,vi,full){
                :`<div class="ab">${reqHTML(ab,s)}<span>${cardText(ab.text)}</span></div>`;
   }).join('');
     const shownDmg=Math.max(0,s.damage-(PEND.get(s.uid)||0));
-  const atts=s.attachments.map(a=>`<div class="att" title="${esc(a.def.text)}"><b>${esc(a.def.name)}</b> · ${esc(a.def.text)}</div>`).join('');
   const used=s.usedTurn===G.turnCount&&G.turn===s.owner&&(d.abilities||[]).length;
   return `<div class="card site ${eraCls(d)}">
     ${bandHTML(d)}${artHTML(d)}${kindHTML(d)}
@@ -1778,10 +1778,8 @@ function siteHTML(s,vi,full){
     ${d.text&&d.text.replace(/^\s*Fortified\.\s*/,'')?`<div class="tx">${cardText(d.text.replace(/^\s*Fortified\.\s*/,''))}</div>`:''}
     ${abs?`<div class="abs">${abs}</div>`:''}
     
-    ${s.tucked.length?`<div class="tuck">${s.tucked.length} card${s.tucked.length>1?'s':''} tucked underneath</div>`:''}
-    ${atts?`<div class="atts">${atts}</div>`:''}
     </div>
-    <div class="foot">${zcHTML(shownZ(s),isFort(s))}
+    <div class="foot">${zcHTML(shownZ(s),isFort(s))}${footIcons(s)}
     ${hpHTML(integ(s)-shownDmg,integ(s))}</div>
   </div>`;
 }
@@ -1802,13 +1800,11 @@ function siteMini(s,vi){
     const shownDmg=Math.max(0,s.damage-(PEND.get(s.uid)||0));
   /* the wall ring on the Zealot disc already says 'Fortified', so drop that sentence from the text */
   const miniTx=(d.text||'').replace(/^\s*Fortified\.\s*/,'');
-  const attl=s.attachments.map(a=>`<span class="chip ${HARMFUL.includes(a.def.id)?'bad':''}" title="${esc(a.def.name)}: ${esc(a.def.text)}">${esc(a.def.name)}</span>`).join('');
-  const chips=[s.tucked.length?`<span class="chip">${s.tucked.length} tucked</span>`:'','',
-''].join('');
+  const chips='';
   return `<div class="card site mini ${eraCls(d)} ${target?'target':''}" data-suid="${s.uid}" ${target?`data-site="${s.uid}" tabindex="0" role="button" aria-label="Choose ${esc(d.name)}"`:''}>
     ${bandHTML(d)}${artHTML(d)}
     <div class="body">${miniTx?`<div class="tx">${cardText(miniTx)}</div>`:''}${abs?`<div class="abs">${abs}</div>`:''}${chips?`<div class="chips">${chips}</div>`:''}</div>
-    <div class="foot">${zcHTML(shownZ(s),isFort(s))}<div class="attl">${attl}</div>
+    <div class="foot">${zcHTML(shownZ(s),isFort(s))}${footIcons(s)}
     ${hpHTML(integ(s)-shownDmg,integ(s))}</div>
   </div>`;
 }
@@ -2120,6 +2116,27 @@ function crumble(uid,col){
 function shownZ(s){return s.followers+(PENDZ.get(s.uid)||0)}
 function zcHTML(n,fort){return `<div class="tokens${fort?' fort':''}" title="${n} Zealot${n===1?'':'s'}${fort?' · Fortified site':''}"><span class="zc${n?'':' zero'}">${n}</span></div>`}
 function hpHTML(cur,max){cur=Math.max(0,cur);return `<div class="integ" title="${cur} of ${max} HP"><span class="hpbox${cur<max?' hurt':''}"><b>${cur}</b>/${max}</span></div>`}
+/* Attachments and tucked cards as numbered icons in the site's bottom bar.
+   Hovering the attachment icon shows the attachment cards themselves. */
+function footIcons(s){
+  const na=s.attachments.length,nt=s.tucked.length;
+  const a=na?`<span class="ic an" data-atts="${s.uid}" role="img" aria-label="${na} attachment${na>1?'s':''}: ${esc(s.attachments.map(k=>k.def.name).join(', '))}"><b>${na}</b></span>`:'';
+  const t=nt?`<span class="ic tn" role="img" title="${nt} card${nt>1?'s':''} tucked under this site" aria-label="${nt} tucked"><b>${nt}</b></span>`:'';
+  return `<div class="attl">${a}${t}</div>`;
+}
+function attCardHTML(k){const d=k.def;return `<div class="card ${eraCls(d)}">${bandHTML(d)}${artHTML(d)}<div class="body"><div class="tx">${cardText(d.text)}</div></div></div>`}
+function showAttZoom(el){
+  const z=$('zoom');if(!z||!G)return;
+  const st=allSites().find(x=>x.uid===+el.dataset.atts);if(!st||!st.attachments.length){z.hidden=true;return}
+  z.innerHTML=term(`<div class="attzoom">${st.attachments.map(attCardHTML).join('')}</div>`);
+  z.hidden=false;placeZoom(z,el.getBoundingClientRect());
+}
+function placeZoom(z,r){
+  const w=z.offsetWidth,h=z.offsetHeight;
+  let x=r.right+12;if(x+w>innerWidth-8)x=r.left-w-12;if(x<8)x=8;
+  let y=r.top-h/2;if(y+h>innerHeight-8)y=innerHeight-h-8;if(y<8)y=8;
+  z.style.left=x+'px';z.style.top=y+'px';
+}
 function settle(d){
   if(d.settled)return;d.settled=true;
   if(!d.pend)return;
@@ -2827,7 +2844,7 @@ if(HAS_DOM){
     if(e.key==='Escape'&&UI.prompt&&UI.prompt.cancellable)UI.prompt.resolve(null);
   });
   addEventListener('resize',()=>{if(G)equalizeCards()});
-  document.addEventListener('mouseover',e=>{const el=e.target.closest&&e.target.closest('#app [data-suid]');const z=$('zoom');if(el)showZoom(el);else if(z&&!z.hidden)z.hidden=true});
+  document.addEventListener('mouseover',e=>{const at=e.target.closest&&e.target.closest('#app [data-atts]');if(at){showAttZoom(at);return}const el=e.target.closest&&e.target.closest('#app [data-suid]');const z=$('zoom');if(el)showZoom(el);else if(z&&!z.hidden)z.hidden=true});
   document.addEventListener('scroll',()=>{const z=$('zoom');if(z)z.hidden=true},true);
   render();
   if(/^https?:$/.test(location.protocol)) fetch('/api/ping').then(r=>r.ok?r.json():null).then(j=>{
