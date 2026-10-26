@@ -28,9 +28,6 @@ const SOUNDS={
   win:(ctx,out,t)=>{[523.25,659.25,783.99,1046.5].forEach((f,i)=>tone(ctx,out,t+i*0.12,f,f,0.16,0.3,'triangle'));
     [523.25,659.25,783.99,1046.5].forEach(f=>tone(ctx,out,t+0.52,f,f*1.002,1.0,0.14,'triangle'));
     for(let i=0;i<4;i++)tone(ctx,out,t+0.6+i*0.1,2093+i*260,2093+i*260,0.12,0.05,'sine')},
-  /* Chat: a bright two-note bell, unlike any game sound */
-  chat:(ctx,out,t)=>{tone(ctx,out,t,987.77,987.77,0.14,0.2,'sine');tone(ctx,out,t,1975.5,1975.5,0.1,0.05,'sine');
-    tone(ctx,out,t+0.12,1318.5,1318.5,0.32,0.22,'sine');tone(ctx,out,t+0.12,2637,2637,0.22,0.06,'sine')},
   /* Upgrade: a quick climbing fanfare in fifths that rings out on a bright chord with shimmer */
   upgrade:(ctx,out,t)=>{[392,587.33,783.99].forEach((f,i)=>{tone(ctx,out,t+i*0.09,f,f,0.12,0.24,'square');tone(ctx,out,t+i*0.09,f/2,f/2,0.12,0.1,'triangle')});
     [783.99,987.77,1174.66].forEach(f=>tone(ctx,out,t+0.3,f,f*1.003,0.7,0.12,'triangle'));tone(ctx,out,t+0.3,392,392,0.7,0.12,'triangle');
@@ -1675,7 +1672,7 @@ function tutAdvance(){const st=tutStep();if(!st)return;if(st.last){G.tut.free=tr
 /* While a step is waiting for a specific action, only that action's controls respond */
 function tutAllows(t){
   const st=tutStep();if(!st)return true;
-  if(t.closest('#coach,#soundBtn,#menuBtn,.chat,[data-discard],#discardView'))return true;
+  if(t.closest('#coach,#soundBtn,#menuBtn,[data-discard],#discardView'))return true;
   if(UI.menu&&t.closest('#overlay'))return true;
   const allow=st.allow?val(st.allow):[];
   return allow.some(sel=>t.closest(sel));
@@ -1962,7 +1959,6 @@ function render(){
     for(const d of ARROWS.q){if(d.pend)continue;d.pend=true;PEND.set(d.t,(PEND.get(d.t)||0)+d.n);if(d.k)PENDZ.set(d.t,(PENDZ.get(d.t)||0)+d.k);
       if(!oldRects['html'+d.t]){const e=document.querySelector(`[data-suid="${d.t}"]`);if(e){oldRects['html'+d.t]=e.outerHTML;oldRects['z'+d.t]=rowZoom(e)}}}
   }
-  chatSync();
   const ov=$('overlay');
   const inLobby=ONLINE.active&&ONLINE.lobby&&(!G||G.mode!=='online');
   if(!G||inLobby){const dk=$('handDock');if(dk)dk.hidden=true;ov.hidden=false;ov.innerHTML=term(UI.menu||!inLobby?menuHTML():lobbyHTML());if(!G){$('turnline').innerHTML='';return}}
@@ -1990,7 +1986,6 @@ function render(){
   else if(G.mode==='hot'&&UI.curtain&&!G.over&&!showPrompt) o=curtainHTML();
   else if(G.over&&!UI.closedOver) o=overHTML();
   ov.hidden=!o; ov.innerHTML=term(o);
-  chatSync();
   syncDiscard();
   equalizeCards();
   drawAnims();
@@ -2524,41 +2519,6 @@ function flyCard(k,src,delay){
   anim.onfinish=done;anim.oncancel=done;setTimeout(()=>{if(f.isConnected)done()},dur+delay+500);
 }
 
-/* ---- Chat (online games only) ---- */
-const CHAT={msgs:[],code:null,open:HAS_DOM&&typeof matchMedia==='function'?matchMedia('(min-width: 761px)').matches:true,unread:0,built:false};
-function chatShown(){return !!(G&&G.mode==='online'&&ONLINE.active&&!UI.menu)}
-function chatBuild(){
-  const el=$('chat');if(!el||CHAT.built)return el;CHAT.built=true;
-  el.innerHTML=`<button type="button" class="chat-head" data-chat="toggle" aria-expanded="true"><span>Chat</span><span class="chat-badge" hidden></span><span class="chat-caret" aria-hidden="true">▾</span></button>
-    <ol class="chat-log" aria-live="polite"></ol>
-    <form class="chat-form" autocomplete="off"><input type="text" maxlength="200" placeholder="Message your opponent…" aria-label="Chat message"><button type="submit">Send</button></form>`;
-  el.querySelector('[data-chat="toggle"]').addEventListener('click',()=>{CHAT.open=!CHAT.open;if(CHAT.open)CHAT.unread=0;chatSync();if(CHAT.open)chatScroll()});
-  el.querySelector('form').addEventListener('submit',e=>{e.preventDefault();const inp=el.querySelector('input');const text=inp.value.trim();if(!text)return;onlineSend({t:'chat',text});inp.value='';inp.focus()});
-  return el;
-}
-function chatList(){
-  const el=$('chat');if(!el)return;const ol=el.querySelector('.chat-log');if(!ol)return;
-  ol.innerHTML=CHAT.msgs.length?CHAT.msgs.map(m=>`<li class="${m.seat===ONLINE.seat?'me':'them'}"><b>${esc(m.seat===ONLINE.seat?'You':m.name)}</b> ${esc(m.text)}</li>`).join(''):'<li class="none">No messages yet.</li>';
-  chatScroll();
-}
-function chatScroll(){const ol=document.querySelector('#chat .chat-log');if(ol)ol.scrollTop=ol.scrollHeight}
-function chatSync(){
-  const el=chatBuild();if(!el)return;
-  const show=chatShown();el.hidden=!show;
-  document.body.classList.toggle('chat-on',show);document.body.classList.toggle('chat-open',show&&CHAT.open);
-  if(!show)return;
-  el.classList.toggle('closed',!CHAT.open);
-  el.querySelector('.chat-head').setAttribute('aria-expanded',String(CHAT.open));
-  const b=el.querySelector('.chat-badge');b.hidden=CHAT.open||!CHAT.unread;b.textContent=CHAT.unread;
-  const dw=$('dockwrap');el.style.bottom=((dw?dw.offsetHeight:0)+10)+'px';
-}
-function chatIn(m){
-  if(m.t==='chatlog'){CHAT.msgs=m.msgs||[];CHAT.code=ONLINE.code;chatList();chatSync();return}
-  CHAT.msgs.push(m.m);if(CHAT.msgs.length>100)CHAT.msgs.shift();
-  if(m.m.seat!==ONLINE.seat&&!CHAT.open)CHAT.unread++;
-  sfx('chat');chatList();chatSync();
-}
-
 async function human(fn){
   if(UI.busy||!G||G.over) return;
   UI.busy=true; render();
@@ -2748,7 +2708,6 @@ function onlineConnect(code,name){
   const sess=loadSession();
   const token=sess&&sess.code===code?sess.token:'';
   ONLINE.active=true;ONLINE.code=code;ONLINE.error='';ONLINE.status='Connecting…';
-  if(CHAT.code!==code){CHAT.msgs=[];CHAT.unread=0;CHAT.code=code;chatList()}
   if(!G||G.mode!=='online')ONLINE.lobby=true;
   render();
   const url=`${location.protocol==='https:'?'wss':'ws'}://${location.host}/api/room/${code}/ws?token=${encodeURIComponent(token)}&name=${encodeURIComponent(name||'')}`;
@@ -2759,7 +2718,6 @@ function onlineConnect(code,name){
     if(m.t==='hello'){ONLINE.seat=m.seat;ONLINE.token=m.token;ONLINE.code=m.code;saveSession();render();return}
     if(m.t==='lobby'){ONLINE.conn=m.conn;ONLINE.names=m.names;if(!G||G.mode!=='online'){ONLINE.lobby=true;UI.menu=false}render();return}
     if(m.t==='state'){onlineSnap(m.s);return}
-    if(m.t==='chat'||m.t==='chatlog'){chatIn(m);return}
     if(m.t==='error'){ONLINE.error=m.msg;ONLINE.status='';if(m.fatal){clearSession();ONLINE.active=false;ONLINE.lobby=false;UI.menu=true}render();return}
   };
   ws.onclose=ev=>{
@@ -2875,7 +2833,6 @@ if(HAS_DOM){
     if(ds.act==='end'){if(!UI.busy)endTurn();return}
   });
   document.addEventListener('keydown',e=>{
-    if(e.target.closest&&e.target.closest('#chat'))return;
     if((e.key==='Enter'||e.key===' ')&&e.target.dataset&&e.target.dataset.site){e.preventDefault();e.target.click()}
     if(e.key==='Escape'&&UI.dview){UI.dview=false;syncDiscard();return}
     if(e.key==='Escape'&&UI.prompt&&UI.prompt.cancellable)UI.prompt.resolve(null);

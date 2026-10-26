@@ -17,13 +17,10 @@ export class Room {
     this.fx = [];
     this.queued = false;
     this.idleTimer = null;
-    this.chat = [];
-    this.chatTimes = [[], []];
     ctx.blockConcurrencyWhile(async () => {
       this.created = !!(await ctx.storage.get('created'));
       this.seats = (await ctx.storage.get('seats')) || [null, null];
       this.saved = (await ctx.storage.get('state')) || null;
-      this.chat = (await ctx.storage.get('chat')) || [];
     });
   }
 
@@ -79,7 +76,6 @@ export class Room {
     this.ensureGame();
     this.sendLobby();
     if (this.game) this.sendState(seat);
-    ws.send(JSON.stringify({ t: 'chatlog', msgs: this.chat }));
   }
 
   ensureGame() {
@@ -109,7 +105,6 @@ export class Room {
     let m;
     try { m = JSON.parse(data); } catch (e) { return; }
     this.touch();
-    if (m.t === 'chat') { this.onChat(seat, m.text); return; }
     if (!this.game) return;
     if (m.t === 'act') this.game.act(seat, m);
     else if (m.t === 'answer') this.game.answer(seat, m);
@@ -119,21 +114,6 @@ export class Room {
     else if (m.t === 'sync') { this.sendState(seat); return; }
     else if (m.t === 'leave') { /* the seat stays reserved so the player can rejoin */ }
     this.broadcast();
-  }
-
-  /* Chat: plain text, at most 200 characters, and no more than 5 messages in 5 seconds per player */
-  onChat(seat, raw) {
-    const text = String(raw || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200);
-    if (!text) return;
-    const now = Date.now(), times = this.chatTimes[seat].filter(t => now - t < 5000);
-    if (times.length >= 5) return;
-    times.push(now); this.chatTimes[seat] = times;
-    const msg = { seat, name: (this.seats[seat] && this.seats[seat].name) || `Player ${seat + 1}`, text, ts: now };
-    this.chat.push(msg);
-    if (this.chat.length > 50) this.chat.shift();
-    this.ctx.storage.put('chat', this.chat);
-    const out = JSON.stringify({ t: 'chat', m: msg });
-    for (const ws of this.sockets) if (ws) { try { ws.send(out); } catch (e) {} }
   }
 
   /* Many engine steps can call render() in a row; send one update per tick. */
@@ -177,6 +157,6 @@ export class Room {
   async alarm() {
     for (const ws of this.sockets) if (ws) { try { ws.close(4010, 'This room has expired'); } catch (e) {} }
     await this.ctx.storage.deleteAll();
-    this.created = false; this.seats = [null, null]; this.saved = null; this.game = null; this.chat = [];
+    this.created = false; this.seats = [null, null]; this.saved = null; this.game = null;
   }
 }

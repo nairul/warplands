@@ -270,28 +270,7 @@ button.ab:disabled{opacity:.75}
   box-shadow:0 14px 30px rgba(0,0,0,.6), inset 0 0 0 2px rgba(0,0,0,.25);color:var(--era-ink);font-family:var(--display);font-weight:800}
 .fly-back span{text-shadow:0 1px 0 rgba(0,0,0,.35)}
 .flyer:not(:has(.fly-front)) .fly-back{transform:none;border-width:1px;border-radius:3px}
-/* Chat (online games only), docked bottom left */
-.chat{position:fixed;left:max(16px, env(safe-area-inset-left, 0px));bottom:16px;z-index:35;width:min(300px, calc(100vw - 32px));display:flex;flex-direction:column;border:3px solid transparent;border-radius:6px;overflow:hidden;
   background:var(--grain) padding-box, linear-gradient(rgba(20,15,11,.96),rgba(14,10,8,.97)) padding-box, var(--iron) border-box;box-shadow:0 8px 24px rgba(0,0,0,.7), inset 0 0 0 1px rgba(201,160,110,.22)}
-.chat-head{display:flex;align-items:center;gap:8px;background:transparent;border:none;padding:7px 10px;font-family:var(--display);font-weight:600;letter-spacing:.06em;color:var(--brass);text-align:left}
-.chat-head span:first-child{flex:1}
-.chat-caret{transition:transform .15s;color:var(--muted)}
-.chat.closed .chat-caret{transform:rotate(180deg)}
-.chat-badge{background:var(--damage);color:#fff;border-radius:999px;font-family:var(--body);font-size:12px;font-weight:700;min-width:20px;padding:1px 6px;text-align:center}
-.chat-log{list-style:none;margin:0;padding:6px 10px;height:170px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;font-size:13.5px;border-top:1px solid rgba(201,160,110,.18);overflow-wrap:anywhere}
-.chat-log li{color:var(--fg);line-height:1.3}
-.chat-log li b{font-weight:700;margin-right:2px}
-.chat-log li.me b{color:var(--brass)}
-.chat-log li.them b{color:#8fb8ff}
-.chat-log li.none{color:var(--muted);font-style:italic}
-.chat-form{display:flex;gap:6px;padding:8px;border-top:1px solid rgba(201,160,110,.18)}
-.chat-form input{flex:1;min-width:0;font:inherit;font-size:14px;background:rgba(0,0,0,.45);color:var(--fg);border:1px solid #0a0705;box-shadow:inset 0 1px 4px rgba(0,0,0,.6);border-radius:4px;padding:6px 8px}
-.chat-form input:focus-visible{outline:2px solid var(--brass);outline-offset:1px}
-.chat-form button{background:var(--grain), linear-gradient(180deg,#f0c272,#c8862e 55%,#8c5718);color:var(--brass-ink);border:1px solid #3a2208;border-radius:4px;padding:6px 12px;font-weight:700}
-.chat.closed .chat-log,.chat.closed .chat-form{display:none}
-/* Leave room to scroll the board clear of the chat box */
-body.chat-on #app{padding-bottom:90px}
-body.chat-open #app{padding-bottom:300px}
 /* ===== One-screen table: board on the left, stacks and log in a rail, hand docked at the bottom ===== */
 .table{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:14px;align-items:start}
 .board{display:flex;flex-direction:column;gap:12px;min-width:0}
@@ -525,7 +504,6 @@ body.chat-open #app{padding-bottom:300px}
 <div class="dockwrap" id="dockwrap"><div class="prompt" id="prompt" hidden></div><div class="dock" id="handDock" hidden></div></div>
 <div class="zoom" id="zoom" hidden aria-hidden="true"></div>
 <aside class="coach" id="coach" hidden aria-live="polite"></aside>
-<aside class="chat" id="chat" hidden aria-label="Chat"></aside>
 <div class="overlay" id="overlay" hidden></div>
 <script type="module">
 import {createGame} from './game.js';
