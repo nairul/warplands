@@ -568,12 +568,6 @@ const CARDS=[
    text:'When any player upgrades, do 1 damage to this site. When a draw stack runs out, do 3 damage to this site.',
    aiAttach:(c,s)=>s.owner!==c.pi?s.followers*0.5+(integ(s)-s.damage<=3?2:0)+(isFort(s)?-1:0):-99,
    ai:c=>c.opp.sites.length?1.3:-1},
-  {id:'cauldron',name:'Cauldron',level:1,type:'site',cost:1,integrity:2,count:1,worth:1.6,
-   abilities:[{need:3,actions:0,text:'Sacrifice a follower on Cauldron to draw a card.',can:c=>drawableLevels(c.pi).length>0,
-     run:async c=>{
-       const l=await pickDrawLevel(c.pi,true,'Cauldron: draw from which level?');if(!l)return;
-       c.pay();killOn(c.site,1);log(`${c.me.name} sacrifice${s_(c.me)} a follower on the Cauldron.`);drawCard(c.pi,l)},
-     ai:c=>totalF(c.me)>=totalF(c.opp)+1&&c.me.hand.length<6?1.0:-1}]},
   {id:'market',name:'Market',level:1,type:'site',cost:2,integrity:3,count:2,worth:2.8,
    text:'Adjacent sites are the ones directly left and right of Market in your row.',
    abilities:[

@@ -26,11 +26,6 @@ export const ART = {
     <path class="y" d="M51.5 28q-3 4 0 6q3-2 0-6zM108.5 28q-3 4 0 6q3-2 0-6z"/>
     <circle class="b" cx="80" cy="40" r="5"/>${GROUND}`,
 
-  cauldron: `${HILLS}<path class="sm" d="M66 30q-5-8 2-14t0-12"/><path class="sm" d="M80 28q5-8-2-14t2-12"/><path class="sm" d="M94 30q-4-7 2-13"/>
-    <path class="k" d="M52 40h56l-4 4q4 18-24 22q-28-4-24-22z"/><ellipse class="p" cx="80" cy="41" rx="26" ry="3"/>
-    <circle class="p" cx="72" cy="36" r="2.5"/><circle class="p" cx="88" cy="34" r="1.8"/><circle class="p" cx="81" cy="31" r="1.2"/>
-    <path class="k" d="M60 62l-6 8M100 62l6 8" stroke="#0b0806" stroke-width="3"/>
-    <path class="e" d="M64 70q4-10 8-4q3-9 8 0q5-9 8 0q4-6 8 4z"/><path class="y" d="M72 70q3-6 5-2q3-6 6 0q2-4 5 2z"/>${GROUND}`,
 
   church: `${MOON(30, 20, 7)}${HILLS}
     <path class="k" d="M58 70V40l22-14 22 14v30z"/><path class="k" d="M74 30V12h12v18z"/><path class="k" d="M74 12l6-10 6 10z"/>
