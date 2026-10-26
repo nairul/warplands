@@ -1811,10 +1811,12 @@ function siteMini(s,vi){
   </div>`;
 }
 /* Hover preview of the full site card */
+/* Twinkling stars around the hover preview, so it can't be mistaken for another card on the board */
+const TWINKLES=[[0,8],[0,55],[18,100],[62,100],[100,30],[100,82],[40,0],[85,0],[0,92],[100,4]].map(([x,y],i)=>`<i class="tw" style="left:${x}%;top:${y}%;animation-delay:${(i*0.23)%1.4}s"></i>`).join('');
 function showZoom(el){
   const z=$('zoom');if(!z||!G)return;
   const uid=+el.dataset.suid,st=allSites().find(x=>x.uid===uid);if(!st){z.hidden=true;return}
-  z.innerHTML=term(siteHTML(st,viewer(),true));
+  z.innerHTML=term(siteHTML(st,viewer(),true))+TWINKLES;
   {const c=z.firstElementChild,k=rowZoom(el);if(c&&k>1)c.style.zoom=k}
   z.hidden=false;
   const r=el.getBoundingClientRect(),w=z.offsetWidth,h=z.offsetHeight;
@@ -2131,7 +2133,7 @@ function attCardHTML(k){const d=k.def;return `<div class="card ${eraCls(d)}">${b
 function showAttZoom(el){
   const z=$('zoom');if(!z||!G)return;
   const st=allSites().find(x=>x.uid===+el.dataset.atts);if(!st||!st.attachments.length){z.hidden=true;return}
-  z.innerHTML=term(`<div class="attzoom">${st.attachments.map(attCardHTML).join('')}</div>`);
+  z.innerHTML=term(`<div class="attzoom">${st.attachments.map(attCardHTML).join('')}</div>`)+TWINKLES;
   z.hidden=false;placeZoom(z,el.getBoundingClientRect());
 }
 function placeZoom(z,r){
