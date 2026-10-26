@@ -1926,11 +1926,11 @@ function midHTML(){
 function syncDiscard(){
   let el=$('discardView');
   if(!el){el=document.createElement('div');el.id='discardView';el.className='dview';el.hidden=true;document.body.appendChild(el)}
-  const open=!!(UI.dview&&G);el.hidden=!open;if(open)el.innerHTML=term(discardViewHTML());
+  const open=!!(UI.dview&&G);el.hidden=!open;if(!open){const z=$('zoom');if(z&&z.classList.contains('over-dialog')){z.hidden=true;z.classList.remove('over-dialog')}}if(open)el.innerHTML=term(discardViewHTML());
 }
 function discardViewHTML(){
   const n=G.discard.length;
-  const rows=G.discard.map((k,i)=>{const d=k.def;return `<li class="${eraCls(d)}"><span class="no">${i+1}</span><span class="sw"></span><span class="dn">${esc(d.name)}</span><span class="dt">${ICONS[d.type]||''}${LEVEL_NAME[d.level]} ${TYPE_NAME[d.type].toLowerCase()}</span></li>`}).join('');
+  const rows=G.discard.map((k,i)=>{const d=k.def;return `<li class="${eraCls(d)}" data-dcard="${i}"><span class="no">${i+1}</span><span class="sw"></span><span class="dn">${esc(d.name)}</span><span class="dt">${ICONS[d.type]||''}${LEVEL_NAME[d.level]} ${TYPE_NAME[d.type].toLowerCase()}</span></li>`}).join('');
   return `<div class="dv-box" role="dialog" aria-label="Discard pile"><div class="dv-head"><b>Discard pile</b><span>${n} card${n===1?'':'s'} · oldest first</span><button class="dv-x" data-dclose="1" aria-label="Close">✕</button></div>
     ${n?`<ol class="dv-list">${rows}</ol>`:'<p class="dv-empty">Nothing has been discarded yet.</p>'}</div>`;
 }
@@ -2036,7 +2036,8 @@ function render(){
   if(UI.prompt&&UI.prompt.kind==='hand'){const z=$('zoom');if(z)z.hidden=true}
   equalizeCards();
   drawAnims();
-  if(oldRects){if(REV.q.length)playReveals(oldRects);followerAnims(oldRects);placeAnims(oldRects);if(ARROWS.q.length)playArrows(oldRects)}
+  if(oldRects){if(REV.q.length)playReveals(oldRects);followerAnims(oldRects);placeAnims(oldRects);if(ARROWS.q.length)playArrows(oldRects);holdShifts(oldRects)}
+  else holdShifts(null);
   if(UPS.q.length) playUps();
   yourTurnCheck();
   tutTick();
@@ -2143,6 +2144,42 @@ function makeGhost(uid,html,r,z=1){
   document.body.appendChild(g);GHOSTS.set(uid,g);
   setTimeout(()=>{if(GHOSTS.get(uid)===g){g.remove();GHOSTS.delete(uid)}},6000);
 }
+/* When a site leaves a row, the sites to its right stay where they were until the destroyed site has
+   finished crumbling, wait a second, then slide left into the gap. */
+const HOLD=new Map(); /* site uid -> {left: screen x to hold at, gone: [uids that left], t: release time} */
+function holdShifts(old){
+  if(!G) {HOLD.clear();return}
+  if(old&&!(typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches)){
+    const gone=Object.keys(old).filter(k=>k[0]==='s'&&!document.querySelector(`[data-suid="${k.slice(1)}"]`)).map(k=>k.slice(1));
+    if(gone.length){
+      for(const el of document.querySelectorAll('#app .board .row [data-suid]')){
+        const u=el.dataset.suid,o=old['s'+u];if(!o||HOLD.has(u))continue;
+        const r=el.getBoundingClientRect();
+        if(Math.abs(r.top-o.top)<40&&o.left-r.left>8) HOLD.set(u,{left:o.left,gone,t:0});
+      }
+    }
+  }
+  for(const [u,h] of HOLD){
+    const el=document.querySelector(`#app [data-suid="${u}"]`);if(!el){HOLD.delete(u);continue}
+    const z=rowZoom(el);el.style.transform='';const r=el.getBoundingClientRect();
+    el.style.transform=`translateX(${(h.left-r.left)/z}px)`;
+  }
+  if(HOLD.size&&!holdShifts.timer) holdShifts.timer=setInterval(holdTick,100);
+}
+function holdTick(){
+  const now=performance.now();
+  for(const [u,h] of HOLD){
+    const busy=h.gone.some(g=>GHOSTS.has(+g)||PEND.has(+g)||ARROWS.q.some(a=>a.t==+g));
+    if(busy){h.t=0;h.crumbled=true;continue}
+    if(!h.t){h.t=now+1000+(h.crumbled?900:0);continue} /* the crumble takes ~0.9s, then a 1s pause */
+    if(now<h.t)continue;
+    HOLD.delete(u);
+    const el=document.querySelector(`#app [data-suid="${u}"]`);if(!el)continue;
+    const from=el.style.transform;el.style.transform='';
+    if(from)el.animate([{transform:from},{transform:'translateX(0)'}],{duration:420,easing:'cubic-bezier(.3,.7,.3,1)'});
+  }
+  if(!HOLD.size){clearInterval(holdShifts.timer);holdShifts.timer=null}
+}
 function crumble(uid,col){
   const g=GHOSTS.get(uid);if(!g)return;GHOSTS.delete(uid);
   const r=g.getBoundingClientRect();
@@ -2176,6 +2213,14 @@ function footIcons(s){
   return `<div class="attl">${a}${t}</div>`;
 }
 function attCardHTML(k){const d=k.def;return `<div class="card ${eraCls(d)}">${bandHTML(d)}${artHTML(d)}<div class="body"><div class="tx">${cardText(d.text)}</div></div></div>`}
+/* Hovering a card in the discard pile list shows the card itself */
+function cardFaceHTML(k){return k.def.type==='site'?siteHTML(mkSite(k,viewer()),viewer(),true):attCardHTML(k)}
+function showDiscardZoom(el){
+  const z=$('zoom');if(!z||!G)return;const k=G.discard[+el.dataset.dcard];if(!k){z.hidden=true;return}
+  z.innerHTML=term(cardFaceHTML(k))+TWINKLES;z.classList.add('over-dialog');z.hidden=false;
+  const r=el.closest('.dv-box').getBoundingClientRect(),row=el.getBoundingClientRect();
+  placeZoom(z,{left:r.left,right:r.right,top:row.top+row.height/2});
+}
 function showAttZoom(el){
   const z=$('zoom');if(!z||!G)return;
   const st=allSites().find(x=>x.uid===+el.dataset.atts);if(!st||!st.attachments.length){z.hidden=true;return}
@@ -2892,7 +2937,7 @@ if(HAS_DOM){
     if(e.key==='Escape'&&UI.prompt&&UI.prompt.cancellable)UI.prompt.resolve(null);
   });
   addEventListener('resize',()=>{if(G)equalizeCards()});
-  document.addEventListener('mouseover',e=>{if(UI.prompt&&UI.prompt.kind==='hand'){const z=$('zoom');if(z)z.hidden=true;return}const at=e.target.closest&&e.target.closest('#app [data-atts]');if(at){showAttZoom(at);return}const el=e.target.closest&&e.target.closest('#app [data-suid]');const z=$('zoom');if(el)showZoom(el);else if(z&&!z.hidden)z.hidden=true});
+  document.addEventListener('mouseover',e=>{const dc=e.target.closest&&e.target.closest('[data-dcard]');if(dc){showDiscardZoom(dc);return}{const z=$('zoom');if(z)z.classList.remove('over-dialog')}if(UI.prompt&&UI.prompt.kind==='hand'){const z=$('zoom');if(z)z.hidden=true;return}const at=e.target.closest&&e.target.closest('#app [data-atts]');if(at){showAttZoom(at);return}const el=e.target.closest&&e.target.closest('#app [data-suid]');const z=$('zoom');if(el)showZoom(el);else if(z&&!z.hidden)z.hidden=true});
   document.addEventListener('scroll',()=>{const z=$('zoom');if(z)z.hidden=true},true);
   render();
   if(/^https?:$/.test(location.protocol)) fetch('/api/ping').then(r=>r.ok?r.json():null).then(j=>{
