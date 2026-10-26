@@ -472,7 +472,7 @@ const CARDS=[
    abilities:[
     {need:0,actions:0,text:'Tuck 1 card under Fields to gain 1 follower on any site.',can:c=>c.me.hand.length>0&&c.me.sites.some(canGain),
      run:async c=>{const k=await pickHandCard(c.pi,{prompt:'Fields: choose a card to tuck under Fields.'});if(!k)return;
-       const s=await pickSite(c.pi,{prompt:'Fields: choose one of your sites to gain 1 follower.',filter:s=>s.owner===c.pi&&canGain(s),aiScore:placeScore,auto:true});if(!s)return;
+       const s=await pickSite(c.pi,{prompt:'Fields: choose one of your sites to gain 1 follower.',filter:s=>s.owner===c.pi&&canGain(s),aiScore:s=>placeScore(s)+(s===c.site&&s.followers<1?20:0),auto:true});if(!s)return;
        c.pay();c.me.hand.splice(c.me.hand.indexOf(k),1);c.site.tucked.push(k);gainF(s,1);log(`${c.me.name} tuck${s_(c.me)} a card under Fields and gain${s_(c.me)} a follower.`)},
      ai:c=>{const h=c.me.hand.length;if(h<2)return -1;const cheap=Math.min(...c.me.hand.map(keepValue));return h>=3||cheap<=1.3?0.8+1.4*gameLeft()-(cheap-1)*0.6:-1}},
     {need:1,actions:0,text:'Gain 1 follower on Fields for each card tucked under Fields.',can:c=>tuckN(c.site)>0&&canGain(c.site),
