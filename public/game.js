@@ -2025,6 +2025,8 @@ function render(){
   else if(G.over&&!UI.closedOver) o=overHTML();
   ov.hidden=!o; ov.innerHTML=term(o);
   syncDiscard();
+  /* no board hover preview while choosing a card from your hand: it would cover the prompt */
+  if(UI.prompt&&UI.prompt.kind==='hand'){const z=$('zoom');if(z)z.hidden=true}
   equalizeCards();
   drawAnims();
   if(oldRects){if(REV.q.length)playReveals(oldRects);followerAnims(oldRects);placeAnims(oldRects);if(ARROWS.q.length)playArrows(oldRects)}
@@ -2876,7 +2878,7 @@ if(HAS_DOM){
     if(e.key==='Escape'&&UI.prompt&&UI.prompt.cancellable)UI.prompt.resolve(null);
   });
   addEventListener('resize',()=>{if(G)equalizeCards()});
-  document.addEventListener('mouseover',e=>{const at=e.target.closest&&e.target.closest('#app [data-atts]');if(at){showAttZoom(at);return}const el=e.target.closest&&e.target.closest('#app [data-suid]');const z=$('zoom');if(el)showZoom(el);else if(z&&!z.hidden)z.hidden=true});
+  document.addEventListener('mouseover',e=>{if(UI.prompt&&UI.prompt.kind==='hand'){const z=$('zoom');if(z)z.hidden=true;return}const at=e.target.closest&&e.target.closest('#app [data-atts]');if(at){showAttZoom(at);return}const el=e.target.closest&&e.target.closest('#app [data-suid]');const z=$('zoom');if(el)showZoom(el);else if(z&&!z.hidden)z.hidden=true});
   document.addEventListener('scroll',()=>{const z=$('zoom');if(z)z.hidden=true},true);
   render();
   if(/^https?:$/.test(location.protocol)) fetch('/api/ping').then(r=>r.ok?r.json():null).then(j=>{
