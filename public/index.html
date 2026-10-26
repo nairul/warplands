@@ -330,8 +330,6 @@ body.chat-open #app{padding-bottom:300px}
 .dock-bar{display:flex;justify-content:center;min-height:36px}
 .dock-bar .controls{justify-content:center}
 .dock .hand{display:flex;justify-content:center;align-items:flex-start;gap:10px;padding:6px 0 0;height:150px}
-.dock .hand.crowded{gap:0;padding-left:40px}
-.dock .hand.crowded .card{margin-left:-40px}
 .dock .hand .card{transition:transform .16s ease-out, box-shadow .16s;position:relative;opacity:1}
 .dock .hand .card:not(.playable):not(.target){filter:saturate(.75) brightness(.9)}
 .dock .hand .card:hover,.dock .hand .card:focus-visible,.dock .hand .card.target{transform:translateY(calc(-1 * var(--lift, 140px)));z-index:10;box-shadow:0 18px 40px rgba(0,0,0,.75)}

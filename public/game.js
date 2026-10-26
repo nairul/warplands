@@ -1854,7 +1854,7 @@ function dockHTML(pi){
     ctl=`<div class="controls"><span class="stat">Waiting for ${esc(G.players[G.turn].name)}…</span></div>`;
   }
   const hand=p.hand.map(c=>handCardHTML(c,pi)).join('')||'<div class="empty">Your hand is empty.</div>';
-  return `<div class="dock-bar">${ctl}</div><div class="hand ${p.hand.length>8?'crowded':''}">${hand}</div>`;
+  return `<div class="dock-bar">${ctl}</div><div class="hand">${hand}</div>`;
 }
 function midHTML(){
   const vi=viewer(), me=G.players[vi], canDraw=humanTurn()&&!UI.busy&&!UI.prompt&&me.actions>=1;
@@ -2349,6 +2349,7 @@ function equalizeCards(){
   }
   /* Hand cards keep their natural height (only the top strip shows until hovered); each one lifts just enough to show itself */
   fitNames('#handDock .card .nm');
+  fanHand();
   for(const c of document.querySelectorAll('#handDock .card')){c.style.minHeight='';c.style.setProperty('--lift',Math.max(0,c.offsetHeight-DOCK_PEEK)+'px')}
   const dw=$('dockwrap'),app=$('app');
   if(dw&&app) app.style.paddingBottom=(dw.offsetHeight+18)+'px';
@@ -2373,6 +2374,21 @@ function fitNames(sel){
     let f=parseFloat(getComputedStyle(nm).fontSize);
     while(nm.scrollWidth>nm.clientWidth+0.5&&f>9){f-=0.5;nm.style.fontSize=f+'px'}
   }
+}
+/* When the hand is wider than the screen, overlap the cards just enough to fit (more cards, more overlap).
+   Each card still shows a strip you can hover; the hovered card lifts above its neighbours. */
+function fanHand(){
+  const hand=document.querySelector('#handDock .hand');if(!hand)return;
+  const cards=[...hand.children].filter(c=>c.classList.contains('card'));
+  for(const c of cards)c.style.marginLeft='';
+  hand.style.gap='';
+  if(cards.length<2)return;
+  const gap=parseFloat(getComputedStyle(hand).columnGap)||10, w=cards[0].offsetWidth;
+  const avail=hand.clientWidth-8, need=cards.length*w+(cards.length-1)*gap;
+  if(need<=avail)return;
+  const step=Math.max(14,(avail-w)/(cards.length-1));
+  hand.style.gap='0px';
+  cards.forEach((c,i)=>{if(i)c.style.marginLeft=(step-w)+'px'});
 }
 function fitBoard(){
   const rows=[...document.querySelectorAll('.board .zone .row')].filter(r=>r.querySelector('.site.mini'));
