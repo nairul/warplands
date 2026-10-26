@@ -21,10 +21,11 @@ function noise(ctx,out,t,dur,peak,ftype,f0,f1,q){const s=ctx.createBufferSource(
 const SOUNDS={
   /* Draw: a crisp card flick off the stack, then the card settling into the hand */
   draw:(ctx,out,t)=>{noise(ctx,out,t,0.09,1.1,'bandpass',2600,5200,1.2);noise(ctx,out,t+0.075,0.11,0.8,'bandpass',1500,900,0.9);tone(ctx,out,t+0.15,520,470,0.07,0.22,'triangle')},
-  /* Site built: a heavy stone thud, a dust rumble, then a rising shimmer to match the sparkles */
+  /* Site built: a heavy stone thud, a dust rumble, then a soft warm settle */
   build:(ctx,out,t)=>{tone(ctx,out,t,120,48,0.32,0.75);noise(ctx,out,t,0.35,0.35,'lowpass',900,180,0.8);
     tone(ctx,out,t+0.02,240,180,0.12,0.18,'triangle');
-    [1318.5,1567.98,2093,2637].forEach((f,i)=>tone(ctx,out,t+0.32+i*0.06,f,f*1.01,0.32,0.07,'sine'))},
+    /* soft settle: a faint airy breath and a low, quiet warm tone instead of a bright chime */
+    noise(ctx,out,t+0.22,0.5,0.06,'bandpass',1800,900,0.7);tone(ctx,out,t+0.26,392,388,0.7,0.035,'sine');tone(ctx,out,t+0.3,587.33,582,0.6,0.02,'sine')},
   place:(ctx,out,t,n)=>{for(let i=0;i<Math.min(n||1,4);i++){const u=t+i*0.07;tone(ctx,out,u,640,420,0.07,0.28,'triangle');noise(ctx,out,u,0.02,0.08,'highpass',3000,3000)}},
   hit:(ctx,out,t)=>{tone(ctx,out,t,190,55,0.18,0.55);noise(ctx,out,t,0.07,0.3,'highpass',1800,900)},
   struct:(ctx,out,t)=>{tone(ctx,out,t,95,45,0.22,0.5);noise(ctx,out,t,0.2,0.35,'lowpass',900,250,0.8);noise(ctx,out,t+0.05,0.08,0.12,'bandpass',2500,1200,2)},
