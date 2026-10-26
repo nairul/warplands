@@ -1665,7 +1665,7 @@ function tutTick(){
   coach.hidden=false;
   const dw=$('dockwrap');coach.style.bottom=((dw?dw.offsetHeight:200)+14)+'px';
   const shown=TUT_STEPS.filter(x=>!x.wait),n=shown.indexOf(st);
-  coach.innerHTML=term(`<div class="coach-n">${st.wait?'Tutorial':`Tutorial · step ${n+1} of ${shown.length}`}</div><h3>${st.title}</h3><p>${st.text}</p>
+  coach.innerHTML=term(`<div class="coach-n">${st.wait?'Tutorial':`Tutorial · step ${n+1} of ${shown.length}`}</div><h3>${st.title}</h3><p>${term(st.text).replace(/(^|>)([^<]+)/g,(m,g,t)=>g+uiIcons(t))}</p>
     ${st.cont?`<div class="coach-btns"><button class="btn primary" data-tut="next">${st.last?'Keep playing':'Continue'}</button></div>`:''}
     ${st.relocExact&&UI.relocate?`<p class="coach-warn">${tutRelocOK()?'That’s it: confirm.':'Move exactly 3 Zealots from Warpland onto Trebuchet.'}</p>`:''}`);
   document.querySelectorAll('.tut-hl').forEach(e=>e.classList.remove('tut-hl'));
@@ -1728,6 +1728,8 @@ const IC_Z='<span class="ic z" role="img" aria-label="Zealot"></span>', IC_M='<s
 const ZN=n=>`<span class="ic zn" role="img" aria-label="${n} Zealot${n==1?'':'s'}">${n}</span>`;
 const DN=(n,st)=>`<span class="ic dn${st?' st':''}${n?'':' bare'}" role="img" aria-label="${n?n+' ':''}${st?'structural ':''}damage">${n?`<b>${n}</b>`:''}</span>`;
 const MN=n=>`<span class="ic mn" role="img" aria-label="${n} Mana"><b>${n}</b></span>`;
+/* Interface text (log, prompts): "3 Mana" -> numbered diamond, lone "Mana" -> plain diamond. Input must be escaped plain text. */
+const uiIcons=t=>t.replace(/\b(\d+) Mana\b/g,'\u0006$1\u0006').replace(/\bMana\b/g,'\u0007').replace(/\u0006(\d+)\u0006/g,(m,n)=>MN(n)).replace(/\u0007/g,IC_M);
 function cardText(t){
   /* swap words for placeholder marks first, then marks for icons, so no icon is matched twice */
   return esc(t)
@@ -1846,9 +1848,9 @@ function dockHTML(pi){
     const free=!UI.busy&&!UI.prompt, uc=UPGRADE_COST[p.level];
     const pips=Array.from({length:Math.max(3,p.actions)},(_,i)=>`<span class="pip ${i<p.actions?'on':''}"></span>`).join('');
     ctl=`<div class="controls"><span class="pips" title="${p.actions} actions left">${pips}</span>
-      <button class="btn" data-act="gain" ${free&&p.actions>=1&&p.sites.some(canGain)?'':'disabled'}>Gain follower<span class="c">1</span></button>
-      <button class="btn" data-act="relocate" ${free&&p.actions>=1&&p.sites.length>1?'':'disabled'}>Relocate<span class="c">1</span></button>
-      <button class="btn" data-act="upgrade" ${free&&uc&&p.actions>=uc?'':'disabled'}>${uc?`Upgrade to Level ${ROMAN[p.level+1]}<span class="c">${uc}</span>`:'Max level'}</button>
+      <button class="btn" data-act="gain" ${free&&p.actions>=1&&p.sites.some(canGain)?'':'disabled'}>Gain follower<span class="c">${MN(1)}</span></button>
+      <button class="btn" data-act="relocate" ${free&&p.actions>=1&&p.sites.length>1?'':'disabled'}>Relocate<span class="c">${MN(1)}</span></button>
+      <button class="btn" data-act="upgrade" ${free&&uc&&p.actions>=uc?'':'disabled'}>${uc?`Upgrade to Level ${ROMAN[p.level+1]}<span class="c">${MN(uc)}</span>`:'Max level'}</button>
       <button class="btn primary ${p.actions===0?'nudge':''}" data-act="end" ${free?'':'disabled'}>End turn</button></div>`;
   } else if(!G.over){
     ctl=`<div class="controls"><span class="stat">Waiting for ${esc(G.players[G.turn].name)}…</span></div>`;
@@ -1863,14 +1865,14 @@ function midHTML(){
     const mk=G.players.filter(p=>p.level===l).map(p=>`<span class="mk">${esc(p.name)}</span>`).join('');
     return `<button class="stack era-${l} ${n?'':'out'}" data-draw="${l}" ${ok?'':'disabled'} aria-label="Level ${ROMAN[l]} stack, ${n} cards">
       <span class="rn">${ROMAN[l]}</span><span class="cnt"><b>${LEVEL_NAME[l]}</b></span><span class="cnt">${n} card${n===1?'':'s'}</span>
-      <span class="hint">${n===0?'Empty':l>me.level?'Locked':ok?'Draw · 1 action':'&nbsp;'}</span><span class="markers">${mk}</span></button>`;
+      <span class="hint">${n===0?'Empty':l>me.level?'Locked':ok?`Draw ${MN(1)}`:'&nbsp;'}</span><span class="markers">${mk}</span></button>`;
   }).join('');
   const last=G.discard[G.discard.length-1];
   const empty=[1,2,3,4].filter(l=>!G.stacks[l].length).length;
   return `<div class="stacks">${stacks}</div><div class="sideinfo">
     <button class="discard" data-discard="1" title="Search the discard pile">Discard: <b>${G.discard.length}</b>${last?` · top: ${esc(last.def.name)}`:''}<span class="dv">View</span></button>
     <div class="ends">Empty stacks: <b>${empty}</b>/3 to end</div></div>
-    <ul class="log">${G.log.slice(0,40).map(l=>`<li>${esc(l)}</li>`).join('')}</ul>`;
+    <ul class="log">${G.log.slice(0,40).map(l=>`<li>${uiIcons(esc(term(l)))}</li>`).join('')}</ul>`;
 }
 /* The discard pile, in the order cards were discarded (oldest first). Anyone can open it at any time. */
 function syncDiscard(){
@@ -1890,7 +1892,7 @@ function promptHTML(){
   if(p.kind==='opts') opts=p.options.map((o,i)=>`<button data-opt="${i}" class="${i?'sec':''}">${esc(o.label)}</button>`).join('');
   if(p.kind==='site') opts=(p.extra||[]).map((o,i)=>`<button data-extra="${i}">${esc(o.label)}</button>`).join('');
   const hint=p.kind==='site'?' Click a highlighted site.':p.kind==='hand'?' Click a highlighted card in your hand.':p.kind==='slot'?' Click a glowing gap in your row.':'';
-  return `<div class="in"><p>${esc(p.text)}${hint}</p><div class="opts">${opts}${p.cancellable?`<button class="sec" data-cancel="1">${esc(p.cancelLabel||'Cancel')}</button>`:''}</div></div>`;
+  return `<div class="in"><p>${uiIcons(esc(term(p.text)))}${hint}</p><div class="opts">${opts}${p.cancellable?`<button class="sec" data-cancel="1">${esc(p.cancelLabel||'Cancel')}</button>`:''}</div></div>`;
 }
 function relocateHTML(){
   const r=UI.relocate, p=G.players[r.pi];
@@ -1911,7 +1913,8 @@ function setPicker(){
   const o=[['core','Core Set'],['exp','Expansion Set'],['mix','Level-by-level mix'],['random','Totally mixed']];
   return `<div class="seg" role="group" aria-label="Card set"><span class="label">Card set</span>${o.map(([v,l])=>`<button data-set="${v}" aria-pressed="${UI.set===v}">${l}</button>`).join('')}</div>`;
 }
-function menuHTML(){
+function menuHTML(){return term(menuHTML0()).replace(/>([^<]+)</g,(m,t)=>'>'+uiIcons(t)+'<')}
+function menuHTML0(){
   return `<div class="panel"><div class="eras"><span style="background:var(--era1)"></span><span style="background:var(--era2)"></span><span style="background:var(--era3)"></span><span style="background:var(--era4)"></span></div>
     <h1>Warplands</h1>
     <p>Lead your followers from a humble hamlet to a sprawling empire. Wipe out your opponent's followers, or hold more of them when three draw stacks run dry.</p>
@@ -1924,7 +1927,7 @@ function menuHTML(){
       <li><b>Gain a follower</b> on one of your sites · 1 action.</li>
       <li><b>Relocate</b> any followers between your sites · 1 action.</li>
       <li><b>Play a card</b> for the cost shown on it. <b>Upgrade</b> costs 2, 3, then 4 actions.</li>
-      <li>Site abilities show how many followers the site needs (●) and how much Mana they cost (◆). Each site can use one ability per turn.</li>
+      <li>Site abilities show how many followers the site needs (${ZN(2)}) and how much Mana they cost (${MN(1)}). Each site can use one ability per turn.</li>
       <li>Abilities marked ∞ work on any turn. The ones marked Automatic fire by themselves when their condition happens.</li>
       <li>Damage kills followers on a site. A site is destroyed when damage reaches its integrity, and everyone on it dies. Structural damage and fortified sites don't kill followers unless the site is destroyed.</li>
       <li>Reactions are offered to you automatically when their condition happens.</li>
@@ -1960,7 +1963,7 @@ function render(){
   const vi=viewer(), cur=G.players[G.turn];
   const net=G.mode==='online'?` · Room ${esc(ONLINE.code||'')}${ONLINE.status&&ONLINE.status!=='Connected'?' · '+esc(ONLINE.status):''}`:'';
   const waitP=G.mode==='online'&&G.waiting!=null&&G.waiting!==ONLINE.seat?G.players[G.waiting]:null;
-  $('turnline').innerHTML=term((G.over?'Game over':waitP?`Waiting for <b>${esc(waitP.name)}</b> to decide…`:`<b>${esc(cur.name)}</b> ${isYou(cur)?'are':'is'} taking a turn · ${cur.actions} action${cur.actions===1?'':'s'} left`)+(G.turnStart!=null?' · '+clockHTML():'')+net);
+  $('turnline').innerHTML=term((G.over?'Game over':waitP?`Waiting for <b>${esc(waitP.name)}</b> to decide…`:`<b>${esc(cur.name)}</b> ${isYou(cur)?'are':'is'} taking a turn · ${MN(cur.actions)} left`)+(G.turnStart!=null?' · '+clockHTML():'')+net);
   if(inLobby) return;
   $('oppZone').innerHTML=term(zoneHTML(1-vi,false));
   $('oppZone').classList.toggle('active',G.turn===1-vi&&!G.over);
@@ -2115,7 +2118,7 @@ function crumble(uid,col){
 /* Zealots killed by damage still in flight are shown until the projectile lands */
 function shownZ(s){return s.followers+(PENDZ.get(s.uid)||0)}
 function zcHTML(n,fort){return `<div class="tokens${fort?' fort':''}" title="${n} Zealot${n===1?'':'s'}${fort?' · Fortified site':''}"><span class="zc${n?'':' zero'}">${n}</span></div>`}
-function hpHTML(cur,max){cur=Math.max(0,cur);return `<div class="integ" title="${cur} of ${max} HP"><span class="hpbox${cur<max?' hurt':''}"><b>${cur}</b>/${max}</span></div>`}
+function hpHTML(cur,max){cur=Math.max(0,cur);return `<div class="integ" title="${cur} / ${max} HP"><span class="hpbox${cur<max?' hurt':''}"><b>${cur}</b></span></div>`}
 /* Attachments and tucked cards as numbered icons in the site's bottom bar.
    Hovering the attachment icon shows the attachment cards themselves. */
 function footIcons(s){
@@ -2148,7 +2151,7 @@ function settle(d){
   const shown=Math.max(0,st.damage-(PEND.get(d.t)||0));
   const box=el.querySelector('.hpbox');if(!box)return;
   const mx=integ(st),cur=Math.max(0,mx-shown),b=box.querySelector('b');
-  if(b&&b.textContent!==String(cur)){b.textContent=cur;box.classList.toggle('hurt',cur<mx);
+  if(b&&b.textContent!==String(cur)){b.textContent=cur;box.classList.toggle('hurt',cur<mx);const ig=box.closest('.integ');if(ig)ig.title=`${cur} / ${mx} HP`;
     box.animate([{transform:'scale(1.6)',filter:'brightness(2.2)'},{transform:'scale(1)',filter:'brightness(1)'}],{duration:420,easing:'ease-out'})}
 }
 function setZ(el,n){const c=el.querySelector('.zc');if(!c)return;c.textContent=n;c.classList.toggle('zero',!n);const t=el.querySelector('.tokens');if(t)t.title=`${n} Zealot${n===1?'':'s'}`}

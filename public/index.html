@@ -118,6 +118,7 @@ button.ab:disabled{opacity:.75}
   background:linear-gradient(180deg,#d85a4c,var(--damage) 55%,#7e221a);color:#fff;font-weight:700;font-size:13px;font-variant-numeric:tabular-nums;
   border:2px solid #2a0a06;box-shadow:0 1px 3px rgba(0,0,0,.6),inset 0 -2px 0 rgba(0,0,0,.25);text-shadow:0 1px 1px rgba(0,0,0,.6)}
 .hpbox b{font-size:17px;font-weight:800}
+.hpbox{min-width:32px;padding:0 5px;cursor:default}
 .foot .attl{flex:1 1 0;min-width:0;display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:3px}
 .foot .attl .chip{font-size:12px;padding:2px 4px;letter-spacing:-.1px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .hpbox.hurt b{color:#ffe1a8}
@@ -413,6 +414,9 @@ body.chat-open #app{padding-bottom:300px}
   font-size:.82em;font-weight:800;color:#fff;line-height:1;text-shadow:0 1px 1px rgba(0,0,0,.6)}
 .ic.mn::before{content:'';position:absolute;inset:.3em;background:linear-gradient(135deg,#3a2e22,#120c07);transform:rotate(45deg);border-radius:2px}
 .ic.mn b{position:relative;font-weight:800}
+/* on dark backgrounds the black diamond gets a brass outline so it stays visible */
+.btn .ic.mn::before,#turnline .ic.mn::before,.log .ic.mn::before,.prompt .ic.mn::before,#overlay .ic.mn::before,.dv-box .ic.mn::before,#coach .ic.mn::before{box-shadow:0 0 0 1.3px #c9a06e}
+.btn .c .ic.mn{font-size:13px;color:#fff}
 /* Damage: a crude red blast with the amount in it (orange for structural damage) */
 .ic.dn{position:relative;display:inline-flex;align-items:center;justify-content:center;width:1.95em;height:1.95em;vertical-align:middle;margin:-.47em .02em;
   font-size:.82em;font-weight:800;color:#fff;line-height:1;text-shadow:0 1px 1px rgba(0,0,0,.7),0 0 2px rgba(0,0,0,.6)}
