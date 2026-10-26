@@ -1630,7 +1630,7 @@ const END_TURN={hl:'[data-act="end"]',allow:['[data-act="end"]']};
 const TUT_STEPS=[
   {title:'Welcome to <span class="holo">Warplands</span>',text:'You and your opponent each lead a band of <b>Zealots</b>. Build sites, cast events and grow from a humble <b>Hamlet</b> into an <b>Empire</b>.<br><br><b>How to win:</b> wipe out every one of your opponent’s Zealots, or hold more Zealots than them when three of the four draw stacks run dry.',cont:true},
   {title:'Your Warpland',text:'This is your starting site, <b>Warpland</b>. It holds your first 10 Zealots (the blue dots). Its <b>HP</b> boxes fill red as it takes damage; when they are all red, the site is destroyed along with everyone on it.',hl:'#meZone [data-suid]',cont:true},
-  {title:'Mana',text:'Everything you do costs <b>Mana</b>, shown by the gold dots above your hand. You get <b>3 Mana</b> at the start of every turn, and whatever you don’t spend is lost when your turn ends. Each card shows its cost in its top corner.',hl:'.pips',cont:true},
+  {title:'Mana',text:'Everything you do costs <b>Mana</b>, shown by the diamonds above your hand. You get <b>3 Mana</b> at the start of every turn, and whatever you don’t spend is lost when your turn ends. Each card shows its cost in its top corner.',hl:'.pips',cont:true},
   {title:'Drawing cards',text:'Your hand holds the cards you can play. To get more, spend <b>1 Mana</b> to draw a card from one of the four <b>draw stacks</b> on the right: Hamlet, Township, City and Empire. Higher stacks hold stronger cards.',hl:'.rail .stacks',cont:true},
   {title:'Draw a Hamlet card',text:'You can only draw from your current level or lower, and you start at <b>Hamlet</b>. The higher stacks stay locked until you upgrade. Click the <b>Hamlet</b> stack to draw a card.',hl:'[data-draw="1"]',allow:['[data-draw="1"]','#prompt button'],done:()=>tutMe().hand.some(k=>k.uid===G.tut.treb)},
   {title:'Sites',text:'You drew a <b>Trebuchet</b>, a <b>site</b>. Sites are buildings: once played they stay on the table in your row, can hold Zealots, and have <b>abilities</b> you can use turn after turn. Like Warpland, each has HP and can be destroyed.',hl:()=>`[data-play="${G.tut.treb}"]`,cont:true},
@@ -1836,7 +1836,7 @@ function zoneHTML(pi,bottom){
     <span class="lvl era-${p.level}">LEVEL ${ROMAN[p.level]}</span>
     <span class="stat"><span class="dot"></span><b>${totalF(p)}</b> followers</span>
     <span class="stat">${showHand?'':`<span class="backs" title="${esc(handSummary(p))}">${[...p.hand].sort((a,b)=>a.def.level-b.def.level).map(k=>`<span class="back era-${k.def.level}" data-buid="${k.uid}">${ROMAN[k.def.level]}</span>`).join('')}</span>`}<b>${p.hand.length}</b> in hand</span>
-    ${!bottom&&active?`<span class="stat oppmana" title="${p.actions} action${p.actions===1?'':'s'} left this turn"><span class="pips">${Array.from({length:Math.max(3,p.actions)},(_,i)=>`<span class="pip ${i<p.actions?'on':''}"></span>`).join('')}</span><b>${p.actions}</b> actions left</span>`:''}
+    ${!bottom&&active?`<span class="stat oppmana" title="${p.actions} action${p.actions===1?'':'s'} left this turn"><span class="pips">${Array.from({length:Math.max(3,p.actions)},(_,i)=>`<span class="pip ${i<p.actions?'on':''}"></span>`).join('')}</span>${MN(p.actions)} left</span>`:''}
     ${lofNext?'<span class="stat warn">Interdict next turn: 1 fewer action</span>':''}
     ${active&&p.ai?'<span class="stat">Thinking…</span>':''}</div>`;
   const SP=UI.prompt&&UI.prompt.kind==='slot'&&UI.prompt.pi===pi&&pi===vi?UI.prompt:null;
