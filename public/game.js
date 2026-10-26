@@ -169,9 +169,9 @@ function bestAlloc(sites,n,maxSites,val){
 }
 
 /* Shared effect pieces */
-/* Cards under a site, as its abilities count them: Ancient Wisdom adds one */
+/* Cards tucked under a site, as its abilities count them */
 const TUCK_SITES={farm:1,port:1.1,bank:1.2,alienweapon:2};
-function tuckN(site){return site.tucked.length+(hasAtt(site,'wisdom')?1:0)}
+function tuckN(site){return site.tucked.length}
 /* Record kills; note any Healer Hut next to the site so it can save some of them */
 function noteKill(pi,n,site){if(n>0&&G){const hh=site&&inPlay(site)?adjacent(site).filter(x=>x.card.def.id==='healerhut').map(x=>x.uid):[];G.pending.push({t:'kill',pi,n,hh})}}
 function killOn(site,k){const x=Math.min(k,site.followers);site.followers-=x;noteKill(site.owner,x,site);sweep();return x}
@@ -419,7 +419,7 @@ const CARDS=[
    ai:c=>{const m=Math.max(0,...c.opp.sites.filter(s=>!hasAtt(s,'plague')).map(s=>s.followers));return m>=3?2.2:-1}},
   {id:'siege',name:'Spark',level:1,type:'event',cost:1,count:2,text:'Do 2 damage to a single site.',
    play:c=>hit(c,2,'Spark'),ai:c=>bestOpp(c,2)},
-  {id:'fanaticism',name:'Holy Fervor',level:1,type:'event',cost:2,count:2,
+  {id:'fanaticism',name:'Holy Fervor',level:1,type:'event',cost:2,count:1,
    text:'Sacrifice up to 3 followers on a single site. Then do 1 damage for each follower sacrificed, all to a single site.',
    play:async c=>{
      const src=await pickSite(c.pi,{prompt:'Holy Fervor: choose one of your sites to sacrifice followers from.',filter:s=>s.owner===c.pi&&s.followers>0,aiScore:s=>s.followers-minNeed(s),auto:true});
@@ -513,7 +513,7 @@ const CARDS=[
      run:async c=>{const s=await pickSite(c.pi,{prompt:'Iron Pit: choose one of your non-starting sites to take 1 structural damage.',filter:s=>s.owner===c.pi&&!s.card.def.start,aiScore:s=>integ(s)-s.damage-s.followers*0.3,auto:true});
        if(!s)return;c.pay();await damage(c.pi,s,1,{structural:true});c.me.actions++;log(`${c.me.name} gain${s_(c.me)} an action from the Iron Pit.`)},
      ai:c=>c.me.sites.some(s=>!s.card.def.start&&integ(s)-s.damage>1)&&wantsMore(c)?0.9:-1}]},
-  {id:'onslaught',name:'Howling Advance',level:1,type:'event',cost:2,count:2,text:"Do 1 damage each to up to 3 different sites owned by an opponent.",
+  {id:'onslaught',name:'Howling Advance',level:1,type:'event',cost:2,count:1,text:"Do 1 damage each to up to 3 different sites owned by an opponent.",
    play:async c=>{
      const picked=await pickUpTo(c,3,{prompt:(i)=>`Howling Advance: choose ${i?'another':'an'} opponent's site (${i+1} of up to 3, 1 damage each).`,filter:s=>s.owner!==c.pi,aiScore:s=>dmgValue(s,1)});
      if(!picked||!picked.length)return;c.pay();for(const s of picked)await damage(c.pi,s,1)},
@@ -693,10 +693,6 @@ const CARDS=[
      run:async c=>{const s=await pickSite(c.pi,{prompt:'Thieves\' Guild: choose a site to kill 1 follower on.',filter:s=>s.followers>0&&(!c.me.ai||s.owner!==c.pi),aiScore:killValue});
        if(!s)return;c.pay();killOn(s,1);log(`A spy kills a follower on ${poss(G.players[s.owner])} ${s.card.def.name}.`)},
      ai:c=>c.opp.sites.some(s=>s.followers>0)?Math.max(...c.opp.sites.filter(s=>s.followers>0).map(killValue)):-1}]},
-  {id:'wisdom',name:'Ancient Wisdom',set:'exp',level:2,type:'attachment',cost:1,count:1,
-   text:"This site's abilities count as having 1 additional tucked card under it.",
-   aiAttach:(c,s)=>s.owner===c.pi&&!hasAtt(s,'wisdom')&&!hasAtt(s,'sabotage')&&TUCK_SITES[s.card.def.id]?TUCK_SITES[s.card.def.id]*2+(s.card.def.id==='farm'?fieldsTuckVal(s):0):-99,
-   ai:c=>{const t=c.me.sites.filter(s=>TUCK_SITES[s.card.def.id]&&!hasAtt(s,'wisdom')&&!hasAtt(s,'sabotage'));return t.length?1.2+Math.max(...t.map(s=>TUCK_SITES[s.card.def.id])):-1}},
   {id:'conscription',name:'Muster',set:'exp',level:2,type:'attachment',cost:1,count:2,
    text:"Upon attachment, gain 2 followers on this site. At the start of site owner's turn, gain 1 follower on this site.",
    onAttach:async s=>{const n=gainF(s,2);if(n)log(`${n} conscripts arrive at ${s.card.def.name}.`)},
@@ -1489,7 +1485,6 @@ function attVal(a,s){
     case 'compnet': return hasAb?w*0.9:0.2;
     case 'sentient': return hasAb?w*0.9:0.2;
     case 'retrofit': return 0.6+0.15*s.followers;
-    case 'wisdom': return TUCK_SITES[s.card.def.id]?(s.card.def.id==='farm'?fieldsTuckVal(s):TUCK_SITES[s.card.def.id]):0.1;
     default: return a.def.fortify?0.6+0.25*s.followers:(HARMFUL.includes(a.def.id)?-EV.att:EV.att*0.6);
   }
 }

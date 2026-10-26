@@ -356,12 +356,6 @@ export const ART = {
     <path class="k" d="M54 70l12-16M106 70L94 54" stroke="#0b0806" stroke-width="2"/>
     ${GROUND}`,
 
-  wisdom: `${MOON(30, 18, 6)}${HILLS}
-    <path class="k" d="M48 70l4-30h56l4 30z"/>
-    <path class="w" d="M52 40q14-8 28 0q14-8 28 0v-6q-14-8-28 0q-14-8-28 0z" opacity=".9"/>
-    <path class="m" d="M54 46h52v4H54zM54 54h52v4H54zM54 62h52v4H54z"/>
-    <circle class="y" cx="80" cy="22" r="7"/><path class="ln-y" d="M80 10v-6M68 22h-6M92 22h6M71 13l-4-4M89 13l4-4"/>
-    ${GROUND}`,
 
   conscription: `${HILLS}
     ${[20, 34, 48, 62, 76, 90, 104, 118, 132].map((x, i) => `<path class="k" d="M${x - 5} 72l2-16q3-3 6 0l2 16z"/><circle class="k" cx="${x}" cy="${51 - (i % 2)}" r="3.5"/><path class="k" d="M${x + 4} 70V${30 + (i % 3) * 2}" stroke="#0b0806" stroke-width="1.2"/><path class="w" d="M${x + 2.5} ${31 + (i % 3) * 2}l1.5-5 1.5 5z"/>`).join('')}
