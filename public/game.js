@@ -1731,7 +1731,7 @@ function bandHTML(d){
 /* The card type is shown by the icon in the header; no separate type line */
 function kindHTML(d){return ''}
 /* Card and ability text with the words Zealot(s) and Mana replaced by their icons */
-const IC_Z='<span class="ic z" role="img" aria-label="Zealot"></span>', IC_M='<span class="ic m" role="img" aria-label="Mana">◆</span>', IC_C='<span class="ic c" role="img" aria-label="card"></span>';
+const IC_Z='<span class="ic z" role="img" aria-label="Zealot"></span>', IC_M='<span class="ic mn bare" role="img" aria-label="Mana"></span>', IC_C='<span class="ic c" role="img" aria-label="card"></span>';
 const ZN=n=>`<span class="ic zn" role="img" aria-label="${n} Zealot${n==1?'':'s'}">${n}</span>`;
 const DN=(n,st)=>`<span class="ic dn${st?' st':''}${n?'':' bare'}" role="img" aria-label="${n?n+' ':''}${st?'structural ':''}damage">${n?`<b>${n}</b>`:''}</span>`;
 const MN=n=>`<span class="ic mn" role="img" aria-label="${n} Mana"><b>${n}</b></span>`;
