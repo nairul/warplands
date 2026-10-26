@@ -899,6 +899,10 @@ const CARDS=[
      c.pay();src.followers=0;for(const s of c.me.sites)if(counts[s.uid]!==undefined)s.followers=counts[s.uid];sfx('place',n);sweep();
      log(`${c.me.name} seize${s_(c.me)} ${n} follower${n>1?'s':''} from ${poss(c.opp)} ${src.card.def.name}.`)},
    ai:c=>c.me.sites.some(canGain)?Math.max(-1,...c.opp.sites.map(s=>s.followers*1.6)):-1},
+  {id:'oracle',name:"Oracle's Eye",set:'core',level:4,type:'attachment',cost:1,count:1,
+   text:'Draw 1 card from the highest level deck available to the site owner at the start of their turn.',
+   aiAttach:(c,s)=>s.owner===c.pi&&!hasAtt(s,'oracle')?3+(integ(s)-s.damage)*0.3+(isFort(s)?0.5:0):-99,
+   ai:c=>c.me.sites.length&&drawableLevels(c.pi).length?3:-1},
   {id:'sentient',name:'Awakened Grimoire',set:'core',level:4,type:'attachment',cost:1,count:1,
    text:'After this site activates an ability, site owner may immediately activate the same ability again for no actions.',
    aiAttach:(c,s)=>s.owner===c.pi&&!hasAtt(s,'sabotage')&&(s.card.def.abilities||[]).some(a=>!a.passive)?(s.card.def.worth||1)+(s.followers>=minNeed(s)?1:0):-99,
@@ -1031,6 +1035,8 @@ async function startTurn(pi){
   }
   for(const s of [...p.sites]) for(const a of s.attachments){
     if(a.def.id==='conscription'&&gainF(s,1)) log(`Muster adds a follower to ${poss(p)} ${s.card.def.name}.`);
+    /* Oracle's Eye: a card from the highest-level stack the owner can draw from */
+    if(a.def.id==='oracle'){const lv=drawableLevels(p.i);if(lv.length){log(`Oracle's Eye on ${poss(p)} ${s.card.def.name} opens.`);drawCard(p.i,lv[lv.length-1])}}
   }
   sweep();
   if(G.mode==='hot') UI.curtain=true;
@@ -1481,6 +1487,7 @@ function attVal(a,s){
     case 'conscription': return 2.2;
     case 'compnet': return hasAb?w*0.9:0.2;
     case 'sentient': return hasAb?w*0.9:0.2;
+    case 'oracle': return 2.8;
     case 'retrofit': return 0.6+0.15*s.followers;
     default: return a.def.fortify?0.6+0.25*s.followers:(HARMFUL.includes(a.def.id)?-EV.att:EV.att*0.6);
   }

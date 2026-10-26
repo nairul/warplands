@@ -597,6 +597,15 @@ export const ART = {
     <path class="w" d="M110 30q16-10 30 4" fill="none" stroke="#e6dccb" stroke-width="1" opacity=".5" stroke-dasharray="2 3"/>
     ${GROUND}`,
 
+  /* Oracle's Eye: a great watching eye hanging over a stone plinth, light raying out */
+  oracle: `<circle class="y" cx="80" cy="32" r="30" opacity=".16"/>${HILLS}
+    <path class="y" d="M80 32L44 6M80 32L116 6M80 32L36 32M80 32L124 32M80 32L50 54M80 32L110 54" stroke="#ffc66b" stroke-width="1.1" opacity=".55" fill="none"/>
+    <path class="s" d="M64 72l4-14h24l4 14z"/><rect class="k" x="60" y="54" width="40" height="5" rx="1"/>
+    <path class="k" d="M54 32q26-22 52 0q-26 22-52 0z"/>
+    <path class="w" d="M58 32q22-16 44 0q-22 16-44 0z"/>
+    <circle class="e" cx="80" cy="32" r="8"/><circle class="k" cx="80" cy="32" r="4"/><circle class="w" cx="82" cy="30" r="1.4"/>
+    ${SPARKS([[52, 16, 1], [108, 14, 1.1], [44, 40, 0.9], [118, 42, 0.9]]).replace(/class="e"/g, 'class="y"')}
+    ${GROUND}`,
   sentient: `<circle class="y" cx="80" cy="36" r="24" opacity=".2"/>${HILLS}
     <path class="k" d="M50 62l6-22h48l6 22z"/>
     <path class="m" d="M54 44q13-6 26 0q13-6 26 0v14q-13-6-26 0q-13-6-26 0z"/>
