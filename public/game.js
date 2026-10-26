@@ -481,7 +481,7 @@ const CARDS=[
     {need:1,actions:0,text:'Gain 1 follower on Fields for each card tucked under Fields.',can:c=>tuckN(c.site)>0&&canGain(c.site),
      run:async c=>{c.pay();const n=gainF(c.site,tuckN(c.site));log(`${c.me.name} gain${s_(c.me)} ${n} follower${n>1?'s':''} on Fields.`)},
      ai:c=>tuckN(c.site)}]},
-  {id:'castle',name:'Stone Keep',level:1,type:'site',cost:2,integrity:4,count:1,worth:3,fortified:true,text:'Fortified.',
+  {id:'castle',name:'Stone Keep',level:2,type:'site',cost:2,integrity:4,count:1,worth:3,fortified:true,text:'Fortified.',
    abilities:[
     {need:0,actions:0,text:'Relocate followers to Stone Keep.',can:c=>canGain(c.site)&&c.me.sites.some(s=>s!==c.site&&s.followers>0&&canLeave(s)),
      run:async c=>{const counts=c.me.ai?castlePlan(c.me,c.site).counts:await relocatePrompt(c.pi,{mode:'to',site:c.site,title:'Stone Keep: move followers onto Stone Keep',cost:'Free'});
@@ -743,10 +743,10 @@ const CARDS=[
    ai:c=>{const n=c.opp.sites.filter(s=>s.followers>0).length;return n?bestAlloc(c.opp.sites,n,2,dmgValue).v:-1}},
 
   /* ---------- LEVEL III · CORE SET ---------- */
-  {id:'silo',name:'Ballista Tower',set:'core',level:3,type:'site',cost:1,integrity:4,count:2,worth:4,
+  {id:'silo',name:'Ballista Tower',set:'core',level:3,type:'site',cost:1,integrity:3,count:2,worth:4,
    abilities:[
-    {need:2,actions:2,text:'Do 2 damage to a single site.',run:c=>hit(c,2,'Ballista Tower'),ai:c=>bestOpp(c,2)},
-    {need:2,actions:2,text:'Do 1 damage each to 2 different sites.',can:()=>allSites().length>=2,
+    {need:2,actions:1,text:'Do 2 damage to a single site.',run:c=>hit(c,2,'Ballista Tower'),ai:c=>bestOpp(c,2)},
+    {need:2,actions:1,text:'Do 1 damage each to 2 different sites.',can:()=>allSites().length>=2,
      run:async c=>{
        const a=await pickSite(c.pi,{prompt:'Ballista Tower: choose the first site (1 damage).',filter:s=>!c.me.ai||s.owner!==c.pi,aiScore:s=>dmgValue(s,1)});if(!a)return;
        const b=await pickSite(c.pi,{prompt:'Ballista Tower: choose a second, different site (1 damage).',filter:s=>s!==a&&(!c.me.ai||s.owner!==c.pi),aiScore:s=>dmgValue(s,1)});if(!b)return;
@@ -1529,6 +1529,14 @@ async function simValue(pi,path,depth){
   return v;
 }
 async function aiStep(pi){
+  /* Endgame push: with 2 draw stacks already empty, a player who is level or ahead on Zealots
+     draws from the smallest stack it can reach to run out the third and end the game.
+     (Without this, two AIs that have both outgrown the low stacks can stall forever.) */
+  {const me=G.players[pi],op=G.players[1-pi];
+   const empty=[1,2,3,4].filter(l=>!G.stacks[l].length).length;
+   const lv=drawableLevels(pi);
+   if(empty>=2&&me.actions>=1&&lv.length&&totalF(me)>=totalF(op)){
+     const l=lv.reduce((a,b)=>G.stacks[b].length<G.stacks[a].length?b:a);await actDraw(pi,l);return true}}
   const base=aiOptions(pi,true);
   if(!base.length) return false;
   const idx=base.map((o,i)=>[o.score,i]).sort((a,b)=>b[0]-a[0]).slice(0,EV.K).map(x=>x[1]);
