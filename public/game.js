@@ -1712,8 +1712,12 @@ const humanTurn=()=>G&&!G.over&&!G.players[G.turn].ai&&G.turn===viewer();
 
 function handSummary(p){const n={};for(const k of p.hand)n[k.def.level]=(n[k.def.level]||0)+1;return [1,2,3,4].filter(l=>n[l]).map(l=>`${n[l]} Level ${ROMAN[l]}`).join(', ')||'No cards'}
 function reqHTML(ab,site){
+  /* only what the ability actually needs: no Zealot disc for 0 Zealots, no diamond for 0 Mana */
   const n=site?effNeed(site,ab):ab.need;
-  return `<span class="req">${ab.infinite?'<span class="rq inf" title="Works on any turn">∞</span>':''}<span class="rq f" title="Followers needed on this site${n<ab.need?' (lowered by Academy)':''}">${n}</span>${ab.actions?`<span class="rq a" title="Mana to spend"><b>${ab.actions}</b></span>`:''}</span>`;
+  const parts=(ab.infinite?'<span class="rq inf" title="Works on any turn">∞</span>':'')
+    +(n>0?`<span class="rq f" title="Followers needed on this site${n<ab.need?' (lowered by Academy)':''}">${n}</span>`:'')
+    +(ab.actions?`<span class="rq a" title="Mana to spend"><b>${ab.actions}</b></span>`:'');
+  return parts?`<span class="req">${parts}</span>`:'';
 }
 const eraCls=d=>d.start?'era-h':'era-'+d.level;
 const artHTML=d=>ART[d.id]?`<div class="art" aria-hidden="true"><svg viewBox="0 0 160 84" preserveAspectRatio="xMidYMid slice">${ART[d.id]}</svg></div>`:'';
