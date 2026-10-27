@@ -2478,11 +2478,11 @@ function sizeHand(){
   if(refs.length){z=Math.min(rowZoom(refs[0]),1.5);w=Math.max(140,Math.min(208,Math.min(...refs.map(r=>r.getBoundingClientRect().width/rowZoom(r)))))}
   /* same fixed height as the board's cards (board cards are all equalized to one height) */
   let bh=refs.length?parseFloat(refs[0].style.minHeight)||refs[0].offsetHeight:0;
-  for(const c of cards){c.style.zoom=z>1.01?z:'';c.style.width=w+'px';c.style.minHeight=''}
+  for(const c of cards){c.style.zoom=Math.abs(z-1)>0.01?z:'';c.style.width=w+'px';c.style.minHeight=''}
   /* a card in hand taller than the board's cards raises the shared height for both */
   const hmax=Math.max(0,...cards.map(c=>c.offsetHeight));
   if(refs.length&&hmax>bh+0.5){bh=hmax;for(const c of document.querySelectorAll('#app .card'))c.style.minHeight=bh+'px';fitBoard();
-    z=Math.min(rowZoom(refs[0]),1.5);for(const c of cards)c.style.zoom=z>1.01?z:''}
+    z=Math.min(rowZoom(refs[0]),1.5);for(const c of cards)c.style.zoom=Math.abs(z-1)>0.01?z:''}
   for(const c of cards)c.style.minHeight=bh?bh+'px':'';
   fitNames('#handDock .card .nm');
   fanHand();
@@ -2517,8 +2517,9 @@ function fitBoard(){
     const availH=zr.bottom-parseFloat(zcs.borderBottomWidth)-parseFloat(zcs.paddingBottom)-rr.top;
     z=Math.min(z,r.clientWidth/needW,availH/r.scrollHeight);
   }
-  z=Math.floor(z*50)/50;
-  if(z>1.02) for(const r of rows) r.style.zoom=z;
+  /* scale up to fill empty space, or down (to 60%) when tall cards no longer fit */
+  z=Math.max(0.6,Math.floor(z*0.995*50)/50); /* small margin so rounding never adds a scrollbar */
+  if(Math.abs(z-1)>0.02) for(const r of rows) r.style.zoom=z;
 }
 const DOCK_PEEK=60;
 /* ---- Zealot animation: dots fly between sites when they move, and in from the hand when gained ---- */
