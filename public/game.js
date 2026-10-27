@@ -19,8 +19,8 @@ function env(ctx,g,t,a,peak,dec){g.gain.setValueAtTime(0.0001,t);g.gain.exponent
 function tone(ctx,out,t,f0,f1,dur,peak,type){const o=ctx.createOscillator(),g=ctx.createGain();o.type=type||'sine';o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f1,t+dur);env(ctx,g,t,0.005,peak,dur);o.connect(g).connect(out);o.start(t);o.stop(t+dur+0.05)}
 function noise(ctx,out,t,dur,peak,ftype,f0,f1,q){const s=ctx.createBufferSource(),f=ctx.createBiquadFilter(),g=ctx.createGain();s.buffer=noiseBuf(ctx,dur+0.05);f.type=ftype;f.Q.value=q||1;f.frequency.setValueAtTime(f0,t);f.frequency.exponentialRampToValueAtTime(f1,t+dur);env(ctx,g,t,0.008,peak,dur);s.connect(f).connect(g).connect(out);s.start(t);s.stop(t+dur+0.05)}
 const SOUNDS={
-  /* Draw: a crisp card flick off the stack, then the card settling into the hand */
-  draw:(ctx,out,t)=>{noise(ctx,out,t,0.09,1.1,'bandpass',2600,5200,1.2);noise(ctx,out,t+0.075,0.11,0.8,'bandpass',1500,900,0.9);tone(ctx,out,t+0.15,520,470,0.07,0.22,'triangle')},
+  /* Draw: a crisp card flick off the stack and a soft swish as it lands */
+  draw:(ctx,out,t)=>{noise(ctx,out,t,0.09,1.1,'bandpass',2600,5200,1.2);noise(ctx,out,t+0.075,0.11,0.8,'bandpass',1500,900,0.9)},
   /* Site built: just a soft, warm ding with a faint airy breath */
   build:(ctx,out,t)=>{noise(ctx,out,t,0.45,0.09,'bandpass',1800,900,0.7);tone(ctx,out,t+0.02,392,388,0.8,0.16,'sine');tone(ctx,out,t+0.06,587.33,582,0.7,0.09,'sine')},
   place:(ctx,out,t,n)=>{for(let i=0;i<Math.min(n||1,4);i++){const u=t+i*0.07;tone(ctx,out,u,640,420,0.07,0.28,'triangle');noise(ctx,out,u,0.02,0.08,'highpass',3000,3000)}},
