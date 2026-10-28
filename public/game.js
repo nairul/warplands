@@ -569,7 +569,6 @@ const CARDS=[
    aiAttach:(c,s)=>s.owner!==c.pi?s.followers*0.5+(integ(s)-s.damage<=3?2:0)+(isFort(s)?-1:0):-99,
    ai:c=>c.opp.sites.length?1.3:-1},
   {id:'market',name:'Market',level:1,type:'site',cost:2,integrity:3,count:2,worth:2.8,
-   text:'Adjacent sites are the ones directly left and right of Market in your row.',
    abilities:[
     {need:2,actions:1,text:'Gain 1 follower on each adjacent site.',can:c=>adjacent(c.site).some(canGain),
      run:async c=>{c.pay();marketGain(c)},ai:c=>adjacent(c.site).filter(canGain).length},
