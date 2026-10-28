@@ -1861,7 +1861,8 @@ function showZoom(el){
   const z=$('zoom');if(!z||!G)return;
   const uid=+el.dataset.suid,st=allSites().find(x=>x.uid===uid);if(!st){z.hidden=true;return}
   z.innerHTML=term(siteHTML(st,viewer(),true))+TWINKLES;
-  {const c=z.firstElementChild,k=rowZoom(el);if(c&&k>1)c.style.zoom=k}
+  /* the preview matches the board card exactly: same width, height and scale (never smaller) */
+  {const c=z.firstElementChild,k=rowZoom(el);if(c){const r=el.getBoundingClientRect();c.style.zoom=k;c.style.width=(r.width/k)+'px';c.style.minHeight=(r.height/k)+'px';c.style.maxWidth='none'}}
   z.hidden=false;
   const r=el.getBoundingClientRect(),w=z.offsetWidth,h=z.offsetHeight;
   let x=r.right+12;if(x+w>innerWidth-8)x=r.left-w-12;if(x<8)x=8;
