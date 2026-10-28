@@ -34,3 +34,10 @@ npx wrangler dev
 ```
 
 Then open http://localhost:8787 in two browser windows to test online play.
+
+## Game logs
+
+Finished games against the computer are posted to `/api/log` and saved by the Worker to the private
+`nairul/warplands-logs` repo (one JSON file per game under `games/YYYY-MM/`). The Worker needs the
+`GITHUB_LOGS_TOKEN` **secret** (a fine-grained GitHub token with Contents: read and write on that repo only),
+set under Settings → Runtime variables and secrets with **Secret** ticked. `/api/log/status` checks the setup.
