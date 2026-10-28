@@ -744,7 +744,7 @@ const CARDS=[
    ai:c=>{const n=c.opp.sites.filter(s=>s.followers>0).length;return n?bestAlloc(c.opp.sites,n,2,dmgValue).v:-1}},
 
   /* ---------- LEVEL III · CORE SET ---------- */
-  {id:'silo',name:'Ballista Tower',set:'core',level:3,type:'site',cost:1,integrity:3,count:2,worth:4,
+  {id:'silo',name:'Ballista Tower',set:'core',level:3,type:'site',cost:2,integrity:3,count:2,worth:4,
    abilities:[
     {need:2,actions:1,text:'Do 2 damage to a single site.',run:c=>hit(c,2,'Ballista Tower'),ai:c=>bestOpp(c,2)},
     {need:2,actions:1,text:'Do 1 damage each to 2 different sites.',can:()=>allSites().length>=2,

@@ -22,6 +22,7 @@ Logs older than 8898344 have no `version` field (logging began at 29874ad).
 
 | Commit | Date | What changed |
 |---|---|---|
+| COMMIT | 2026-10-28 | Ballista Tower costs 2 Mana to play (was 1); its abilities still cost 1 Mana each. |
 | 7df3334 | 2026-10-28 | Oracle's Eye also draws from your highest available deck when it's attached. |
 | 7ec993c | 2026-10-28 | Relocate can be confirmed without moving any Zealots. |
 | a0ef975 | 2026-10-27 | Market: adjacent-sites reminder text removed (text only). |
