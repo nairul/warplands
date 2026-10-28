@@ -2217,6 +2217,8 @@ function cardFaceHTML(k){return k.def.type==='site'?siteHTML(mkSite(k,viewer()),
 function showDiscardZoom(el){
   const z=$('zoom');if(!z||!G)return;const k=G.discard[+el.dataset.dcard];if(!k){z.hidden=true;return}
   z.innerHTML=term(cardFaceHTML(k))+TWINKLES;z.classList.add('over-dialog');z.hidden=false;
+  /* same size and scale as the cards on the board */
+  {const c=z.firstElementChild,ref=document.querySelector('#app .board .site.mini');if(c&&ref){const k2=rowZoom(ref),r=ref.getBoundingClientRect();c.style.zoom=k2;c.style.width=(r.width/k2)+'px';c.style.minHeight=(r.height/k2)+'px';c.style.maxWidth='none'}}
   const r=el.closest('.dv-box').getBoundingClientRect(),row=el.getBoundingClientRect();
   placeZoom(z,{left:r.left,right:r.right,top:row.top+row.height/2});
 }
@@ -2224,6 +2226,7 @@ function showAttZoom(el){
   const z=$('zoom');if(!z||!G)return;
   const st=allSites().find(x=>x.uid===+el.dataset.atts);if(!st||!st.attachments.length){z.hidden=true;return}
   z.innerHTML=term(`<div class="attzoom">${st.attachments.map(attCardHTML).join('')}</div>`)+TWINKLES;
+  {const ref=el.closest('[data-suid]');if(ref){const k2=rowZoom(ref),r=ref.getBoundingClientRect();for(const c of z.querySelectorAll('.attzoom .card')){c.style.zoom=k2;c.style.width=(r.width/k2)+'px';c.style.minHeight=(r.height/k2)+'px'}}}
   z.hidden=false;placeZoom(z,el.getBoundingClientRect());
 }
 function placeZoom(z,r){
