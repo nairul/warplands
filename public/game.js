@@ -1978,12 +1978,13 @@ function relocateHTML(){
       <button data-rl="-${s.uid}" ${rlCan(r,s.uid,-1)?'':'disabled'} aria-label="Take a follower from ${esc(s.card.def.name)}">−</button><span class="n">${r.counts[s.uid]}</span>
       <button data-rl="+${s.uid}" ${rlCan(r,s.uid,1)?'':'disabled'} aria-label="Add a follower to ${esc(s.card.def.name)}">+</button></div>`}).join('');
   const changed=p.sites.some(s=>r.orig[s.uid]!==r.counts[s.uid]);
-  const ok=r.pool===0&&(r.mode==='threat'?r.counts[r.src]===0:r.mode==='place'?true:changed);
+  /* moving no Zealots is still a legal relocate (e.g. to tuck under Harbor without moving anyone) */
+  const ok=r.pool===0&&(r.mode==='threat'?r.counts[r.src]===0:true);
   return `<div class="panel" role="dialog" aria-label="${esc(r.title)}"><h2>${esc(r.title)}</h2>
     <p>${r.mode==='place'?'Place each follower with +.':'Take followers with − and place them with +.'} ${esc(r.cost)}.</p>
     <div class="pool"><span class="dot"></span> In hand to place: ${r.pool}</div>
     <div class="reloc">${rows}</div>
-    <div class="choices"><button class="btn primary" data-rlok="1" ${ok?'':'disabled'}>Confirm</button>${r.forced?'':'<button class="btn" data-rlx="1">Cancel</button>'}</div></div>`;
+    <div class="choices"><button class="btn primary" data-rlok="1" ${ok?'':'disabled'}>${changed||r.mode==='place'?'Confirm':'Confirm (move none)'}</button>${r.forced?'':'<button class="btn" data-rlx="1">Cancel</button>'}</div></div>`;
 }
 function setPicker(){
   const o=[['core','Core Set'],['exp','Expansion Set'],['mix','Level-by-level mix'],['random','Totally mixed']];
