@@ -994,8 +994,29 @@ const SET_LABEL={core:'Core Set',exp:'Expansion Set',random:'Totally mixed'};
 /* Draw stack sizes for a 2-player game; Level I loses 10 more when the opening hands are dealt. */
 const STACK_SIZE={1:20,2:15,3:10,4:5};
 
+/* ---- Game recording (vs-computer games only): sent to the server when the game ends,
+   which saves it to the warplands-logs repo for later analysis ---- */
+function recStart(){
+  G.rec={v:1,started:new Date().toISOString(),lines:[],turns:[],ai:[],
+    openingHands:G.players.map(p=>({player:p.name,cards:p.hand.map(k=>k.def.name)})),
+    stacks:{1:G.stacks[1].map(k=>k.def.name),2:G.stacks[2].map(k=>k.def.name),3:G.stacks[3].map(k=>k.def.name),4:G.stacks[4].map(k=>k.def.name)},sent:false};
+}
+function recSnap(pi){
+  G.rec.turns.push({turn:G.turnCount,player:G.players[pi].name,players:G.players.map(p=>({name:p.name,level:p.level,zealots:totalF(p),
+    hand:p.hand.map(k=>k.def.name),sites:p.sites.map(s=>({name:s.card.def.name,zealots:s.followers,hp:Math.max(0,integ(s)-s.damage),maxHp:integ(s),
+      attachments:s.attachments.map(a=>a.def.name),tucked:s.tucked.length}))})),stacks:[1,2,3,4].map(l=>G.stacks[l].length)});
+}
+function recSend(){
+  const r=G.rec;if(!r||r.sent)return;r.sent=true;
+  const o=G.over;
+  const body={v:r.v,mode:'ai',started:r.started,ended:new Date().toISOString(),
+    result:{winner:o.winner===-1?'draw':G.players[o.winner].name,type:o.type,reason:o.reason,turns:G.turnCount},
+    finalLevels:G.players.map(p=>({player:p.name,level:p.level,zealots:totalF(p)})),
+    openingHands:r.openingHands,stacks:r.stacks,turns:r.turns,aiDecisions:r.ai,log:r.lines.map(([t,m])=>[t,term(m)])};
+  try{fetch('/api/log',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),keepalive:true}).catch(()=>{})}catch(e){}
+}
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
-function log(msg){if(!G)return;G.log.unshift(msg);if(G.log.length>80)G.log.pop()}
+function log(msg){if(!G)return;G.log.unshift(msg);if(G.log.length>80)G.log.pop();if(G.rec)G.rec.lines.push([G.turnCount,msg])}
 function mkSite(card,owner){return{uid:card.uid,card,owner,followers:0,damage:0,attachments:[],tucked:[],usedTurn:-1}}
 function mkCtx(pi,extra){return Object.assign({pi,me:G.players[pi],opp:G.players[1-pi],oppi:1-pi},extra)}
 
@@ -1021,6 +1042,7 @@ function newGame(mode,setChoice){
   }
   UI.prompt=null;UI.relocate=null;UI.menu=false;UI.busy=false;
   if(setChoice==='tutorial'){tutSetup();startTurn(0);return}
+  if(mode==='ai'&&HAS_DOM) recStart();
   const first=Math.random()<.5?0:1;
   log(`${players[first].name} ${isYou(players[first])?'are':'is'} the first player.`);
   startTurn(first);
@@ -1028,6 +1050,7 @@ function newGame(mode,setChoice){
 
 async function startTurn(pi){
   G.turn=pi; G.turnCount++; G.turnStart=Date.now(); G.turnEnd=null;
+  if(G.rec) recSnap(pi);
   const p=G.players[pi];
   p.actions=G.turnCount===1&&!G.tut?2:3;
   log(`— ${p.name}: turn begins (${p.actions} actions).`);
@@ -1462,27 +1485,27 @@ function aiOptions(pi,steady){
     if(!abilityReady(pi,s,i)) return;
     const v=ab.ai(mkCtx(pi,{site:s}));
     if(v<=0) return;
-    opts.push({score:ab.actions?v/ab.actions+j():v*1.5,aggr:/damage|kill|steal/i.test(ab.text)&&!/you own/i.test(ab.text),exec:()=>useAbility(pi,s,i)});
+    opts.push({label:`ability ${s.card.def.name} #${i+1}`,score:ab.actions?v/ab.actions+j():v*1.5,aggr:/damage|kill|steal/i.test(ab.text)&&!/you own/i.test(ab.text),exec:()=>useAbility(pi,s,i)});
   });
   for(const c of p.hand){
     if(!canPlay(pi,c)) continue;
     const v=cardValue(pi,c);
     if(v<=0) continue;
-    opts.push({score:v/Math.max(c.def.cost,0.5)+j(),aggr:!!c.def.attacker||(c.def.type==='event'&&/damage|kill|steal/i.test(c.def.text||'')&&!/you own/i.test(c.def.text||'')),exec:()=>playCard(pi,c)});
+    opts.push({label:`play ${c.def.name}`,score:v/Math.max(c.def.cost,0.5)+j(),aggr:!!c.def.attacker||(c.def.type==='event'&&/damage|kill|steal/i.test(c.def.text||'')&&!/you own/i.test(c.def.text||'')),exec:()=>playCard(pi,c)});
   }
   if(p.actions>=1){
-    if(p.sites.some(canGain)) opts.push({score:0.9+j(),exec:()=>actGain(pi)});
+    if(p.sites.some(canGain)) opts.push({label:'gain Zealot',score:0.9+j(),exec:()=>actGain(pi)});
     const lv=drawableLevels(pi);
-    if(lv.length){opts.push({score:1.0+j(),exec:()=>actDraw(pi,lv[lv.length-1])})}
+    if(lv.length){opts.push({label:`draw L${lv[lv.length-1]}`,score:1.0+j(),exec:()=>actDraw(pi,lv[lv.length-1])})}
     const plan=relocatePlan(p),rv=relocateValue(p,plan);
-    if(rv>=1.5) opts.push({score:rv,exec:async()=>actRelocate(pi,plan)});
+    if(rv>=1.5) opts.push({label:'relocate',score:rv,exec:async()=>actRelocate(pi,plan)});
   }
   const uc=UPGRADE_COST[p.level];
   if(uc&&p.actions>=uc){
     const stuck=drawableLevels(pi).length===0||G.stacks[p.level].length<=1;
     if(stuck||aiSafeToUpgrade(pi)){
       const sc=stuck?5:p.level===1?(G.turnCount>2?1.25:0.8):p.level===2?1.15:1.5;
-      opts.push({score:sc+j(),exec:async()=>actUpgrade(pi)});
+      opts.push({label:'upgrade',score:sc+j(),exec:async()=>actUpgrade(pi)});
     }
   }
   return opts;
@@ -1496,7 +1519,7 @@ function cloneState(pi){
   const players=G.players.map(p=>({...p,ai:true,hand:p.i===pi?p.hand.map(cc):p.hand.map(k=>({uid:k.uid,def:HIDDEN})),
     sites:p.sites.map(s=>({...s,card:cc(s.card),attachments:s.attachments.map(cc),tucked:s.tucked.map(cc)}))}));
   const stacks={};for(const l of [1,2,3,4])stacks[l]=shuffle(G.stacks[l].map(cc));
-  return {...G,players,stacks,discard:G.discard.map(cc),log:[],pending:G.pending.map(e=>({...e})),over:null,sim:true};
+  return {...G,players,stacks,discard:G.discard.map(cc),log:[],pending:G.pending.map(e=>({...e})),over:null,sim:true,rec:null};
 }
 function attackPotential(pi){
   let v=0;
@@ -1582,6 +1605,9 @@ async function aiStep(pi){
     if(v>best){best=v;bi=i}
   }
   const endV=evalPos(pi,true)-G.players[pi].actions*EV.act;
+  if(G.rec&&!G.sim) G.rec.ai.push({turn:G.turnCount,player:G.players[pi].name,mana:G.players[pi].actions,threat:+oppThreat(pi).toFixed(1),endTurnValue:+endV.toFixed(2),
+    chose:bi<0||best<=endV+0.05?'end turn':base[bi].label,best:+best.toFixed(2),
+    options:idx.map(i=>[base[i].label,+base[i].score.toFixed(2)])});
   if(bi<0||best<=endV+0.05) return false;
   await base[bi].exec();
   return true;
@@ -2030,6 +2056,7 @@ function render(){
   else if(G.over&&!UI.closedOver) o=overHTML();
   ov.hidden=!o; ov.innerHTML=term(o);
   syncDiscard();
+  if(G&&G.over&&G.rec&&!G.rec.sent) recSend();
   /* no board hover preview while choosing a card from your hand: it would cover the prompt */
   if(UI.prompt&&UI.prompt.kind==='hand'){const z=$('zoom');if(z)z.hidden=true}
   equalizeCards();
