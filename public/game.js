@@ -2940,7 +2940,15 @@ if(HAS_DOM){
     if(e.key==='Escape'&&UI.prompt&&UI.prompt.cancellable)UI.prompt.resolve(null);
   });
   addEventListener('resize',()=>{if(G)equalizeCards()});
-  document.addEventListener('mouseover',e=>{const dc=e.target.closest&&e.target.closest('[data-dcard]');if(dc){showDiscardZoom(dc);return}{const z=$('zoom');if(z)z.classList.remove('over-dialog')}if(UI.prompt&&UI.prompt.kind==='hand'){const z=$('zoom');if(z)z.hidden=true;return}const at=e.target.closest&&e.target.closest('#app [data-atts]');if(at){showAttZoom(at);return}const el=e.target.closest&&e.target.closest('#app [data-suid]');const z=$('zoom');if(el)showZoom(el);else if(z&&!z.hidden)z.hidden=true});
+  /* Hovering a card in your hand shows its full ability text (the board-style 2-line cap is lifted),
+   and raises the card far enough to show all of it */
+document.addEventListener('mouseover',e=>{
+  const hc=e.target.closest&&e.target.closest('#handDock .card');
+  for(const c of document.querySelectorAll('#handDock .card.full'))if(c!==hc){c.classList.remove('full');c.style.setProperty('--lift',c.dataset.lift0||c.style.getPropertyValue('--lift'))}
+  if(hc&&!hc.classList.contains('full')){hc.dataset.lift0=hc.style.getPropertyValue('--lift');hc.classList.add('full');
+    const z=parseFloat(hc.style.zoom)||1;hc.style.setProperty('--lift',Math.max(0,hc.offsetHeight-DOCK_PEEK/z)+'px')}
+});
+document.addEventListener('mouseover',e=>{const dc=e.target.closest&&e.target.closest('[data-dcard]');if(dc){showDiscardZoom(dc);return}{const z=$('zoom');if(z)z.classList.remove('over-dialog')}if(UI.prompt&&UI.prompt.kind==='hand'){const z=$('zoom');if(z)z.hidden=true;return}const at=e.target.closest&&e.target.closest('#app [data-atts]');if(at){showAttZoom(at);return}const el=e.target.closest&&e.target.closest('#app [data-suid]');const z=$('zoom');if(el)showZoom(el);else if(z&&!z.hidden)z.hidden=true});
   document.addEventListener('scroll',()=>{const z=$('zoom');if(z)z.hidden=true},true);
   render();
   if(/^https?:$/.test(location.protocol)) fetch('/api/ping').then(r=>r.ok?r.json():null).then(j=>{
