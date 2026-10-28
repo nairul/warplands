@@ -904,9 +904,10 @@ const CARDS=[
      log(`${c.me.name} seize${s_(c.me)} ${n} follower${n>1?'s':''} from ${poss(c.opp)} ${src.card.def.name}.`)},
    ai:c=>c.me.sites.some(canGain)?Math.max(-1,...c.opp.sites.map(s=>s.followers*1.6)):-1},
   {id:'oracle',name:"Oracle's Eye",set:'core',level:4,type:'attachment',cost:1,count:1,
-   text:'Draw 1 card from the highest level deck available to the site owner at the start of their turn.',
+   text:'Upon attachment, draw 1 card from the highest level deck available to you. The site owner also does this at the start of each of their turns.',
+   onAttach:async(s,by,moved)=>{if(moved)return;const pi=by==null?s.owner:by,lv=drawableLevels(pi);if(lv.length){log(`Oracle's Eye opens.`);drawCard(pi,lv[lv.length-1])}},
    aiAttach:(c,s)=>s.owner===c.pi&&!hasAtt(s,'oracle')?3+(integ(s)-s.damage)*0.3+(isFort(s)?0.5:0):-99,
-   ai:c=>c.me.sites.length&&drawableLevels(c.pi).length?3:-1},
+   ai:c=>c.me.sites.length&&drawableLevels(c.pi).length?4:-1},
   {id:'sentient',name:'Awakened Grimoire',set:'core',level:4,type:'attachment',cost:1,count:1,
    text:'After this site activates an ability, site owner may immediately activate the same ability again for no actions.',
    aiAttach:(c,s)=>s.owner===c.pi&&!hasAtt(s,'sabotage')&&(s.card.def.abilities||[]).some(a=>!a.passive)?(s.card.def.worth||1)+(s.followers>=minNeed(s)?1:0):-99,
@@ -1229,7 +1230,7 @@ async function attach(card,s,by,moved){
   card.attachedBy=by; s.attachments.push(card);
   if(!moved) log(`${card.def.name} is attached to ${poss(G.players[s.owner])} ${s.card.def.name}.`);
   sweep();
-  if(card.def.onAttach&&s.attachments.includes(card)) await card.def.onAttach(s,by);
+  if(card.def.onAttach&&s.attachments.includes(card)) await card.def.onAttach(s,by,moved);
 }
 
 /* Triggered effects resolve after the action that caused them. Kills from one action count as one event. */
