@@ -11,5 +11,7 @@
     "bindings": [{ "name": "ROOM", "class_name": "Room" }]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  /* keep variables set in the Cloudflare dashboard (e.g. GITHUB_LOGS_TOKEN) when deploying from GitHub */
+  "keep_vars": true
 }
