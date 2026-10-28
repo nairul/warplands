@@ -996,6 +996,7 @@ const STACK_SIZE={1:20,2:15,3:10,4:5};
 
 /* ---- Game recording (vs-computer games only): sent to the server when the game ends,
    which saves it to the warplands-logs repo for later analysis ---- */
+const VERSION={sha:''}; /* the deployed commit, read from version.json; stamped into game logs */
 function recStart(){
   G.rec={v:1,started:new Date().toISOString(),lines:[],turns:[],ai:[],
     openingHands:G.players.map(p=>({player:p.name,cards:p.hand.map(k=>k.def.name)})),
@@ -1009,7 +1010,7 @@ function recSnap(pi){
 function recSend(){
   const r=G.rec;if(!r||r.sent)return;r.sent=true;
   const o=G.over;
-  const body={v:r.v,mode:'ai',started:r.started,ended:new Date().toISOString(),
+  const body={v:r.v,mode:'ai',version:(typeof window!=='undefined'&&window.__WARPLANDS_VERSION)||VERSION.sha||'unknown',started:r.started,ended:new Date().toISOString(),
     result:{winner:o.winner===-1?'draw':G.players[o.winner].name,type:o.type,reason:o.reason,turns:G.turnCount},
     finalLevels:G.players.map(p=>({player:p.name,level:p.level,zealots:totalF(p)})),
     openingHands:r.openingHands,stacks:r.stacks,turns:r.turns,aiDecisions:r.ai,log:r.lines.map(([t,m])=>[t,term(m)])};
@@ -1055,6 +1056,7 @@ function newGame(mode,setChoice){
 async function startTurn(pi){
   G.turn=pi; G.turnCount++; G.turnStart=Date.now(); G.turnEnd=null;
   if(G.rec) recSnap(pi);
+  {const p=G.players[pi],f=totalF(p),h=hpTotal(p);p.lossLast=p.lastF==null?0:Math.max(0,p.lastF-f)+Math.max(0,p.lastH-h);}
   const p=G.players[pi];
   p.actions=G.turnCount===1&&!G.tut?2:3;
   log(`— ${p.name}: turn begins (${p.actions} actions).`);
@@ -1083,6 +1085,7 @@ async function startTurn(pi){
 async function endTurn(){
   if(!G||G.over) return;
   const p=G.players[G.turn];
+  p.lastF=totalF(p);p.lastH=hpTotal(p);
   for(const s of p.sites) for(const a of [...s.attachments]) if(a.def.id==='threat'){
     s.attachments.splice(s.attachments.indexOf(a),1);G.discard.push(a);log(`Death Mark on ${poss(p)} ${s.card.def.name} is discarded.`);
   }
@@ -1427,8 +1430,9 @@ function relocatePlan(p){
   let left=0;
   for(const s of p.sites) if(canLeave(s)){left+=s.followers;plan[s.uid]=0}
   const staffed=open.filter(s=>minNeed(s)>0&&!hasAtt(s,'plague')&&!hasAtt(s,'sabotage')).sort((a,b)=>(b.card.def.worth||1)-(a.card.def.worth||1));
-  for(const s of staffed){const n=Math.max(0,needOf(s)-plan[s.uid]);if(left>=n){plan[s.uid]+=n;left-=n}}
-  const pool=open.filter(s=>!hasAtt(s,'plague')); const tgt=pool.length?pool:open;
+  {for(const s of staffed){const n=Math.max(0,needOf(s)-plan[s.uid]);if(left>=n){plan[s.uid]+=n;left-=n}}}
+  const inc=incomingDamage(p.i),safe=open.filter(s=>!doomed(s,inc));
+  const pool=(safe.length?safe:open).filter(s=>!hasAtt(s,'plague')); const tgt=pool.length?pool:(safe.length?safe:open);
   while(left>0){
     let best=null,bv=Infinity;
     for(const s of tgt){const v=plan[s.uid]/Math.max(1,integ(s)-s.damage+(isFort(s)?3:0));if(v<bv){bv=v;best=s}}
@@ -1441,12 +1445,17 @@ function relocateValue(p,plan){
   const en=f=>p.sites.filter(s=>minNeed(s)>0&&f(s)>=minNeed(s)).length;
   const maxB=Math.max(...p.sites.map(s=>s.followers)), maxA=Math.max(...p.sites.map(s=>plan[s.uid]));
   const snipe=ofId(G.players[1-p.i],'sniper').some(s=>s.followers>=1&&!abilBlocked(s))?1.5:0;
-  return 2*(en(s=>plan[s.uid])-en(s=>s.followers))+0.35*(maxB-maxA)-snipe;
+  const inc=incomingDamage(p.i),risk=f=>p.sites.reduce((a,s)=>a+(doomed(s,inc)?Math.max(0,f(s)-needOf(s)):0),0);
+  return 2*(en(s=>plan[s.uid])-en(s=>s.followers))+0.35*(maxB-maxA)+0.9*(risk(s=>s.followers)-risk(s=>plan[s.uid]))-snipe;
 }
 function cardValue(pi,k){
   const d=k.def,p=G.players[pi];
   if(d.type==='reaction') return -1;
-  if(d.type==='site') return ((d.worth||1)+(d.enterValue||0))*(p.sites.length<4?1:0.6);
+  if(d.type==='site'){
+    const tot=totalF(p),mx=Math.max(0,...p.sites.map(s=>s.followers));
+    const spread=AIX.spread?(tot>=4&&mx/tot>0.6&&p.sites.length<5?1.2:0)+(atRiskZealots(pi)>=2?1.2:0):0;
+    return ((d.worth||1)+(d.enterValue||0))*(p.sites.length<4?1:0.6)+spread;
+  }
   return d.ai(mkCtx(pi,{card:k}));
 }
 function aiBestFree(pi,except){
@@ -1479,30 +1488,67 @@ function myDefence(pi){
   if(p.sites.some(s=>s.card.def.id==='forcefield'&&!abilBlocked(s)&&s.followers>=effNeed(s,s.card.def.abilities[0]))) d+=4;
   return d;
 }
-/* Upgrading while the opponent has damage sites ready to fire usually loses: only upgrade when
-   unthreatened, or when there are enough reactions to absorb the hits. */
-function aiSafeToUpgrade(pi){return oppThreat(pi)-myDefence(pi)<1}
+/* How much damage the opponent could throw at us next turn: its ready damage sites, plus a guess at
+   damage events in its hand (more cards and higher levels mean more likely and bigger hits). */
+function incomingDamage(pi){
+  const op=G.players[1-pi];
+  return oppThreat(pi)+Math.min(op.hand.length,6)*(0.15+0.08*op.level);
+}
+/* Zealots + HP lost since the end of our own last turn (i.e. during the opponent's turn) */
+function recentLoss(pi){const p=G.players[pi];return p.lossLast||0}
+function hpTotal(p){return p.sites.reduce((a,s)=>a+Math.max(0,integ(s)-s.damage),0)}
+/* Only upgrade when it feels safe: not while being hammered, not with a crumbling Warpland, and not
+   when the opponent's likely damage outweighs our reactions. */
+/* switches for the computer's newer judgement, kept separate so each can be tested on its own */
+const AIX={gate:true,doom:true,fight:true,draw:true,spread:true};
+function aiSafeToUpgrade(pi){
+  if(!AIX.gate) return true;
+  const p=G.players[pi],home=startSite(p);
+  if(recentLoss(pi)>=3) return false;
+  if(home&&(integ(home)-home.damage)*2<integ(home)&&home.followers>0) return false;
+  if(atRiskZealots(pi)>=3) return false;
+  return oppThreat(pi)-myDefence(pi)<1;
+}
+/* A site is doomed if the opponent can likely destroy it next turn */
+/* (fortified sites don't lose Zealots to damage, but everyone still dies when the site itself falls) */
+function doomed(s,inc){const left=integ(s)-s.damage;return left<=Math.max(1,inc)}
+function atRiskZealots(pi){const inc=incomingDamage(pi);return G.players[pi].sites.reduce((a,s)=>a+(doomed(s,inc)?Math.max(0,s.followers-needOf(s)):0),0)}
 function aiOptions(pi,steady){
   const p=G.players[pi],o=G.players[1-pi],opts=[];
   const j=steady?()=>0:()=>Math.random()*0.15;
+  /* under attack (lost Zealots/HP last round or facing ready damage sites): favour hitting back */
+  const fight=AIX.fight&&(recentLoss(pi)>=2||oppThreat(pi)>=1)?0.6:0;
   for(const s of p.sites)(s.card.def.abilities||[]).forEach((ab,i)=>{
     if(!abilityReady(pi,s,i)) return;
     const v=ab.ai(mkCtx(pi,{site:s}));
     if(v<=0) return;
-    opts.push({label:`ability ${s.card.def.name} #${i+1}`,score:ab.actions?v/ab.actions+j():v*1.5,aggr:/damage|kill|steal/i.test(ab.text)&&!/you own/i.test(ab.text),exec:()=>useAbility(pi,s,i)});
+    const ag=/damage|kill|steal/i.test(ab.text)&&!/you own/i.test(ab.text);
+    opts.push({label:`ability ${s.card.def.name} #${i+1}`,score:(ab.actions?v/ab.actions:v*1.5)+(ag?fight:0)+j(),aggr:ag,exec:()=>useAbility(pi,s,i)});
   });
   for(const c of p.hand){
     if(!canPlay(pi,c)) continue;
     const v=cardValue(pi,c);
     if(v<=0) continue;
-    opts.push({label:`play ${c.def.name}`,score:v/Math.max(c.def.cost,0.5)+j(),aggr:!!c.def.attacker||(c.def.type==='event'&&/damage|kill|steal/i.test(c.def.text||'')&&!/you own/i.test(c.def.text||'')),exec:()=>playCard(pi,c)});
+    const ag=!!c.def.attacker||(c.def.type==='event'&&/damage|kill|steal/i.test(c.def.text||'')&&!/you own/i.test(c.def.text||''));
+    opts.push({label:`play ${c.def.name}`,score:v/Math.max(c.def.cost,0.5)+(ag?fight:0)+j(),aggr:ag,exec:()=>playCard(pi,c)});
   }
   if(p.actions>=1){
     if(p.sites.some(canGain)) opts.push({label:'gain Zealot',score:0.9+j(),exec:()=>actGain(pi)});
     const lv=drawableLevels(pi);
-    if(lv.length){opts.push({label:`draw L${lv[lv.length-1]}`,score:1.0+j(),exec:()=>actDraw(pi,lv[lv.length-1])})}
+    if(lv.length){opts.push({label:`draw L${lv[lv.length-1]}`,score:1.0-(AIX.draw?0.15*Math.max(0,p.hand.length-4)+(totalF(p)<=6?0.3:0):0)+j(),exec:()=>actDraw(pi,lv[lv.length-1])})}
     const plan=relocatePlan(p),rv=relocateValue(p,plan);
     if(rv>=1.5) opts.push({label:'relocate',score:rv,exec:async()=>actRelocate(pi,plan)});
+    /* escape: Zealots stuck on a site that will likely fall next turn. Build a site and move them
+       onto it in one go (each step alone looks pointless to a one-move-at-a-time judgement). */
+    const risk=AIX.doom?atRiskZealots(pi):0;
+    if(risk>=4&&p.actions>=2){
+      const seen=new Set();
+      for(const c of p.hand){
+        if(c.def.type!=='site'||c.def.cost>p.actions-1||seen.has(c.def.id)||!canPlay(pi,c))continue;seen.add(c.def.id);
+        opts.push({label:`build ${c.def.name} + evacuate`,score:2+0.4*risk,exec:async()=>{
+          if(!(await playCard(pi,c)))return;await flush();if(p.actions>=1&&!G.over)await actRelocate(pi,relocatePlan(p))}});
+      }
+    }
   }
   const uc=UPGRADE_COST[p.level];
   if(uc&&p.actions>=uc){
@@ -1516,7 +1562,7 @@ function aiOptions(pi,steady){
 }
 /* Lookahead: try each candidate action on a copy of the game (draw stacks reshuffled,
    the opponent's hand hidden) and keep the one that leaves the best position. */
-const EV={depth:0,K2:6,pot:0.8,aggr:0.3,atk:2.5,stuck:3,f:0.9,fLate:1.0,card:1.1,cardL:0.25,lvl:4.5,site:1.4,staffed:0.8,tuck:0.4,att:1.2,act:0.9,risk:1.2,K:14};
+const EV={depth:0,K2:6,pot:0.8,aggr:0.3,atk:2.5,stuck:3,f:0.9,fLate:1.0,card:1.1,cardL:0.25,lvl:4.5,doom:0.85,site:1.4,staffed:0.8,tuck:0.4,att:1.2,act:0.9,risk:1.2,K:14};
 const HIDDEN={id:'hidden',name:'Hidden card',level:1,type:'hidden',cost:99};
 function cloneState(pi){
   const cc=k=>({uid:k.uid,def:k.def,attachedBy:k.attachedBy});
@@ -1554,7 +1600,9 @@ function attVal(a,s){
 function evalPos(pi,noPot){
   if(G.over){if(G.over.winner===pi)return 1e6;if(G.over.winner===1-pi)return -1e6;return 0}
   const late=[1,2,3,4].filter(l=>!G.stacks[l].length).length>=2?EV.fLate:0;
+  const incOn=[incomingDamage(1),incomingDamage(0)];
   const side=p=>{
+    const inc=p.i===G.turn?incOn[p.i]*0.8:incOn[p.i]*0.3; /* danger mostly matters for the side about to be hit */
     let v=totalF(p)*(EV.f+late)+(p.level-1)*EV.lvl+(p.i===G.turn&&!drawableLevels(p.i).length&&p.level<4?-EV.stuck:0);
     for(const s of p.sites){
       const I=integ(s),left=I-s.damage,w=s.card.def.worth||1;
@@ -1566,6 +1614,8 @@ function evalPos(pi,noPot){
       if(s.card.def.id==='healerhut')v+=Math.min(2,adjacent(s).reduce((a,x)=>a+x.followers,0)*0.12);
       for(const a of s.attachments)v+=attVal(a,s);
       v-=EV.risk*s.followers*(s.damage/I)*(isFort(s)?0.6:1);
+      /* Zealots piled on a site that will likely fall: the crew its abilities need is fine, the excess is at risk */
+      if(AIX.doom&&s.followers&&doomed(s,inc)) v-=EV.doom*Math.max(0,s.followers-needOf(s));
     }
     return v;
   };
@@ -1579,7 +1629,8 @@ async function simValue(pi,path,depth){
   try{
     G=cloneState(pi);
     let bonus=0;
-    for(const i of path){const o=aiOptions(pi,true)[i];if(!o){v=-Infinity;return v}await o.exec();await flush();if(o.aggr)bonus+=EV.aggr;if(G.over)break}
+    const ua=AIX.fight&&(recentLoss(pi)>=2||oppThreat(pi)>=1);
+    for(const i of path){const o=aiOptions(pi,true)[i];if(!o){v=-Infinity;return v}await o.exec();await flush();if(o.aggr)bonus+=EV.aggr+(ua?0.5:0);if(G.over)break}
     v=Math.max(evalPos(pi,true)-G.players[pi].actions*EV.act, evalPos(pi))+bonus;
     if(depth>0&&!G.over&&G.turn===pi){
       const nxt=aiOptions(pi,true).map((o,i)=>[o.score,i]).sort((x,y)=>y[0]-x[0]).slice(0,EV.K2).map(x=>x[1]);
@@ -2917,7 +2968,7 @@ if(HAS_DOM){
   /* show the deployed commit (offline copies carry it in window.__WARPLANDS_VERSION) */
   {const tag=$('verTag');const show=v=>{if(tag&&v)tag.textContent=v};
    if(typeof window!=='undefined'&&window.__WARPLANDS_VERSION) show(window.__WARPLANDS_VERSION);
-   else fetch('version.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>j&&show(j.sha)).catch(()=>{});}
+   else fetch('version.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>{if(j){VERSION.sha=j.sha;show(j.sha)}}).catch(()=>{});}
   document.addEventListener('click',e=>{
     const tst=G&&G.tut&&!G.tut.free?TUT_STEPS[G.tut.step]:null;
     const badReloc=tst&&tst.relocExact&&e.target.closest('[data-rlok]')&&!tutRelocOK();
