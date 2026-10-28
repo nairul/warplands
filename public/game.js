@@ -1013,7 +1013,11 @@ function recSend(){
     result:{winner:o.winner===-1?'draw':G.players[o.winner].name,type:o.type,reason:o.reason,turns:G.turnCount},
     finalLevels:G.players.map(p=>({player:p.name,level:p.level,zealots:totalF(p)})),
     openingHands:r.openingHands,stacks:r.stacks,turns:r.turns,aiDecisions:r.ai,log:r.lines.map(([t,m])=>[t,term(m)])};
-  try{fetch('/api/log',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),keepalive:true}).catch(()=>{})}catch(e){}
+  /* no keepalive: browsers refuse keepalive uploads over 64 KB, and a long game's log is bigger than that */
+  const data=JSON.stringify(body);
+  try{fetch('/api/log',{method:'POST',headers:{'content-type':'application/json'},body:data})
+    .then(r=>r.json().then(j=>console.info('[Warplands] game log',r.status,j,Math.round(data.length/1024)+' KB')))
+    .catch(e=>console.info('[Warplands] game log not sent:',e&&e.message))}catch(e){}
 }
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function log(msg){if(!G)return;G.log.unshift(msg);if(G.log.length>80)G.log.pop();if(G.rec)G.rec.lines.push([G.turnCount,msg])}

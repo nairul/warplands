@@ -9,6 +9,23 @@ const LOG_REPO = 'nairul/warplands-logs';
 const MAX_LOG = 400_000;               /* bytes; a normal game log is ~30-100 KB */
 const recent = new Map();              /* ip -> recent upload times (per Worker instance) */
 
+const GH = token => ({ authorization: `Bearer ${token}`, accept: 'application/vnd.github+json', 'x-github-api-version': '2022-11-28', 'user-agent': 'warplands-worker' });
+let lastUpload = null;  /* result of the most recent upload attempt (per Worker instance) */
+
+async function logStatus(env) {
+  const out = { tokenSet: !!env.GITHUB_LOGS_TOKEN, repo: LOG_REPO, lastUpload };
+  if (!out.tokenSet) return json({ ...out, verdict: 'The GITHUB_LOGS_TOKEN secret is missing on this Worker.' });
+  const r = await fetch(`https://api.github.com/repos/${LOG_REPO}`, { headers: GH(env.GITHUB_LOGS_TOKEN) });
+  out.githubStatus = r.status;
+  if (r.ok) { const j = await r.json(); out.canWrite = !!(j.permissions && j.permissions.push); }
+  out.verdict = r.status === 401 ? 'GitHub rejected the token (wrong, revoked or expired).'
+    : r.status === 404 ? 'The token cannot see the warplands-logs repo (repo not selected for this token, or wrong name/owner).'
+    : !r.ok ? `GitHub answered ${r.status}.`
+    : out.canWrite ? 'All good: the token can write to the logs repo.'
+    : 'The token can read the repo but not write: set Contents to "Read and write".';
+  return json(out);
+}
+
 async function saveLog(request, env, ctx) {
   if (!env.GITHUB_LOGS_TOKEN) return json({ error: 'Logging is not configured' }, 503);
   const len = +request.headers.get('content-length') || 0;
@@ -31,9 +48,12 @@ async function saveLog(request, env, ctx) {
   let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   const put = fetch(`https://api.github.com/repos/${LOG_REPO}/contents/${path}`, {
     method: 'PUT',
-    headers: { authorization: `Bearer ${env.GITHUB_LOGS_TOKEN}`, accept: 'application/vnd.github+json', 'x-github-api-version': '2022-11-28', 'user-agent': 'warplands-worker' },
+    headers: GH(env.GITHUB_LOGS_TOKEN),
     body: JSON.stringify({ message: `Game log: ${log.result.winner} won (${log.result.type}, ${log.result.turns} turns)`, content: btoa(bin) })
-  }).then(async r => { if (!r.ok) console.log('log upload failed', r.status, (await r.text()).slice(0, 200)); });
+  }).then(async r => {
+    lastUpload = { at: new Date().toISOString(), status: r.status, path };
+    if (!r.ok) { lastUpload.error = (await r.text()).slice(0, 300); console.log('log upload failed', r.status, lastUpload.error); }
+  }).catch(e => { lastUpload = { at: new Date().toISOString(), error: String(e) }; });
   ctx.waitUntil(put);
   return json({ ok: true, path }, 202);
 }
@@ -46,6 +66,8 @@ export default {
 
     /* Game logs from games against the computer, saved to the warplands-logs GitHub repo */
     if (url.pathname === '/api/log' && request.method === 'POST') return saveLog(request, env, ctx);
+    /* Self-check for game logging: is the token set, and does GitHub accept it for the logs repo? */
+    if (url.pathname === '/api/log/status') return logStatus(env);
 
     if (url.pathname === '/api/new' && request.method === 'POST') {
       for (let i = 0; i < 6; i++) {
