@@ -2914,6 +2914,10 @@ if(HAS_DOM){
   syncSound();
   document.addEventListener('pointerdown',()=>{if(SFX.on)audioCtx()});
   document.addEventListener('keydown',()=>{if(SFX.on)audioCtx()});
+  /* show the deployed commit (offline copies carry it in window.__WARPLANDS_VERSION) */
+  {const tag=$('verTag');const show=v=>{if(tag&&v)tag.textContent=v};
+   if(typeof window!=='undefined'&&window.__WARPLANDS_VERSION) show(window.__WARPLANDS_VERSION);
+   else fetch('version.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(j=>j&&show(j.sha)).catch(()=>{});}
   document.addEventListener('click',e=>{
     const tst=G&&G.tut&&!G.tut.free?TUT_STEPS[G.tut.step]:null;
     const badReloc=tst&&tst.relocExact&&e.target.closest('[data-rlok]')&&!tutRelocOK();

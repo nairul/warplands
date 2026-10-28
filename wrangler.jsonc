@@ -2,6 +2,8 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "warplands",
   "main": "src/worker.js",
+  /* stamp public/version.json with the deployed commit before each deploy */
+  "build": { "command": "node tools/stamp.mjs" },
   "compatibility_date": "2025-06-01",
   "assets": {
     "directory": "./public",

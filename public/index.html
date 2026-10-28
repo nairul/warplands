@@ -317,6 +317,8 @@ button.ab:disabled{opacity:.75}
 .dv-list li[data-dcard]{cursor:default}
 .dv-list li[data-dcard]:hover{background:rgba(255,210,120,.12)}
 /* The game's name: an iridescent, shifting hologram foil with a sweeping sheen */
+/* the deployed git commit, faint, next to the top-right buttons */
+.ver{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;color:var(--muted);opacity:.45;margin-right:10px;align-self:center;letter-spacing:.03em;user-select:all}
 .holo{display:inline-block;color:transparent!important;-webkit-text-fill-color:transparent;text-shadow:none!important;
   background-image:linear-gradient(110deg,transparent 38%,rgba(255,255,255,.85) 48%,rgba(255,255,255,.85) 50%,transparent 60%),
     linear-gradient(100deg,#ff6ad5,#c774e8 12%,#ad8cff 24%,#8795e8 36%,#94d0ff 48%,#7af7d6 60%,#f7f48b 72%,#ffb37a 84%,#ff6ad5);
@@ -507,7 +509,7 @@ button.ab:disabled{opacity:.75}
   <div class="topbar">
     <div class="brand"><span class="holo">WARPLANDS</span></div>
     <div class="turnline" id="turnline"></div>
-    <div class="seg"><button class="ghost" id="soundBtn" aria-pressed="true">Sound on</button><button class="ghost" id="menuBtn">Menu</button></div>
+    <div class="seg"><span class="ver" id="verTag" title="Version (git commit)"></span><button class="ghost" id="soundBtn" aria-pressed="true">Sound on</button><button class="ghost" id="menuBtn">Menu</button></div>
   </div>
   <div class="table">
     <div class="board">
