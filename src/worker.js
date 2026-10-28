@@ -43,13 +43,14 @@ async function saveLog(request, env, ctx) {
   if (!log || log.v !== 1 || log.mode !== 'ai' || !Array.isArray(log.log) || !log.result) return json({ error: 'Not a game log' }, 400);
   const d = new Date(), pad = n => String(n).padStart(2, '0');
   const winner = String(log.result.winner || 'unknown').replace(/[^A-Za-z]/g, '').toLowerCase() || 'unknown';
-  const path = `games/${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}/${pad(d.getUTCDate())}-${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}-${winner}-${crypto.randomUUID().slice(0, 6)}.json`;
+  const player = String(log.playerName || '').replace(/[^A-Za-z0-9]/g, '').toLowerCase().slice(0, 20);
+  const path = `games/${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}/${pad(d.getUTCDate())}-${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}-${winner}${player ? '-' + player : ''}-${crypto.randomUUID().slice(0, 6)}.json`;
   const bytes = new TextEncoder().encode(JSON.stringify(log, null, 1));
   let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   const put = fetch(`https://api.github.com/repos/${LOG_REPO}/contents/${path}`, {
     method: 'PUT',
     headers: GH(env.GITHUB_LOGS_TOKEN),
-    body: JSON.stringify({ message: `Game log: ${log.result.winner} won (${log.result.type}, ${log.result.turns} turns)`, content: btoa(bin) })
+    body: JSON.stringify({ message: `Game log${player ? ' (' + String(log.playerName).slice(0, 40) + ')' : ''}: ${log.result.winner} won (${log.result.type}, ${log.result.turns} turns)`, content: btoa(bin) })
   }).then(async r => {
     lastUpload = { at: new Date().toISOString(), status: r.status, path };
     if (!r.ok) { lastUpload.error = (await r.text()).slice(0, 300); console.log('log upload failed', r.status, lastUpload.error); }

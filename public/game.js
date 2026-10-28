@@ -114,7 +114,9 @@ const ofId=(p,id)=>p.sites.filter(s=>s.card.def.id===id);
 function abilBlocked(site){return hasAtt(site,'sabotage')}
 function univBonus(site){const p=G.players[site.owner];return p.sites.some(u=>u!==site&&u.card.def.id==='university'&&u.followers>=1&&!abilBlocked(u))?1:0}
 const effNeed=(site,ab)=>hasAtt(site,'compnet')?0:Math.max(0,ab.need-univBonus(site));
-function needOf(s){const ab=(s.card.def.abilities||[]);return ab.length?Math.min(...ab.map(a=>effNeed(s,a))):0}
+/* crew the AI aims for: ignore one-shot "Sacrifice <this site>" abilities when the site has a repeatable one */
+const selfSac=(s,a)=>a.text.startsWith('Sacrifice '+s.card.def.name);
+function needOf(s){let ab=(s.card.def.abilities||[]);if(ab.some(a=>!selfSac(s,a)))ab=ab.filter(a=>!selfSac(s,a));return ab.length?Math.min(...ab.map(a=>effNeed(s,a))):0}
 
 /* Aegis shields its owner's other sites from opponents' damage */
 function ffProtects(site){return G.players[site.owner].sites.some(f=>f!==site&&f.card.def.id==='forcefield'&&!abilBlocked(f)&&f.followers>=effNeed(f,f.card.def.abilities[0]))}
@@ -1007,10 +1009,11 @@ function recSnap(pi){
     hand:p.hand.map(k=>k.def.name),sites:p.sites.map(s=>({name:s.card.def.name,zealots:s.followers,hp:Math.max(0,integ(s)-s.damage),maxHp:integ(s),
       attachments:s.attachments.map(a=>a.def.name),tucked:s.tucked.length}))})),stacks:[1,2,3,4].map(l=>G.stacks[l].length)});
 }
-function recSend(){
+function recSend(name){
   const r=G.rec;if(!r||r.sent)return;r.sent=true;
+  name=String(name||'').trim().slice(0,40);r.name=name;
   const o=G.over;
-  const body={v:r.v,mode:'ai',version:(typeof window!=='undefined'&&window.__WARPLANDS_VERSION)||VERSION.sha||'unknown',started:r.started,ended:new Date().toISOString(),
+  const body={v:r.v,mode:'ai',playerName:name||undefined,version:(typeof window!=='undefined'&&window.__WARPLANDS_VERSION)||VERSION.sha||'unknown',started:r.started,ended:new Date().toISOString(),
     result:{winner:o.winner===-1?'draw':G.players[o.winner].name,type:o.type,reason:o.reason,turns:G.turnCount},
     finalLevels:G.players.map(p=>({player:p.name,level:p.level,zealots:totalF(p)})),
     openingHands:r.openingHands,stacks:r.stacks,turns:r.turns,aiDecisions:r.ai,log:r.lines.map(([t,m])=>[t,term(m)])};
@@ -1442,7 +1445,7 @@ function relocatePlan(p){
 }
 function relocateValue(p,plan){
   if(p.sites.every(s=>s.followers===plan[s.uid])) return 0;
-  const en=f=>p.sites.filter(s=>minNeed(s)>0&&f(s)>=minNeed(s)).length;
+  const en=f=>p.sites.filter(s=>minNeed(s)>0&&f(s)>=needOf(s)).length;
   const maxB=Math.max(...p.sites.map(s=>s.followers)), maxA=Math.max(...p.sites.map(s=>plan[s.uid]));
   const snipe=ofId(G.players[1-p.i],'sniper').some(s=>s.followers>=1&&!abilBlocked(s))?1.5:0;
   const inc=incomingDamage(p.i),risk=f=>p.sites.reduce((a,s)=>a+(doomed(s,inc)?Math.max(0,f(s)-needOf(s)):0),0);
@@ -1562,7 +1565,9 @@ function aiOptions(pi,steady){
 }
 /* Lookahead: try each candidate action on a copy of the game (draw stacks reshuffled,
    the opponent's hand hidden) and keep the one that leaves the best position. */
-const EV={depth:0,K2:6,pot:0.8,aggr:0.3,atk:2.5,stuck:3,f:0.9,fLate:1.0,card:1.1,cardL:0.25,lvl:4.5,doom:0.85,site:1.4,staffed:0.8,tuck:0.4,att:1.2,act:0.9,risk:1.2,K:14};
+const EV={depth:0,K2:6,pot:0.8,aggr:0.3,atk:2.5,stuck:3,f:0.9,fLate:1.0,card:1.1,cardL:0.25,lvl:4.5,doom:0.85,site:1.4,staffed:0.8,tuck:0.4,att:1.2,act:0.9,risk:1.2,K:14,hold:3.2};
+/* one-shot damage events are worth keeping for a site that matters, not spending on spare Zealots */
+const HOLD_EV=d=>d.type==='event'&&/\bdamage\b/i.test(d.text||'')&&/^Do /.test(d.text||'');
 const HIDDEN={id:'hidden',name:'Hidden card',level:1,type:'hidden',cost:99};
 function cloneState(pi){
   const cc=k=>({uid:k.uid,def:k.def,attachedBy:k.attachedBy});
@@ -1620,7 +1625,7 @@ function evalPos(pi,noPot){
     return v;
   };
   const me=G.players[pi],op=G.players[1-pi];
-  const hv=[...me.hand].map(k=>EV.card+EV.cardL*k.def.level).sort((a,b)=>b-a).reduce((a,x,i)=>a+(i<6?x:x*0.4),0);
+  const hv=[...me.hand].map(k=>EV.card+EV.cardL*k.def.level).sort((a,b)=>b-a).reduce((a,x,i)=>a+(i<6?x:x*0.4),0)+me.hand.filter(k=>HOLD_EV(k.def)).length*EV.hold;
   return side(me)-side(op)+hv-op.hand.length*(EV.card+EV.cardL*op.level*0.5)+me.actions*EV.act+(!noPot&&G.turn===pi?EV.pot*attackPotential(pi):0);
 }
 async function simValue(pi,path,depth){
@@ -2063,11 +2068,20 @@ function menuHTML0(){
     <p class="fine disclaimer">Unofficial fan implementation for personal play. Time Barons is designed by Jon Perry and Derek Yu.</p>
     </div>`;
 }
+/* After a game against the computer: ask who played, then send the game record (or send it unnamed if they skip or move on) */
+function sendLog(name){if(name===undefined){const i=typeof document!=='undefined'&&$('pname');name=i?i.value:undefined}if(UI.logTimer){clearTimeout(UI.logTimer);UI.logTimer=null}if(G&&G.over&&G.rec&&!G.rec.sent){if(name!=null){try{localStorage.setItem('wl-name',name.trim().slice(0,40))}catch(e){}}recSend(name)}}
+function nameAskHTML(){
+  if(!G.rec||G.mode!=='ai')return '';
+  if(G.rec.sent)return G.rec.name?`<div class="nameask done">Thanks, ${esc(G.rec.name)}! Your game record was sent.</div>`:'';
+  let saved='';try{saved=localStorage.getItem('wl-name')||''}catch(e){}
+  return `<div class="nameask"><b>Who played?</b><p>We save a record of every game against the computer and study them to make it a tougher opponent. Add your name so we know whose game this was.</p>
+    <form data-nameform="1"><input id="pname" maxlength="40" autocomplete="nickname" placeholder="Your name" value="${esc(saved)}"><button class="btn primary" type="submit">Send</button><button class="btn" type="button" data-nameskip="1">Skip</button></form></div>`;
+}
 function overHTML(){
   const o=G.over, w=o.winner, name=w===-1?null:G.players[w].name;
   const title=w===-1?'Draw':G.mode==='online'?(w===ONLINE.seat?'You win':`${name} wins`):name==='You'?'You win':G.mode==='ai'?'Your opponent wins':`${name} wins`;
   return `<div class="panel"><div class="eras"><span style="background:var(--era1)"></span><span style="background:var(--era2)"></span><span style="background:var(--era3)"></span><span style="background:var(--era4)"></span></div>
-    <h1>${esc(title)}</h1><p><b style="color:var(--fg)">${esc(o.type)}.</b> ${esc(o.reason)}</p>
+    <h1>${esc(title)}</h1><p><b style="color:var(--fg)">${esc(o.type)}.</b> ${esc(o.reason)}</p>${nameAskHTML()}
     <div class="choices">${G.mode==='online'?'<button class="btn primary" data-online="rematch">Rematch</button><button class="btn" data-leave="1">Leave online game</button>':`<button class="btn primary" data-new="${G.mode}">Play again</button><button class="btn" data-menu="1">Main menu</button>`}<button class="btn" data-close="1">View the board</button></div></div>`;
 }
 function curtainHTML(){
@@ -2110,9 +2124,9 @@ function render(){
   else if(UI.relocate) o=relocateHTML();
   else if(G.mode==='hot'&&UI.curtain&&!G.over&&!showPrompt) o=curtainHTML();
   else if(G.over&&!UI.closedOver) o=overHTML();
-  ov.hidden=!o; ov.innerHTML=term(o);
+  ov.hidden=!o; {const h=term(o);if(h!==UI.ovHTML){ov.innerHTML=h;UI.ovHTML=h}}
   syncDiscard();
-  if(G&&G.over&&G.rec&&!G.rec.sent) recSend();
+  if(G&&G.over&&G.rec&&!G.rec.sent&&!UI.logTimer) UI.logTimer=setTimeout(()=>{UI.logTimer=null;sendLog()},180000);
   /* no board hover preview while choosing a card from your hand: it would cover the prompt */
   if(UI.prompt&&UI.prompt.kind==='hand'){const z=$('zoom');if(z)z.hidden=true}
   equalizeCards();
@@ -2974,6 +2988,9 @@ if(HAS_DOM){
     const badReloc=tst&&tst.relocExact&&e.target.closest('[data-rlok]')&&!tutRelocOK();
     if(G&&G.tut&&!G.tut.free&&(badReloc||!tutAllows(e.target))){e.stopPropagation();e.preventDefault();const c=$('coach');if(c)c.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:260});}
   },true);
+  document.addEventListener('submit',e=>{if(e.target.closest('[data-nameform]')){e.preventDefault();const v=($('pname')||{}).value||'';sendLog(v);render()}});
+  /* leaving the page with a finished game still unsent: send it unnamed */
+  window.addEventListener('pagehide',()=>sendLog());
   document.addEventListener('click',e=>{
     if(e.target.closest('[data-discard]')){UI.dview=!UI.dview;syncDiscard();return}
     if(e.target.closest('[data-dclose]')||e.target.id==='discardView'){UI.dview=false;syncDiscard();return}
@@ -2987,10 +3004,11 @@ if(HAS_DOM){
     if(ds.online==='rematch'){onlineSend({t:'rematch'});return}
     if(ds.leave){onlineLeave();return}
     if(ds.copycode){const c=ONLINE.code||'';(navigator.clipboard?navigator.clipboard.writeText(c):Promise.reject()).then(()=>{t.textContent='Copied'}).catch(()=>{t.textContent=c});return}
-    if(ds.new){if(ONLINE.active)onlineLeave();UI.closedOver=false;if(ds.new==='tutorial')newGame('ai','tutorial');else newGame(ds.new);return}
+    if(ds.nameskip){sendLog('');render();return}
+    if(ds.new){sendLog();if(ONLINE.active)onlineLeave();UI.closedOver=false;if(ds.new==='tutorial')newGame('ai','tutorial');else newGame(ds.new);return}
     if(ds.tut==='next'){tutAdvance();return}
     if(ds.resume){UI.menu=false;render();return}
-    if(ds.menu){UI.menu=true;UI.closedOver=false;render();return}
+    if(ds.menu){sendLog();UI.menu=true;UI.closedOver=false;render();return}
     if(ds.close){UI.closedOver=true;render();return}
     if(ds.curtain){UI.curtain=false;render();return}
     if(t.id==='menuBtn'){UI.menu=!UI.menu||(!G&&!ONLINE.lobby);render();return}

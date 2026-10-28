@@ -180,6 +180,12 @@ button.ab:disabled{opacity:.75}
 .panel h2{font-family:var(--display);font-weight:600;margin:0;font-size:22px;text-wrap:balance}
 .panel p{margin:0;color:var(--muted);max-width:65ch}
 .panel .choices{display:flex;gap:10px;flex-wrap:wrap}
+.nameask{border:1px solid var(--line,rgba(255,255,255,.15));border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;max-width:65ch;background:rgba(255,255,255,.03)}
+.nameask b{color:var(--fg)}
+.nameask form{display:flex;gap:8px;flex-wrap:wrap}
+.nameask input{flex:1 1 180px;min-width:0;font:inherit;font-size:16px;padding:8px 10px;border-radius:8px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.35);color:var(--fg)}
+.nameask input:focus{outline:2px solid var(--era1,#6cf);outline-offset:1px}
+.nameask.done{color:var(--fg)}
 .panel details{color:var(--muted);font-size:14px}
 .panel details summary{cursor:pointer;color:var(--fg);font-weight:600}
 .panel details ul{padding-left:18px;margin:8px 0 0;display:flex;flex-direction:column;gap:4px}
