@@ -1145,7 +1145,9 @@ function pickSite(pi,o){
   if(!cands.length) return Promise.resolve(null);
   if(G.players[pi].ai){cands.sort((a,b)=>o.aiScore(b)-o.aiScore(a));return Promise.resolve(cands[0])}
   if(cands.length===1&&o.auto) return Promise.resolve(cands[0]);
-  return new Promise(res=>{UI.prompt={kind:'site',pi,text:o.prompt,set:new Set(cands.map(s=>s.uid)),extra:o.extra||[],cancellable:o.cancellable!==false,resolve:v=>{UI.prompt=null;res(v);render()}};render()});
+  /* choosing where damage goes: the player aims an arrow from the damage's source */
+  const aim=/damage/i.test(o.prompt||'')&&!/counter|save|tuck/i.test(o.prompt)?{src:CUR_SRC?{site:CUR_SRC.site??null,card:CUR_SRC.card??null,pi:CUR_SRC.pi??pi}:{site:null,card:null,pi},st:/structural/i.test(o.prompt)}:null;
+  return new Promise(res=>{UI.prompt={kind:'site',pi,text:o.prompt,aim,set:new Set(cands.map(s=>s.uid)),extra:o.extra||[],cancellable:o.cancellable!==false,resolve:v=>{UI.prompt=null;res(v);render()}};render()});
 }
 function pickOption(pi,o){
   if(G.players[pi].ai) return Promise.resolve(o.aiChoose?o.aiChoose():o.options[0].value);
@@ -1935,7 +1937,7 @@ function siteMini(s,vi){
   /* the wall ring on the Zealot disc already says 'Fortified', so drop that sentence from the text */
   const miniTx=(d.text||'').replace(/^\s*Fortified\.\s*/,'');
   const chips='';
-  return `<div class="card site mini ${eraCls(d)} ${target?'target':''}" data-suid="${s.uid}" ${target?`data-site="${s.uid}" tabindex="0" role="button" aria-label="Choose ${esc(d.name)}"`:''}>
+  return `<div class="card site mini ${eraCls(d)} ${target?'target':''}${target&&UI.prompt.aim?' aimt':''}" data-suid="${s.uid}" ${target?`data-site="${s.uid}" tabindex="0" role="button" aria-label="Choose ${esc(d.name)}"`:''}>
     ${bandHTML(d)}${artHTML(d)}
     <div class="body">${miniTx?`<div class="tx">${cardText(miniTx)}</div>`:''}${abs?`<div class="abs">${abs}</div>`:''}${chips?`<div class="chips">${chips}</div>`:''}</div>
     <div class="foot">${zcHTML(shownZ(s),isFort(s))}${footIcons(s)}
@@ -2140,9 +2142,10 @@ function render(){
   else if(G.over&&!UI.closedOver) o=overHTML();
   ov.hidden=!o; {const h=term(o);if(h!==UI.ovHTML){ov.innerHTML=h;UI.ovHTML=h}}
   syncDiscard();
+  syncAim();
   if(G&&G.over&&G.rec&&!G.rec.sent) recSend(playerName());
   /* no board hover preview while choosing a card from your hand: it would cover the prompt */
-  if(UI.prompt&&UI.prompt.kind==='hand'){const z=$('zoom');if(z)z.hidden=true}
+  if(UI.prompt&&(UI.prompt.kind==='hand'||UI.prompt.aim)){const z=$('zoom');if(z)z.hidden=true}
   equalizeCards();
   drawAnims();
   if(oldRects){if(REV.q.length)playReveals(oldRects);followerAnims(oldRects);placeAnims(oldRects);if(ARROWS.q.length)playArrows(oldRects);holdShifts(oldRects)}
@@ -2172,6 +2175,45 @@ function fxLayer(){
   svg.setAttribute('viewBox',`0 0 ${innerWidth} ${innerHeight}`);svg.setAttribute('width',innerWidth);svg.setAttribute('height',innerHeight);
   return svg;
 }
+/* ---- Aiming: while you choose where damage goes, a red arrow runs from the source to your pointer
+   and snaps onto the site under it ---- */
+const AIM={x:null,y:null,raf:0};
+function aimSrcRect(a){
+  if(a.site!=null){const e=document.querySelector(`[data-suid="${a.site}"]`);if(e)return e.getBoundingClientRect()}
+  if(a.card!=null){const e=document.querySelector(`#handDock [data-play="${a.card}"],#handDock [data-pick="${a.card}"]`);if(e)return e.getBoundingClientRect();
+    const h=document.querySelector('#handDock .hand');if(h&&a.pi===viewer()){const b=h.getBoundingClientRect();return {left:b.left+b.width/2-40,top:b.top,width:80,height:60}}}
+  return zoneRect(a.pi);
+}
+function syncAim(){
+  const P=UI.prompt,on=!!(P&&P.kind==='site'&&P.aim&&G&&!G.players[P.pi].ai&&!HOST.server);
+  document.body.classList.toggle('aiming',on);
+  let svg=document.getElementById('aimsvg');
+  if(!on){if(svg)svg.remove();return}
+  const NS='http://www.w3.org/2000/svg';
+  if(!svg){svg=document.createElementNS(NS,'svg');svg.id='aimsvg';svg.setAttribute('aria-hidden','true');
+    svg.innerHTML='<g class="aimg"><path class="aimp" fill="none" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 11"/><path class="aimh" d="M12 0L-8 -8L-3 0L-8 8Z" stroke="#2a0a04" stroke-width="1"/><circle class="aimr" r="22" fill="none" stroke-width="3"/></g>';document.body.appendChild(svg)}
+  svg.setAttribute('viewBox',`0 0 ${innerWidth} ${innerHeight}`);svg.setAttribute('width',innerWidth);svg.setAttribute('height',innerHeight);
+  const col=P.aim.st?'#ff9a1f':'#ff3b2f';
+  const a=aimSrcRect(P.aim.src);
+  const pth=svg.querySelector('.aimp'),hd=svg.querySelector('.aimh'),ring=svg.querySelector('.aimr');
+  pth.setAttribute('stroke',col);hd.setAttribute('fill',col);ring.setAttribute('stroke',col);
+  svg.querySelector('.aimg').style.filter=`drop-shadow(0 0 5px ${P.aim.st?'#ff7a00':'#ff1a0a'})`;
+  document.querySelectorAll('.aimt.aimon').forEach(e=>e.classList.remove('aimon'));
+  if(!a||AIM.x==null){pth.setAttribute('d','');hd.setAttribute('transform','scale(0)');ring.setAttribute('r','0');return}
+  const p0={x:a.left+a.width/2,y:a.top+Math.min(a.height/2,60)};
+  /* over a valid target: lock onto it */
+  const over=document.elementFromPoint(AIM.x,AIM.y),tEl=over&&over.closest&&over.closest('.aimt');
+  let p2={x:AIM.x,y:AIM.y},locked=false;
+  if(tEl){const b=tEl.getBoundingClientRect();p2={x:b.left+b.width/2,y:b.top+Math.min(b.height*0.32,70)};locked=true;tEl.classList.add('aimon')}
+  const dist=Math.hypot(p2.x-p0.x,p2.y-p0.y),lift=Math.min(220,dist*0.35+30);
+  const ddx=p2.x-p0.x,bend=Math.abs(ddx)<140?(ddx>=0?1:-1)*(140-Math.abs(ddx))*0.7:0;
+  const p1={x:(p0.x+p2.x)/2+bend,y:Math.min(p0.y,p2.y)-lift};
+  pth.setAttribute('d',`M${p0.x} ${p0.y}Q${p1.x} ${p1.y} ${p2.x} ${p2.y}`);
+  const ang=Math.atan2(p2.y-p1.y,p2.x-p1.x)*180/Math.PI;
+  hd.setAttribute('transform',`translate(${p2.x} ${p2.y}) rotate(${ang}) scale(${locked?1.6:1.25})`);
+  ring.setAttribute('cx',p2.x);ring.setAttribute('cy',p2.y);ring.setAttribute('r',locked?'26':'0');
+}
+function aimMove(e){AIM.x=e.clientX;AIM.y=e.clientY;if(!AIM.raf)AIM.raf=requestAnimationFrame(()=>{AIM.raf=0;syncAim()})}
 function playArrows(old){
   const list=ARROWS.q.splice(0);
   const reduce=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -2766,7 +2808,7 @@ function snapshot(pi,full){
     if(P.pi===pi){
       if(P.seq==null)P.seq=++PROMPT_SEQ;
       s.prompt={seq:P.seq,kind:P.kind,text:P.text,cancellable:!!P.cancellable,cancelLabel:P.cancelLabel||null,
-        set:P.set?[...P.set]:[],options:(P.options||[]).map(o=>o.label),extra:(P.extra||[]).map(o=>o.label),def:P.def||null,slots:P.slots||0};
+        set:P.set?[...P.set]:[],options:(P.options||[]).map(o=>o.label),extra:(P.extra||[]).map(o=>o.label),def:P.def||null,slots:P.slots||0,aim:P.aim||null};
     } else s.waiting=P.pi;
   }
   if(R){
@@ -2878,7 +2920,7 @@ function onlineSnap(s){
   if(s.prompt){
     const q=s.prompt;
     UI.prompt={kind:q.kind,pi:ONLINE.seat,seq:q.seq,text:q.text,cancellable:q.cancellable,cancelLabel:q.cancelLabel,set:new Set(q.set),
-      options:q.options.map((label,i)=>({label,value:i})),extra:q.extra.map((label,i)=>({label,value:i})),def:q.def,slots:q.slots,
+      options:q.options.map((label,i)=>({label,value:i})),extra:q.extra.map((label,i)=>({label,value:i})),def:q.def,slots:q.slots,aim:q.aim||null,
       resolve:v=>{
         let m;
         if(v===null||v===undefined) m={a:'cancel'};
@@ -3056,6 +3098,7 @@ if(HAS_DOM){
     if(e.key==='Escape'&&UI.prompt&&UI.prompt.cancellable)UI.prompt.resolve(null);
   });
   addEventListener('resize',()=>{if(G)equalizeCards()});
+  addEventListener('pointermove',aimMove,{passive:true});
   /* Hovering a card in your hand shows its full ability text (the board-style 2-line cap is lifted),
    and raises the card far enough to show all of it */
 document.addEventListener('mouseover',e=>{
@@ -3064,7 +3107,7 @@ document.addEventListener('mouseover',e=>{
   if(hc&&!hc.classList.contains('full')){hc.dataset.lift0=hc.style.getPropertyValue('--lift');hc.classList.add('full');
     const z=parseFloat(hc.style.zoom)||1;hc.style.setProperty('--lift',Math.max(0,hc.offsetHeight-DOCK_PEEK/z)+'px')}
 });
-document.addEventListener('mouseover',e=>{const dc=e.target.closest&&e.target.closest('[data-dcard]');if(dc){showDiscardZoom(dc);return}{const z=$('zoom');if(z)z.classList.remove('over-dialog')}if(UI.prompt&&UI.prompt.kind==='hand'){const z=$('zoom');if(z)z.hidden=true;return}const at=e.target.closest&&e.target.closest('#app [data-atts]');if(at){showAttZoom(at);return}const el=e.target.closest&&e.target.closest('#app [data-suid]');const z=$('zoom');if(el)showZoom(el);else if(z&&!z.hidden)z.hidden=true});
+document.addEventListener('mouseover',e=>{const dc=e.target.closest&&e.target.closest('[data-dcard]');if(dc){showDiscardZoom(dc);return}{const z=$('zoom');if(z)z.classList.remove('over-dialog')}if(UI.prompt&&(UI.prompt.kind==='hand'||UI.prompt.aim)){const z=$('zoom');if(z)z.hidden=true;return}const at=e.target.closest&&e.target.closest('#app [data-atts]');if(at){showAttZoom(at);return}const el=e.target.closest&&e.target.closest('#app [data-suid]');const z=$('zoom');if(el)showZoom(el);else if(z&&!z.hidden)z.hidden=true});
   document.addEventListener('scroll',()=>{const z=$('zoom');if(z)z.hidden=true},true);
   render();
   if(/^https?:$/.test(location.protocol)) fetch('/api/ping').then(r=>r.ok?r.json():null).then(j=>{
