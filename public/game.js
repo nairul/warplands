@@ -471,7 +471,7 @@ const CARDS=[
    abilities:[
     {need:1,actions:0,infinite:true,passive:true,text:'After your followers are killed on an adjacent site, gain followers on Healer Hut equal to half the number killed (rounded down).'},
     {need:3,actions:0,infinite:true,passive:true,text:'Round up instead.'}]},
-  {id:'farm',name:'Fields',level:1,type:'site',cost:1,integrity:2,count:2,worth:1.5,
+  {id:'farm',name:'Fields',level:1,type:'site',cost:1,integrity:3,count:2,worth:1.5,
    abilities:[
     {need:0,actions:0,text:'Tuck 1 card under Fields to gain 1 follower on any site.',can:c=>c.me.hand.length>0&&c.me.sites.some(canGain),
      run:async c=>{const k=await pickHandCard(c.pi,{prompt:'Fields: choose a card to tuck under Fields.'});if(!k)return;
