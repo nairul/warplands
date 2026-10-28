@@ -41,3 +41,7 @@ Finished games against the computer are posted to `/api/log` and saved by the Wo
 `nairul/warplands-logs` repo (one JSON file per game under `games/YYYY-MM/`). The Worker needs the
 `GITHUB_LOGS_TOKEN` **secret** (a fine-grained GitHub token with Contents: read and write on that repo only),
 set under Settings → Runtime variables and secrets with **Secret** ticked. `/api/log/status` checks the setup.
+
+Each log records the commit it was played on (`version`) and, if the player gave one, their name
+(`playerName`, added via `/api/log/name` after the game). Which games to review is tracked in
+[AI_CHANGELOG.md](AI_CHANGELOG.md): use games from the newest computer change onward.
