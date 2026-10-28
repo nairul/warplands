@@ -129,7 +129,7 @@ function dmgValue(site,n){
   const killed=isFort(site)?0:Math.min(n,site.followers);
   return killed+0.25*n+(n/left)*(Math.max(0,site.followers-killed)*0.5+w*0.5);
 }
-function structValue(site,n){if(ffProtects(site))return -0.5;const left=integ(site)-site.damage;return n>=left?site.followers+2+(site.card.def.worth||1):0.35*n}
+function structValue(site,n){if(ffProtects(site))return -0.5;const left=integ(site)-site.damage;return n>=left?site.followers+2+(site.card.def.worth||1):0.35*n+(n/left)*(site.followers*0.3+(site.card.def.worth||1)*0.3+(site.card.def.attacker?0.8:0))}
 function killValue(site){let v=1;if((site.card.def.abilities||[]).some(a=>!a.passive&&a.need===site.followers))v+=1.2;if(hasAtt(site,'plague'))v-=0.4;return v}
 function bestOpp(c,n){let b=-1;for(const s of c.opp.sites)b=Math.max(b,dmgValue(s,n));return b}
 function bestOppS(c,n){let b=-1;for(const s of c.opp.sites)b=Math.max(b,structValue(s,n));return b}
@@ -1003,7 +1003,8 @@ const VERSION={sha:''}; /* the deployed commit, read from version.json; stamped 
 function recStart(){
   G.rec={v:1,started:new Date().toISOString(),lines:[],turns:[],ai:[],
     openingHands:G.players.map(p=>({player:p.name,cards:p.hand.map(k=>k.def.name)})),
-    stacks:{1:G.stacks[1].map(k=>k.def.name),2:G.stacks[2].map(k=>k.def.name),3:G.stacks[3].map(k=>k.def.name),4:G.stacks[4].map(k=>k.def.name)},sent:false};
+    stacks:{1:G.stacks[1].map(k=>k.def.name),2:G.stacks[2].map(k=>k.def.name),3:G.stacks[3].map(k=>k.def.name),4:G.stacks[4].map(k=>k.def.name)},sent:false,
+    claim:Array.from({length:20},()=>'abcdefghijkmnpqrstuvwxyz23456789'[Math.floor(Math.random()*32)]).join('')};
 }
 function recSnap(pi){
   G.rec.turns.push({turn:G.turnCount,player:G.players[pi].name,players:G.players.map(p=>({name:p.name,level:p.level,zealots:totalF(p),
@@ -1014,14 +1015,14 @@ function recSend(name){
   const r=G.rec;if(!r||r.sent)return;r.sent=true;
   name=String(name||'').trim().slice(0,40);r.name=name;
   const o=G.over;
-  const body={v:r.v,mode:'ai',playerName:name||undefined,version:(typeof window!=='undefined'&&window.__WARPLANDS_VERSION)||VERSION.sha||'unknown',started:r.started,ended:new Date().toISOString(),
+  const body={v:r.v,mode:'ai',playerName:name||undefined,claim:r.claim,version:(typeof window!=='undefined'&&window.__WARPLANDS_VERSION)||VERSION.sha||'unknown',started:r.started,ended:new Date().toISOString(),
     result:{winner:o.winner===-1?'draw':G.players[o.winner].name,type:o.type,reason:o.reason,turns:G.turnCount},
     finalLevels:G.players.map(p=>({player:p.name,level:p.level,zealots:totalF(p)})),
     openingHands:r.openingHands,stacks:r.stacks,turns:r.turns,aiDecisions:r.ai,log:r.lines.map(([t,m])=>[t,term(m)])};
   /* no keepalive: browsers refuse keepalive uploads over 64 KB, and a long game's log is bigger than that */
   const data=JSON.stringify(body);
   try{fetch('/api/log',{method:'POST',headers:{'content-type':'application/json'},body:data})
-    .then(r=>r.json().then(j=>console.info('[Warplands] game log',r.status,j,Math.round(data.length/1024)+' KB')))
+    .then(res=>res.json().then(j=>{console.info('[Warplands] game log',res.status,j,Math.round(data.length/1024)+' KB');if(j&&j.path){r.path=j.path;if(r.pendingName)postName(r)}}))
     .catch(e=>console.info('[Warplands] game log not sent:',e&&e.message))}catch(e){}
 }
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
@@ -1566,7 +1567,7 @@ function aiOptions(pi,steady){
 }
 /* Lookahead: try each candidate action on a copy of the game (draw stacks reshuffled,
    the opponent's hand hidden) and keep the one that leaves the best position. */
-const EV={depth:0,K2:6,pot:0.8,aggr:0.3,atk:2.5,stuck:3,f:0.9,fLate:1.0,card:1.1,cardL:0.25,lvl:4.5,doom:0.85,site:1.4,staffed:0.8,tuck:0.4,att:1.2,act:0.9,risk:1.2,K:14,hold:3.2};
+const EV={depth:0,K2:6,pot:0.8,aggr:0.3,atk:2.5,stuck:3,f:0.9,fLate:1.0,card:1.1,cardL:0.25,lvl:4.5,doom:0.85,site:1.4,staffed:0.8,tuck:0.4,att:1.2,act:0.9,risk:1.2,K:14,hold:3.2,offRisk:0};
 /* one-shot damage events are worth keeping for a site that matters, not spending on spare Zealots */
 const HOLD_EV=d=>d.type==='event'&&/\bdamage\b/i.test(d.text||'')&&/^Do /.test(d.text||'');
 const HIDDEN={id:'hidden',name:'Hidden card',level:1,type:'hidden',cost:99};
@@ -1619,9 +1620,10 @@ function evalPos(pi,noPot){
       v+=s.tucked.length*(s.card.def.id==='farm'?fieldsTuckVal(s):EV.tuck);
       if(s.card.def.id==='healerhut')v+=Math.min(2,adjacent(s).reduce((a,x)=>a+x.followers,0)*0.12);
       for(const a of s.attachments)v+=attVal(a,s);
-      v-=EV.risk*s.followers*(s.damage/I)*(isFort(s)?0.6:1);
+      /* Zealots on a damaged site are at risk mostly for the side that's about to be attacked: the other side moves first and can pull them out */
+      v-=EV.risk*s.followers*(s.damage/I)*(isFort(s)?0.6:1)*(p.i===G.turn?1:EV.offRisk);
       /* Zealots piled on a site that will likely fall: the crew its abilities need is fine, the excess is at risk */
-      if(AIX.doom&&s.followers&&doomed(s,inc)) v-=EV.doom*Math.max(0,s.followers-needOf(s));
+      if(AIX.doom&&s.followers&&doomed(s,inc)) v-=EV.doom*Math.max(0,s.followers-needOf(s))*(p.i===G.turn?1:EV.offRisk);
     }
     return v;
   };
@@ -2070,12 +2072,23 @@ function menuHTML0(){
     </div>`;
 }
 /* After a game against the computer: ask who played, then send the game record (or send it unnamed if they skip or move on) */
-function sendLog(name){if(name===undefined){const i=typeof document!=='undefined'&&$('pname');name=i?i.value:undefined}if(UI.logTimer){clearTimeout(UI.logTimer);UI.logTimer=null}if(G&&G.over&&G.rec&&!G.rec.sent){if(name!=null){try{localStorage.setItem('wl-name',name.trim().slice(0,40))}catch(e){}}recSend(name)}}
+/* Every game against the computer is logged the moment it ends (with the name from last time, if any).
+   A name typed afterwards is attached to that same record. */
+function postName(r){const name=r.pendingName;r.pendingName=null;
+  try{fetch('/api/log/name',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({path:r.path,claim:r.claim,name})}).catch(()=>{})}catch(e){}}
+function setLogName(name){
+  const r=G&&G.rec;if(!r)return;name=String(name||'').trim().slice(0,40);r.asked=true;if(!name)return;
+  try{localStorage.setItem('wl-name',name)}catch(e){}
+  r.thanked=name;if(name===r.name)return;r.name=name;r.pendingName=name;if(r.path)postName(r);
+}
+/* moving on with a name typed but not sent: keep it */
+function typedName(){const i=$('pname');if(i&&i.value.trim()&&G&&G.rec&&!G.rec.asked)setLogName(i.value)}
 function nameAskHTML(){
   if(!G.rec||G.mode!=='ai')return '';
-  if(G.rec.sent)return G.rec.name?`<div class="nameask done">Thanks, ${esc(G.rec.name)}! Your game record was sent.</div>`:'';
+  if(G.rec.thanked)return `<div class="nameask done">Thanks, ${esc(G.rec.thanked)}! Your name was added to this game's record.</div>`;
+  if(G.rec.asked)return '';
   let saved='';try{saved=localStorage.getItem('wl-name')||''}catch(e){}
-  return `<div class="nameask"><b>Who played?</b><p>We save a record of every game against the computer and study them to make it a tougher opponent. Add your name so we know whose game this was.</p>
+  return `<div class="nameask"><b>Who played?</b><p>This game's record has been saved. We study every game against the computer to make it a tougher opponent. Add your name so we know who played.</p>
     <form data-nameform="1"><input id="pname" maxlength="40" autocomplete="nickname" placeholder="Your name" value="${esc(saved)}"><button class="btn primary" type="submit">Send</button><button class="btn" type="button" data-nameskip="1">Skip</button></form></div>`;
 }
 function overHTML(){
@@ -2127,7 +2140,7 @@ function render(){
   else if(G.over&&!UI.closedOver) o=overHTML();
   ov.hidden=!o; {const h=term(o);if(h!==UI.ovHTML){ov.innerHTML=h;UI.ovHTML=h}}
   syncDiscard();
-  if(G&&G.over&&G.rec&&!G.rec.sent&&!UI.logTimer) UI.logTimer=setTimeout(()=>{UI.logTimer=null;sendLog()},180000);
+  if(G&&G.over&&G.rec&&!G.rec.sent) recSend(playerName());
   /* no board hover preview while choosing a card from your hand: it would cover the prompt */
   if(UI.prompt&&UI.prompt.kind==='hand'){const z=$('zoom');if(z)z.hidden=true}
   equalizeCards();
@@ -2989,9 +3002,7 @@ if(HAS_DOM){
     const badReloc=tst&&tst.relocExact&&e.target.closest('[data-rlok]')&&!tutRelocOK();
     if(G&&G.tut&&!G.tut.free&&(badReloc||!tutAllows(e.target))){e.stopPropagation();e.preventDefault();const c=$('coach');if(c)c.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:260});}
   },true);
-  document.addEventListener('submit',e=>{if(e.target.closest('[data-nameform]')){e.preventDefault();const v=($('pname')||{}).value||'';sendLog(v);render()}});
-  /* leaving the page with a finished game still unsent: send it unnamed */
-  window.addEventListener('pagehide',()=>sendLog());
+  document.addEventListener('submit',e=>{if(e.target.closest('[data-nameform]')){e.preventDefault();setLogName(($('pname')||{}).value||'');render()}});
   document.addEventListener('click',e=>{
     if(e.target.closest('[data-discard]')){UI.dview=!UI.dview;syncDiscard();return}
     if(e.target.closest('[data-dclose]')||e.target.id==='discardView'){UI.dview=false;syncDiscard();return}
@@ -3005,11 +3016,11 @@ if(HAS_DOM){
     if(ds.online==='rematch'){onlineSend({t:'rematch'});return}
     if(ds.leave){onlineLeave();return}
     if(ds.copycode){const c=ONLINE.code||'';(navigator.clipboard?navigator.clipboard.writeText(c):Promise.reject()).then(()=>{t.textContent='Copied'}).catch(()=>{t.textContent=c});return}
-    if(ds.nameskip){sendLog('');render();return}
-    if(ds.new){sendLog();if(ONLINE.active)onlineLeave();UI.closedOver=false;if(ds.new==='tutorial')newGame('ai','tutorial');else newGame(ds.new);return}
+    if(ds.nameskip){if(G&&G.rec)G.rec.asked=true;render();return}
+    if(ds.new){typedName();if(ONLINE.active)onlineLeave();UI.closedOver=false;if(ds.new==='tutorial')newGame('ai','tutorial');else newGame(ds.new);return}
     if(ds.tut==='next'){tutAdvance();return}
     if(ds.resume){UI.menu=false;render();return}
-    if(ds.menu){sendLog();UI.menu=true;UI.closedOver=false;render();return}
+    if(ds.menu){typedName();UI.menu=true;UI.closedOver=false;render();return}
     if(ds.close){UI.closedOver=true;render();return}
     if(ds.curtain){UI.curtain=false;render();return}
     if(t.id==='menuBtn'){UI.menu=!UI.menu||(!G&&!ONLINE.lobby);render();return}

@@ -41,6 +41,7 @@ async function saveLog(request, env, ctx) {
   let log;
   try { log = JSON.parse(text); } catch (e) { return json({ error: 'Not JSON' }, 400); }
   if (!log || log.v !== 1 || log.mode !== 'ai' || !Array.isArray(log.log) || !log.result) return json({ error: 'Not a game log' }, 400);
+  if (log.claim != null && !/^[A-Za-z0-9]{8,64}$/.test(String(log.claim))) return json({ error: 'Bad claim' }, 400);
   const d = new Date(), pad = n => String(n).padStart(2, '0');
   const winner = String(log.result.winner || 'unknown').replace(/[^A-Za-z]/g, '').toLowerCase() || 'unknown';
   const player = String(log.playerName || '').replace(/[^A-Za-z0-9]/g, '').toLowerCase().slice(0, 20);
@@ -59,6 +60,42 @@ async function saveLog(request, env, ctx) {
   return json({ ok: true, path }, 202);
 }
 
+/* The player's name, added after the game's log was already saved. The browser proves it sent that log
+   by repeating the random claim code that log carries. The log may still be uploading, so retry a few times. */
+const b64dec = b => { const bin = atob(b.replace(/\n/g, '')); return new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0))); };
+const b64enc = t => { const bytes = new TextEncoder().encode(t); let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000)); return btoa(bin); };
+const nameTimes = new Map();
+async function nameLog(request, env, ctx) {
+  if (!env.GITHUB_LOGS_TOKEN) return json({ error: 'Logging is not configured' }, 503);
+  const ip = request.headers.get('cf-connecting-ip') || 'unknown', now = Date.now();
+  const times = (nameTimes.get(ip) || []).filter(t => now - t < 600_000);
+  if (times.length >= 10) return json({ error: 'Slow down' }, 429);
+  times.push(now); nameTimes.set(ip, times);
+  let b;
+  try { const t = await request.text(); if (t.length > 2000) return json({ error: 'Too large' }, 413); b = JSON.parse(t); } catch (e) { return json({ error: 'Bad request' }, 400); }
+  const path = String(b && b.path || ''), claim = String(b && b.claim || ''), name = String(b && b.name || '').trim().slice(0, 40);
+  if (!/^games\/\d{4}-\d{2}\/[A-Za-z0-9-]+\.json$/.test(path) || !/^[A-Za-z0-9]{8,64}$/.test(claim) || !name) return json({ error: 'Bad request' }, 400);
+  const url = `https://api.github.com/repos/${LOG_REPO}/contents/${path}`;
+  const job = (async () => {
+    for (let i = 0; i < 6; i++) {
+      if (i) await new Promise(r => setTimeout(r, 2500 * i));
+      const g = await fetch(url, { headers: GH(env.GITHUB_LOGS_TOKEN) });
+      if (g.status === 404) continue;              /* still uploading */
+      if (!g.ok) return;
+      const f = await g.json();
+      let log; try { log = JSON.parse(f.content ? b64dec(f.content) : await (await fetch(f.download_url, { headers: GH(env.GITHUB_LOGS_TOKEN) })).text()); } catch (e) { return; }
+      if (log.claim !== claim) return;             /* not this player's game */
+      log.playerName = name;
+      const r = await fetch(url, { method: 'PUT', headers: GH(env.GITHUB_LOGS_TOKEN),
+        body: JSON.stringify({ message: `Game log: played by ${name}`, content: b64enc(JSON.stringify(log, null, 1)), sha: f.sha }) });
+      if (r.ok) return;
+      if (r.status !== 409 && r.status !== 422) return;
+    }
+  })().catch(e => console.log('name update failed', String(e)));
+  ctx.waitUntil(job);
+  return json({ ok: true }, 202);
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -67,6 +104,7 @@ export default {
 
     /* Game logs from games against the computer, saved to the warplands-logs GitHub repo */
     if (url.pathname === '/api/log' && request.method === 'POST') return saveLog(request, env, ctx);
+    if (url.pathname === '/api/log/name' && request.method === 'POST') return nameLog(request, env, ctx);
     /* Self-check for game logging: is the token set, and does GitHub accept it for the logs repo? */
     if (url.pathname === '/api/log/status') return logStatus(env);
 
