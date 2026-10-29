@@ -22,6 +22,7 @@ Logs older than 8898344 have no `version` field (logging began at 29874ad).
 
 | Commit | Date | What changed |
 |---|---|---|
+| ce74895 | 2026-10-29 | Treasury can be used before the target site has acted, giving that site a second activation this turn. |
 | 2e36be9 | 2026-10-28 | Dragon's Maw is no longer fortified. |
 | 41a4795 | 2026-10-28 | Ballista Tower costs 2 Mana to play (was 1); its abilities still cost 1 Mana each. |
 | 7df3334 | 2026-10-28 | Oracle's Eye also draws from your highest available deck when it's attached. |
