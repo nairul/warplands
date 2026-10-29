@@ -2017,6 +2017,41 @@ function syncDiscard(){
   if(!el){el=document.createElement('div');el.id='discardView';el.className='dview';el.hidden=true;document.body.appendChild(el)}
   const open=!!(UI.dview&&G);el.hidden=!open;if(!open){const z=$('zoom');if(z&&z.classList.contains('over-dialog')){z.hidden=true;z.classList.remove('over-dialog')}}if(open)el.innerHTML=term(discardViewHTML());
 }
+/* ---- Card List: every card in the game, by Level > Type > name; hover a card to see it full size ---- */
+const TYPE_ORDER={site:0,event:1,attachment:2,reaction:3};
+function catalogue(){return CARDS.slice().sort((a,b)=>a.level-b.level||TYPE_ORDER[a.type]-TYPE_ORDER[b.type]||(b.start?1:0)-(a.start?1:0)||a.name.localeCompare(b.name))}
+/* a card face drawn from its definition alone (no game needed) */
+function defFaceHTML(d){
+  if(d.type!=='site') return attCardHTML({def:d});
+  const tx=(d.text||'').replace(/^\s*Fortified\.\s*/,'');
+  const abs=(d.abilities||[]).map(ab=>`<div class="ab${ab.passive?' passive':''}">${reqHTML(ab)}<span>${cardText(ab.text)}${ab.passive?'<span class="auto">Automatic</span>':''}</span></div>`).join('');
+  return `<div class="card site ${eraCls(d)}">${bandHTML(d)}${artHTML(d)}${kindHTML(d)}<div class="body">${tx?`<div class="tx">${cardText(tx)}</div>`:''}${abs?`<div class="abs">${abs}</div>`:''}</div><div class="foot">${zcHTML(d.start?10:0,!!d.fortified)}<div class="attl"></div>${hpHTML(d.integrity||3,d.integrity||3)}</div></div>`;
+}
+function cardListHTML(){
+  const all=catalogue();let html='',lv=0,ty='';
+  for(const d of all){
+    if(d.level!==lv){if(lv)html+='</div></section>';lv=d.level;ty='';const n=all.filter(x=>x.level===lv).length;
+      html+=`<section class="cl-lv"><h3 class="${eraCls(d)}"><span>${ROMAN[lv]}</span> ${LEVEL_NAME[lv]} <small>${n} cards</small></h3><div class="cl-grid">`}
+    if(d.type!==ty){ty=d.type;html+=`<div class="cl-type">${TYPE_NAME[ty]}s</div>`}
+    html+=`<div class="card cl-tile ${eraCls(d)}" data-ccard="${d.id}" tabindex="0" aria-label="${esc(d.name)}">${bandHTML(d)}${artHTML(d)}${d.count>1?`<span class="cl-n">×${d.count}</span>`:''}</div>`;
+  }
+  if(lv)html+='</div></section>';
+  return `<div class="dv-box cl-box" role="dialog" aria-label="Card list"><div class="dv-head"><b>Card List</b><span>${all.length} cards · hover a card to see it in full</span><button class="dv-x" data-clclose="1" aria-label="Close">✕</button></div><div class="cl-body">${html}</div></div>`;
+}
+function syncCardList(){
+  let el=$('cardList');
+  if(!el){el=document.createElement('div');el.id='cardList';el.className='dview';el.hidden=true;document.body.appendChild(el)}
+  const open=!!UI.clist;
+  if(open&&el.hidden){el.innerHTML=term(cardListHTML());}
+  el.hidden=!open;
+  if(!open){const z=$('zoom');if(z&&z.classList.contains('over-dialog')){z.hidden=true;z.classList.remove('over-dialog')}}
+}
+function showCatZoom(el){
+  const z=$('zoom');const d=DEF[el.dataset.ccard];if(!z||!d)return;
+  z.innerHTML=term(defFaceHTML(d))+TWINKLES;z.classList.add('over-dialog');z.hidden=false;
+  const c=z.firstElementChild;if(c){c.style.zoom='';c.style.width='250px';c.style.minHeight='';c.style.maxWidth='none'}
+  const r=el.getBoundingClientRect();placeZoom(z,{left:r.left,right:r.right,top:r.top+r.height/2});
+}
 function discardViewHTML(){
   const n=G.discard.length;
   const rows=G.discard.map((k,i)=>{const d=k.def;return `<li class="${eraCls(d)}" data-dcard="${i}"><span class="no">${i+1}</span><span class="sw"></span><span class="dn">${esc(d.name)}</span><span class="dt">${ICONS[d.type]||''}${LEVEL_NAME[d.level]} ${TYPE_NAME[d.type].toLowerCase()}</span></li>`}).join('');
@@ -2057,7 +2092,7 @@ function menuHTML0(){
     <h1><span class="holo">Warplands</span></h1>
     <p>Lead your followers from a humble hamlet to a sprawling empire. Wipe out your opponent's followers, or hold more of them when three draw stacks run dry.</p>
     <p class="fine">Each game deals a fresh random draw stack for every level: 20 Level I cards, 15 Level II, 10 Level III and 5 Level IV.</p>
-    <div class="choices"><button class="btn primary" data-new="ai">Play the computer</button><button class="btn" data-new="tutorial">Tutorial</button>${G&&!G.over?'<button class="btn" data-resume="1">Resume game</button>':''}</div>
+    <div class="choices"><button class="btn primary" data-new="ai">Play the computer</button><button class="btn" data-new="tutorial">Tutorial</button><button class="btn" data-clist="1">Card List</button>${G&&!G.over?'<button class="btn" data-resume="1">Resume game</button>':''}</div>
     ${onlineMenuHTML()}
     <details><summary>How to play</summary><ul>
       <li>Each turn you get 3 actions (the first player gets 2 on turn one).</li>
@@ -3092,6 +3127,8 @@ if(HAS_DOM){
   document.addEventListener('click',e=>{
     if(e.target.closest('[data-discard]')){UI.dview=!UI.dview;syncDiscard();return}
     if(e.target.closest('[data-dclose]')||e.target.id==='discardView'){UI.dview=false;syncDiscard();return}
+    if(e.target.closest('[data-clist]')){UI.clist=true;syncCardList();return}
+    if(e.target.closest('[data-clclose]')||e.target.id==='cardList'){UI.clist=false;syncCardList();return}
     if(e.target.closest('#soundBtn')){SFX.on=!SFX.on;try{localStorage.setItem('tb-sound',SFX.on?'on':'off')}catch(err){}if(SFX.on){audioCtx();setTimeout(()=>sfx('place',1),30)}syncSound();return}
     const st=e.target.closest('[data-site]');
     const t=(st&&UI.prompt&&UI.prompt.kind==='site')?st:e.target.closest('button,[data-site]'); if(!t) return;
@@ -3138,6 +3175,7 @@ if(HAS_DOM){
   });
   document.addEventListener('keydown',e=>{
     if((e.key==='Enter'||e.key===' ')&&e.target.dataset&&e.target.dataset.site){e.preventDefault();e.target.click()}
+    if(e.key==='Escape'&&UI.clist){UI.clist=false;syncCardList();return}
     if(e.key==='Escape'&&UI.dview){UI.dview=false;syncDiscard();return}
     if(e.key==='Escape'&&UI.prompt&&UI.prompt.cancellable)UI.prompt.resolve(null);
   });
@@ -3157,7 +3195,7 @@ document.addEventListener('mouseover',e=>{
   if(hc&&!hc.classList.contains('full')){hc.dataset.lift0=hc.style.getPropertyValue('--lift');hc.classList.add('full');
     const z=parseFloat(hc.style.zoom)||1;hc.style.setProperty('--lift',Math.max(0,hc.offsetHeight-DOCK_PEEK/z)+'px')}
 });
-document.addEventListener('mouseover',e=>{const dc=e.target.closest&&e.target.closest('[data-dcard]');if(dc){showDiscardZoom(dc);return}{const z=$('zoom');if(z)z.classList.remove('over-dialog')}if(UI.prompt&&(UI.prompt.kind==='hand'||UI.prompt.aim)){const z=$('zoom');if(z)z.hidden=true;return}const at=e.target.closest&&e.target.closest('#app [data-atts]');if(at){showAttZoom(at);return}const el=e.target.closest&&e.target.closest('#app [data-suid]');const z=$('zoom');if(el)showZoom(el);else if(z&&!z.hidden)z.hidden=true});
+document.addEventListener('mouseover',e=>{const cc=e.target.closest&&e.target.closest('[data-ccard]');if(cc){showCatZoom(cc);return}if(UI.clist){const z=$('zoom');if(z)z.hidden=true;return}const dc=e.target.closest&&e.target.closest('[data-dcard]');if(dc){showDiscardZoom(dc);return}{const z=$('zoom');if(z)z.classList.remove('over-dialog')}if(UI.prompt&&(UI.prompt.kind==='hand'||UI.prompt.aim)){const z=$('zoom');if(z)z.hidden=true;return}const at=e.target.closest&&e.target.closest('#app [data-atts]');if(at){showAttZoom(at);return}const el=e.target.closest&&e.target.closest('#app [data-suid]');const z=$('zoom');if(el)showZoom(el);else if(z&&!z.hidden)z.hidden=true});
   document.addEventListener('scroll',()=>{const z=$('zoom');if(z)z.hidden=true},true);
   render();
   if(/^https?:$/.test(location.protocol)) fetch('/api/ping').then(r=>r.ok?r.json():null).then(j=>{
