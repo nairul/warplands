@@ -1950,7 +1950,8 @@ const TWINKLES=[[0,8],[0,55],[18,100],[62,100],[100,30],[100,82],[40,0],[85,0],[
 function showZoom(el){
   const z=$('zoom');if(!z||!G)return;
   const uid=+el.dataset.suid,st=allSites().find(x=>x.uid===uid);if(!st){z.hidden=true;return}
-  z.innerHTML=term(siteHTML(st,viewer(),true))+TWINKLES;
+  /* the preview is the printed card: full HP, its starting Zealots, no attachments */
+  z.innerHTML=term(defFaceHTML(st.card.def))+TWINKLES;
   /* the preview matches the board card exactly: same width, height and scale (never smaller) */
   {const c=z.firstElementChild,k=rowZoom(el);if(c){const r=el.getBoundingClientRect();c.style.zoom=k;c.style.width=(r.width/k)+'px';c.style.minHeight=(r.height/k)+'px';c.style.maxWidth='none'}}
   z.hidden=false;
@@ -2465,7 +2466,7 @@ function footIcons(s){
 }
 function attCardHTML(k){const d=k.def;return `<div class="card ${eraCls(d)}">${bandHTML(d)}${artHTML(d)}<div class="body"><div class="tx">${cardText(d.text)}</div></div></div>`}
 /* Hovering a card in the discard pile list shows the card itself */
-function cardFaceHTML(k){return k.def.type==='site'?siteHTML(mkSite(k,viewer()),viewer(),true):attCardHTML(k)}
+function cardFaceHTML(k){return defFaceHTML(k.def)}
 function showDiscardZoom(el){
   const z=$('zoom');if(!z||!G)return;const k=G.discard[+el.dataset.dcard];if(!k){z.hidden=true;return}
   z.innerHTML=term(cardFaceHTML(k))+TWINKLES;z.classList.add('over-dialog');z.hidden=false;
