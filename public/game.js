@@ -1762,7 +1762,7 @@ const TUT_STEPS=[
   {title:'Drawing cards',text:'Your hand holds the cards you can play. To get more, spend <b>1 Mana</b> to draw a card from one of the four <b>draw stacks</b> on the right: Hamlet, Township, City and Empire. Higher stacks hold stronger cards.',hl:'.rail .stacks',cont:true},
   {title:'Draw a Hamlet card',text:'You can only draw from your current level or lower, and you start at <b>Hamlet</b>. The higher stacks stay locked until you upgrade. Click the <b>Hamlet</b> stack to draw a card.',hl:'[data-draw="1"]',allow:['[data-draw="1"]','#prompt button'],done:()=>tutMe().hand.some(k=>k.uid===G.tut.treb)},
   {title:'Sites',text:'You drew a <b>Trebuchet</b>, a <b>site</b>. Sites are buildings: once played they stay on the table in your row, can hold Zealots, and have <b>abilities</b> you can use turn after turn. Like Warpland, each has HP and can be destroyed.',hl:()=>`[data-play="${G.tut.treb}"]`,cont:true},
-  {title:'Play Trebuchet',text:'Spend <b>2 Mana</b> to play the Trebuchet: click it in your hand. New sites always go at the right end of your row.',hl:()=>`[data-play="${G.tut.treb}"],[data-slot]`,allow:()=>[`[data-play="${G.tut.treb}"]`,'[data-slot]','#prompt button'],done:()=>!!tutTreb()},
+  {title:'Play Trebuchet',text:'Spend <b>2 Mana</b> to play the Trebuchet: drag it from your hand onto your row (or just click it). New sites always go at the right end of your row.',hl:()=>`[data-play="${G.tut.treb}"],[data-slot]`,allow:()=>[`[data-play="${G.tut.treb}"]`,'[data-slot]','#prompt button'],done:()=>!!tutTreb()},
   {title:'Site abilities',text:'Each ability shows what it needs: <span class="ic zn" role="img" aria-label="3 Zealots">3</span> is how many Zealots must be standing on the site, and <span class="ic mn" role="img" aria-label="1 Mana"><b>1</b></span> is its Mana cost. Trebuchet’s first ability needs <b>3 Zealots</b> on it and <b>1 Mana</b> to do 1 damage. Each site can use one ability per turn.',hl:()=>tutTreb()?`[data-suid="${tutTreb().uid}"]`:'',cont:true},
   {title:'Out of Mana!',text:'You’ve spent all 3 Mana, and Trebuchet has no Zealots on it yet, so there is nothing left to do this turn. You’ll add Zealots to Trebuchet next turn. Click <b>End turn</b>.',...END_TURN,done:()=>G.turn===1},
   {title:'Opponent’s turn',text:'Your opponent is taking its turn…',wait:true,done:()=>G.turn===0&&G.turnCount>=3&&!UI.busy},
@@ -2143,6 +2143,7 @@ function render(){
   ov.hidden=!o; {const h=term(o);if(h!==UI.ovHTML){ov.innerHTML=h;UI.ovHTML=h}}
   syncDiscard();
   syncAim();
+  syncDrag();
   if(G&&G.over&&G.rec&&!G.rec.sent) recSend(playerName());
   /* no board hover preview while choosing a card from your hand: it would cover the prompt */
   if(UI.prompt&&(UI.prompt.kind==='hand'||UI.prompt.aim)){const z=$('zoom');if(z)z.hidden=true}
@@ -2213,6 +2214,53 @@ function syncAim(){
   hd.setAttribute('transform',`translate(${p2.x} ${p2.y}) rotate(${ang}) scale(${locked?1.6:1.25})`);
   ring.setAttribute('cx',p2.x);ring.setAttribute('cy',p2.y);ring.setAttribute('r',locked?'26':'0');
 }
+/* ---- Drag a site from your hand onto your row to build it (clicking still works) ---- */
+const DRAG={on:false,uid:null,sx:0,sy:0,ghost:null,ox:0,oy:0,suppress:0};
+function dragZone(){return document.querySelector('#meZone')}
+function dragOver(x,y){const z=dragZone();if(!z)return false;const b=z.getBoundingClientRect();return x>=b.left&&x<=b.right&&y>=b.top&&y<=b.bottom}
+function syncDrag(){
+  if(!DRAG.on)return;
+  const el=document.querySelector(`#handDock [data-play="${DRAG.uid}"]`);if(el)el.classList.add('dragging');
+  const z=dragZone();if(!z)return;z.classList.add('dropok');
+  const row=z.querySelector('.row');
+  if(row&&!row.querySelector('.dropslot')){const ref=row.querySelector('.site');const d=document.createElement('div');d.className='dropslot';d.setAttribute('aria-hidden','true');
+    if(ref){const r=ref.getBoundingClientRect();d.style.width=r.width+'px';d.style.height=r.height+'px'}row.appendChild(d)}
+}
+function dragEnd(drop){
+  const uid=DRAG.uid,g=DRAG.ghost;DRAG.on=false;DRAG.uid=null;DRAG.ghost=null;DRAG.suppress=performance.now()+400;
+  document.body.classList.remove('dragsite');
+  document.querySelectorAll('.dragging').forEach(e=>e.classList.remove('dragging'));
+  document.querySelectorAll('.dropslot').forEach(e=>e.remove());
+  const z=dragZone();if(z)z.classList.remove('dropok','dropover');
+  const el=document.querySelector(`#handDock [data-play="${uid}"]`);
+  if(drop&&el){if(g)g.remove();el.click();return}
+  /* not dropped on your row: the card slides back to your hand */
+  if(g){if(el){const b=el.getBoundingClientRect(),gb=g.getBoundingClientRect();
+      g.animate([{transform:g.style.transform},{transform:`translate(${b.left}px,${b.top}px) scale(1)`,opacity:.4}],{duration:220,easing:'ease-in'}).onfinish=()=>g.remove()}
+    else g.remove()}
+}
+function dragDown(e){
+  if(e.button!==0||DRAG.on)return;
+  const el=e.target.closest&&e.target.closest('#handDock .card.site.playable[data-play]');if(!el)return;
+  DRAG.uid=+el.dataset.play;DRAG.sx=e.clientX;DRAG.sy=e.clientY;DRAG.armed=true;
+}
+function dragMove(e){
+  if(DRAG.armed&&!DRAG.on){
+    if(Math.hypot(e.clientX-DRAG.sx,e.clientY-DRAG.sy)<8)return;
+    const el=document.querySelector(`#handDock [data-play="${DRAG.uid}"]`);if(!el){DRAG.armed=false;return}
+    DRAG.on=true;DRAG.armed=false;
+    const b=el.getBoundingClientRect();DRAG.ox=DRAG.sx-b.left;DRAG.oy=DRAG.sy-b.top;
+    const g=el.cloneNode(true);g.classList.add('dragghost');g.classList.remove('full','playable');g.removeAttribute('data-play');
+    Object.assign(g.style,{width:b.width+'px',height:b.height+'px'});document.body.appendChild(g);DRAG.ghost=g;
+    document.body.classList.add('dragsite');const zz=$('zoom');if(zz)zz.hidden=true;
+    syncDrag();
+  }
+  if(!DRAG.on)return;
+  const x=e.clientX-DRAG.ox,y=e.clientY-DRAG.oy,over=dragOver(e.clientX,e.clientY);
+  DRAG.ghost.style.transform=`translate(${x}px,${y}px) scale(${over?0.92:0.85}) rotate(${over?0:-2}deg)`;
+  const z=dragZone();if(z)z.classList.toggle('dropover',over);
+}
+function dragUp(e){if(DRAG.armed){DRAG.armed=false;return}if(DRAG.on)dragEnd(dragOver(e.clientX,e.clientY))}
 function aimMove(e){AIM.x=e.clientX;AIM.y=e.clientY;if(!AIM.raf)AIM.raf=requestAnimationFrame(()=>{AIM.raf=0;syncAim()})}
 function playArrows(old){
   const list=ARROWS.q.splice(0);
@@ -3099,6 +3147,12 @@ if(HAS_DOM){
   });
   addEventListener('resize',()=>{if(G)equalizeCards()});
   addEventListener('pointermove',aimMove,{passive:true});
+  addEventListener('pointerdown',dragDown);
+  addEventListener('pointermove',dragMove,{passive:true});
+  addEventListener('pointerup',dragUp);
+  addEventListener('pointercancel',()=>{DRAG.armed=false;if(DRAG.on)dragEnd(false)});
+  /* the click a browser fires at the end of a drag isn't a click on the card */
+  document.addEventListener('click',e=>{if(e.isTrusted&&performance.now()<DRAG.suppress){e.stopPropagation();e.preventDefault();DRAG.suppress=0}},true);
   /* Hovering a card in your hand shows its full ability text (the board-style 2-line cap is lifted),
    and raises the card far enough to show all of it */
 document.addEventListener('mouseover',e=>{
