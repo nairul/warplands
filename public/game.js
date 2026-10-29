@@ -1762,7 +1762,7 @@ const TUT_STEPS=[
   {title:'Drawing cards',text:'Your hand holds the cards you can play. To get more, spend <b>1 Mana</b> to draw a card from one of the four <b>draw stacks</b> on the right: Hamlet, Township, City and Empire. Higher stacks hold stronger cards.',hl:'.rail .stacks',cont:true},
   {title:'Draw a Hamlet card',text:'You can only draw from your current level or lower, and you start at <b>Hamlet</b>. The higher stacks stay locked until you upgrade. Click the <b>Hamlet</b> stack to draw a card.',hl:'[data-draw="1"]',allow:['[data-draw="1"]','#prompt button'],done:()=>tutMe().hand.some(k=>k.uid===G.tut.treb)},
   {title:'Sites',text:'You drew a <b>Trebuchet</b>, a <b>site</b>. Sites are buildings: once played they stay on the table in your row, can hold Zealots, and have <b>abilities</b> you can use turn after turn. Like Warpland, each has HP and can be destroyed.',hl:()=>`[data-play="${G.tut.treb}"]`,cont:true},
-  {title:'Play Trebuchet',text:'Spend <b>2 Mana</b> to play the Trebuchet: drag it from your hand onto your row (or just click it). New sites always go at the right end of your row.',hl:()=>`[data-play="${G.tut.treb}"],[data-slot]`,allow:()=>[`[data-play="${G.tut.treb}"]`,'[data-slot]','#prompt button'],done:()=>!!tutTreb()},
+  {title:'Play Trebuchet',text:'Spend <b>2 Mana</b> to play the Trebuchet: drag it from your hand onto your board. New sites always go at the right end of your row.',hl:()=>`[data-play="${G.tut.treb}"],[data-slot]`,allow:()=>[`[data-play="${G.tut.treb}"]`,'[data-slot]','#prompt button'],done:()=>!!tutTreb()},
   {title:'Site abilities',text:'Each ability shows what it needs: <span class="ic zn" role="img" aria-label="3 Zealots">3</span> is how many Zealots must be standing on the site, and <span class="ic mn" role="img" aria-label="1 Mana"><b>1</b></span> is its Mana cost. Trebuchet’s first ability needs <b>3 Zealots</b> on it and <b>1 Mana</b> to do 1 damage. Each site can use one ability per turn.',hl:()=>tutTreb()?`[data-suid="${tutTreb().uid}"]`:'',cont:true},
   {title:'Out of Mana!',text:'You’ve spent all 3 Mana, and Trebuchet has no Zealots on it yet, so there is nothing left to do this turn. You’ll add Zealots to Trebuchet next turn. Click <b>End turn</b>.',...END_TURN,done:()=>G.turn===1},
   {title:'Opponent’s turn',text:'Your opponent is taking its turn…',wait:true,done:()=>G.turn===0&&G.turnCount>=3&&!UI.busy},
@@ -1771,7 +1771,7 @@ const TUT_STEPS=[
   {title:'Put Zealots on Trebuchet',text:'For now, let’s staff Trebuchet with the minimum number of Zealots it needs. Click <b>Relocate</b>, take <b>exactly 3</b> Zealots from Warpland and add them to Trebuchet, then confirm.',hl:'[data-act="relocate"]',allow:['[data-act="relocate"]','#overlay button'],relocExact:true,done:()=>{const t=tutTreb();return t&&t.followers>=3}},
   {title:'Use Trebuchet',text:'Trebuchet has its 3 Zealots. Click its first ability (<b>Do 1 damage</b>, 1 Mana) and target your opponent’s <b>Warpland</b>.',hl:()=>`[data-ab="${tutTreb()?tutTreb().uid:0}:0"],${oppHomeSel()}`,allow:()=>[`[data-ab="${tutTreb()?tutTreb().uid:0}:0"]`,oppHomeSel(),'#prompt button'],done:()=>{const t=tutTreb();return t&&t.usedTurn===G.turnCount}},
   {title:'Damage',text:'Each point of <b>damage</b> takes 1 HP off the site (<span class="hpbox tut-hp"><b>3</b></span>) and kills one Zealot on it. Two exceptions: <b>Fortified</b> sites and <b>Structural</b> damage hurt the site without killing its Zealots. And when a site’s HP reaches 0, it is <b>destroyed</b> and every Zealot on it dies.',hl:'#oppZone [data-suid]',cont:true},
-  {title:'Play Fields',text:'Spend your last Mana to play <b>Fields</b> (1 Mana). It joins the right end of your row.',hl:()=>`[data-play="${G.tut.fields}"],[data-slot]`,allow:()=>[`[data-play="${G.tut.fields}"]`,'[data-slot]','#prompt button'],done:()=>!!tutFields()},
+  {title:'Play Fields',text:'Spend your last Mana to play <b>Fields</b> (1 Mana): drag it onto your board. It joins the right end of your row.',hl:()=>`[data-play="${G.tut.fields}"],[data-slot]`,allow:()=>[`[data-play="${G.tut.fields}"]`,'[data-slot]','#prompt button'],done:()=>!!tutFields()},
   {title:'Tucking',text:'Some sites let you <b>tuck</b> a card from your hand underneath them. A tucked card is out of play for good, but it powers the site: Fields gains you a Zealot each time you tuck, and its second ability grows with every card tucked under it.',hl:()=>tutFields()?`[data-suid="${tutFields().uid}"]`:'',cont:true},
   {title:'Use Fields',text:'Fields’ first ability needs no Zealots and no Mana. Click it, choose <b>Palisade</b> as the card to tuck, then place the new Zealot on <b>Fields</b>.',hl:()=>`[data-ab="${tutFields()?tutFields().uid:0}:0"],[data-pick="${G.tut.keep}"],${siteSel(tutFields())}`,allow:()=>[`[data-ab="${tutFields()?tutFields().uid:0}:0"]`,`[data-pick="${G.tut.keep}"]`,siteSel(tutFields()),'#prompt button'],done:()=>{const f=tutFields();return f&&f.usedTurn===G.turnCount}},
   {title:'Out of Mana!',text:'You’re out of Mana and every site that can act has acted, so your turn is done. Click <b>End turn</b>.',...END_TURN,done:()=>G.turn===1},
@@ -1892,7 +1892,7 @@ function handCardHTML(card,pi){
     body=`<div class="body">${tx?`<div class="tx">${cardText(tx)}</div>`:''}${abs?`<div class="abs">${abs}</div>`:''}</div><div class="foot">${zcHTML(0,!!d.fortified)}<div class="attl"></div>${hpHTML(d.integrity||3,d.integrity||3)}</div>`;
   }
   else body=`<div class="body"><div class="tx">${cardText(d.text)}</div></div>`;
-  const title=pick?'Choose '+d.name:ok?'Play '+d.name:d.type==='reaction'?'Reactions are offered to you automatically when their condition happens':!hasEffect(pi,card)?'No valid target right now':'Not enough actions';
+  const title=pick?'Choose '+d.name:ok?(d.type==='site'?'Drag '+d.name+' onto your board to build it':'Play '+d.name):d.type==='reaction'?'Reactions are offered to you automatically when their condition happens':!hasEffect(pi,card)?'No valid target right now':'Not enough actions';
   return `<button class="card ${d.type==='site'?'site mini ':''}${eraCls(d)} ${ok?'playable':''} ${pick?'target':''}" ${pick?`data-pick="${card.uid}"`:`data-play="${card.uid}"`} ${ok||pick?'':'aria-disabled="true"'} title="${esc(title)}">${bandHTML(d)}${kindHTML(d)}${artHTML(d)}${body}</button>`;
 }
 function siteHTML(s,vi,full){
@@ -3208,7 +3208,10 @@ if(HAS_DOM){
   addEventListener('pointerup',dragUp);
   addEventListener('pointercancel',()=>{DRAG.armed=false;if(DRAG.on)dragEnd(false)});
   /* the click a browser fires at the end of a drag isn't a click on the card */
-  document.addEventListener('click',e=>{if(e.isTrusted&&performance.now()<DRAG.suppress){e.stopPropagation();e.preventDefault();DRAG.suppress=0}},true);
+  document.addEventListener('click',e=>{if(e.isTrusted&&performance.now()<DRAG.suppress){e.stopPropagation();e.preventDefault();DRAG.suppress=0;return}
+    /* sites are built by dragging them onto your board, not by clicking */
+    const sc=e.isTrusted&&e.target.closest&&e.target.closest('#handDock .card.site[data-play]');
+    if(sc){e.stopPropagation();e.preventDefault();if(sc.classList.contains('playable'))sc.animate([{translate:'0 0'},{translate:'-5px 0'},{translate:'5px 0'},{translate:'-3px 0'},{translate:'0 0'}],{duration:280});}},true);
   /* Hovering a card in your hand shows its full ability text (the board-style 2-line cap is lifted),
    and raises the card far enough to show all of it */
 document.addEventListener('mouseover',e=>{
