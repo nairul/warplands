@@ -2327,11 +2327,13 @@ function playReveals(old){
   const now=performance.now();let t0=Math.max(now,REV.until);
   for(const d of list){
     const def=DEF[d.id];if(!def)continue;
-    if(d.ev&&d.pi===viewer())continue;
+    if(d.ev&&d.pi===viewer()&&G.mode!=='hot')continue;
     const quick=d.to!=null&&d.pi===viewer();
-    const delay=t0-now,dur=reduce?1600:quick?750:2300;
+    /* events stay up an extra 1.5s so the other player can read them */
+    d.extra=def.type==='event'&&!quick?1500:0;
+    const delay=t0-now,dur=(reduce?1600:quick?750:2300)+d.extra;
     REV.until=t0+dur;t0+=dur;
-    ARROWS.until=Math.max(ARROWS.until,now+delay+(reduce?1200:1650));
+    ARROWS.until=Math.max(ARROWS.until,now+delay+(reduce?1200:1650)+d.extra);
     setTimeout(()=>revealCard(d,def,old,reduce,dur),delay);
   }
 }
@@ -2362,15 +2364,17 @@ function revealCard(d,def,old,reduce,dur){
     setTimeout(()=>{if(f.isConnected)f.remove()},dur+600);return;
   }
   if(reduce){f.animate([{opacity:0},{opacity:1,offset:.15},{opacity:1,offset:.85},{opacity:0}],{duration:dur,fill:'forwards'}).onfinish=()=>f.remove();return}
+  /* keyframes are laid out for 2.3s; the extra reading time goes into the hold, before the card leaves */
+  const X=d.extra||0,M=f=>(f<0.7?f*2300:f*2300+X)/(2300+X);
   f.animate([
     {transform:`translate(${fromX}px,${fromY}px) scale(${sc0})`,opacity:.3,easing:'cubic-bezier(.2,.8,.3,1)'},
-    {transform:'translate(0,0) scale(1.08)',opacity:1,offset:.2,easing:'ease-out'},
-    {transform:'translate(0,0) scale(1)',offset:.28,easing:'linear'},
-    {transform:'translate(0,0) scale(1)',opacity:1,offset:.76,easing:'cubic-bezier(.5,0,.8,.4)'},
+    {transform:'translate(0,0) scale(1.08)',opacity:1,offset:M(.2),easing:'ease-out'},
+    {transform:'translate(0,0) scale(1)',offset:M(.28),easing:'linear'},
+    {transform:'translate(0,0) scale(1)',opacity:1,offset:M(.76),easing:'cubic-bezier(.5,0,.8,.4)'},
     {transform:`translate(${toX}px,${toY}px) scale(${endSc}) rotate(${siteEl?0:8}deg)`,opacity:siteEl?.9:.25}],{duration:dur,easing:'linear',fill:'both'}).onfinish=()=>{f.remove();if(siteEl)land()};
-  f.querySelector('.fly-inner').animate([{transform:mine?'rotateY(0deg)':'rotateY(180deg)'},{transform:mine?'rotateY(0deg)':'rotateY(180deg)',offset:.12,easing:'ease-in-out'},{transform:'rotateY(0deg)',offset:.3},{transform:'rotateY(0deg)'}],{duration:dur,easing:'linear',fill:'both'});
-  f.querySelector('.reveal-cap').animate([{opacity:0},{opacity:0,offset:.22},{opacity:1,offset:.32},{opacity:1,offset:.7},{opacity:0,offset:.76},{opacity:0}],{duration:dur,fill:'both'});
-  const glow=f.animate([{boxShadow:'0 0 0 0 rgba(255,200,90,0)'},{boxShadow:'0 0 60px 16px rgba(255,190,80,.55)',offset:.32},{boxShadow:'0 0 40px 8px rgba(255,190,80,.35)',offset:.7},{boxShadow:'0 0 0 0 rgba(255,200,90,0)'}],{duration:dur,fill:'both'});
+  f.querySelector('.fly-inner').animate([{transform:mine?'rotateY(0deg)':'rotateY(180deg)'},{transform:mine?'rotateY(0deg)':'rotateY(180deg)',offset:M(.12),easing:'ease-in-out'},{transform:'rotateY(0deg)',offset:M(.3)},{transform:'rotateY(0deg)'}],{duration:dur,easing:'linear',fill:'both'});
+  f.querySelector('.reveal-cap').animate([{opacity:0},{opacity:0,offset:M(.22)},{opacity:1,offset:M(.32)},{opacity:1,offset:M(.7)},{opacity:0,offset:M(.76)},{opacity:0}],{duration:dur,fill:'both'});
+  const glow=f.animate([{boxShadow:'0 0 0 0 rgba(255,200,90,0)'},{boxShadow:'0 0 60px 16px rgba(255,190,80,.55)',offset:M(.32)},{boxShadow:'0 0 40px 8px rgba(255,190,80,.35)',offset:M(.7)},{boxShadow:'0 0 0 0 rgba(255,200,90,0)'}],{duration:dur,fill:'both'});
   setTimeout(()=>{if(f.isConnected)f.remove()},dur+600);
 }
 /* A destroyed site lingers as a copy until the projectile that destroys it lands */
