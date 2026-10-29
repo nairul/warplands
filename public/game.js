@@ -2252,7 +2252,11 @@ function syncAim(){
 /* ---- Drag a site from your hand onto your row to build it (clicking still works) ---- */
 const DRAG={on:false,uid:null,sx:0,sy:0,ghost:null,ox:0,oy:0,suppress:0};
 function dragZone(){return document.querySelector('#meZone')}
-function dragOver(x,y){x=x-DRAG.ox+DRAG.w/2;y=y-DRAG.oy+DRAG.h/2;const z=dragZone();if(!z)return false;const b=z.getBoundingClientRect();return x>=b.left&&x<=b.right&&y>=b.top&&y<=b.bottom}
+function dragOver(x,y){const z=dragZone();if(!z)return false;const b=z.getBoundingClientRect();
+  /* at least 75% of the dragged card has to be over your board */
+  const l=x-DRAG.ox,t=y-DRAG.oy,r=l+DRAG.w,bt=t+DRAG.h;
+  const ix=Math.max(0,Math.min(r,b.right)-Math.max(l,b.left)),iy=Math.max(0,Math.min(bt,b.bottom)-Math.max(t,b.top));
+  return ix*iy>=0.75*DRAG.w*DRAG.h}
 function syncDrag(){
   if(!DRAG.on)return;
   const el=document.querySelector(`#handDock [data-play="${DRAG.uid}"]`);if(el)el.classList.add('dragging');
@@ -2264,7 +2268,7 @@ function dragEnd(drop){
   document.querySelectorAll('.dragging').forEach(e=>e.classList.remove('dragging'));
   const z=dragZone();if(z)z.classList.remove('dropover');DRAG.over=false;
   const el=document.querySelector(`#handDock [data-play="${uid}"]`);
-  if(drop&&el){if(g)g.remove();el.click();return}
+  if(drop&&el){if(g){const gb=g.getBoundingClientRect(),eb=el.getBoundingClientRect();el.style.transition='none';el.style.transform=`translate(${gb.left-eb.left}px,${gb.top-eb.top}px)`;g.remove()}el.click();return}
   /* not dropped on your row: the card slides back to your hand */
   if(g){if(el){const b=el.getBoundingClientRect(),gb=g.getBoundingClientRect();
       g.animate([{transform:g.style.transform},{transform:`translate(${b.left}px,${b.top}px) scale(1)`,opacity:.4}],{duration:220,easing:'ease-in'}).onfinish=()=>g.remove()}
@@ -2281,14 +2285,18 @@ function dragMove(e){
     const el=document.querySelector(`#handDock [data-play="${DRAG.uid}"]`);if(!el){DRAG.armed=false;return}
     DRAG.on=true;DRAG.armed=false;
     const b=el.getBoundingClientRect();DRAG.ox=DRAG.sx-b.left;DRAG.oy=DRAG.sy-b.top;DRAG.w=b.width;DRAG.h=b.height;
-    const g=el.cloneNode(true);g.classList.add('dragghost');g.classList.remove('full','playable');g.removeAttribute('data-play');
-    Object.assign(g.style,{width:b.width+'px',height:b.height+'px'});document.body.appendChild(g);DRAG.ghost=g;
+    /* the copy keeps the hand card's own size and scale; an unscaled wrapper carries it around */
+    const c=el.cloneNode(true);c.classList.remove('full','playable','dragging');c.removeAttribute('data-play');c.style.transform='none';c.style.margin='0';c.style.position='static';
+    const g=document.createElement('div');g.className='dragghost';g.appendChild(c);
+    Object.assign(g.style,{width:b.width+'px',height:b.height+'px',transform:`translate(${b.left}px,${b.top}px)`});document.body.appendChild(g);DRAG.ghost=g;
+    /* line the copy up exactly with the card it came from */
+    {const cb=c.getBoundingClientRect();c.style.transform=`translate(${b.left-cb.left}px,${b.top-cb.top}px)`}
     document.body.classList.add('dragsite');const zz=$('zoom');if(zz)zz.hidden=true;
     syncDrag();
   }
   if(!DRAG.on)return;
   const x=e.clientX-DRAG.ox,y=e.clientY-DRAG.oy,over=dragOver(e.clientX,e.clientY);
-  DRAG.ghost.style.transform=`translate(${x}px,${y}px) scale(${over?0.92:0.85}) rotate(${over?0:-2}deg)`;
+  DRAG.ghost.style.transform=`translate(${x}px,${y}px) rotate(${over?0:-2}deg)`;
   DRAG.over=over;const z=dragZone();if(z)z.classList.toggle('dropover',over);
 }
 function dragUp(e){if(DRAG.armed){DRAG.armed=false;return}if(DRAG.on)dragEnd(dragOver(e.clientX,e.clientY))}
