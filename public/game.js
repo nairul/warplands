@@ -819,11 +819,14 @@ const CARDS=[
   {id:'bank',name:'Treasury',set:'exp',level:3,type:'site',cost:1,integrity:3,count:2,worth:2.5,
    abilities:[
     {need:0,actions:0,text:'Tuck 1 card under Treasury to allow another site to activate abilities again, even if that site already activated an ability this turn.',
-     can:c=>c.me.hand.length>0&&c.me.sites.some(s=>s!==c.site&&s.usedTurn===G.turnCount),
+     can:c=>c.me.hand.length>0&&c.me.sites.some(s=>s!==c.site&&treasuryTarget(s)),
      run:async c=>{
-       const s=await pickSite(c.pi,{prompt:'Treasury: choose another of your sites that has already used an ability this turn.',filter:s=>s.owner===c.pi&&s!==c.site&&s.usedTurn===G.turnCount,aiScore:s=>bankValue(c,s),auto:true});if(!s)return;
+       const s=await pickSite(c.pi,{prompt:'Treasury: choose another of your sites to activate again this turn.',filter:s=>s.owner===c.pi&&s!==c.site&&treasuryTarget(s),aiScore:s=>bankValue(c,s),auto:true});if(!s)return;
        const k=await pickHandCard(c.pi,{prompt:'Treasury: choose a card to tuck under Treasury.'});if(!k)return;
-       c.pay();c.me.hand.splice(c.me.hand.indexOf(k),1);c.site.tucked.push(k);s.usedTurn=-1;log(`${c.me.name} tuck${s_(c.me)} a card under the Treasury so ${s.card.def.name} can act again.`)},
+       c.pay();c.me.hand.splice(c.me.hand.indexOf(k),1);c.site.tucked.push(k);
+       /* already used this turn: it may act again now; not yet used: it may act twice this turn */
+       if(s.usedTurn===G.turnCount)s.usedTurn=-1;else{s.extraN=(s.extraTurn===G.turnCount?s.extraN||0:0)+1;s.extraTurn=G.turnCount}
+       log(`${c.me.name} tuck${s_(c.me)} a card under the Treasury so ${s.card.def.name} can act again.`)},
      ai:c=>{if(c.me.hand.length<3)return -1;const v=Math.max(-1,...c.me.sites.filter(s=>s!==c.site&&s.usedTurn===G.turnCount).map(s=>bankValue(c,s)));return v-0.8}},
     {need:3,actions:0,text:'Gain 1 action for each card tucked under Treasury.',can:c=>tuckN(c.site)>0,
      run:async c=>{c.pay();const n=tuckN(c.site);c.me.actions+=n;log(`${c.me.name} gain${s_(c.me)} ${n} action${n>1?'s':''} from the Treasury.`)},
@@ -1027,6 +1030,8 @@ function recSend(name){
 }
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function log(msg){if(!G)return;G.log.unshift(msg);if(G.log.length>80)G.log.pop();if(G.rec)G.rec.lines.push([G.turnCount,msg])}
+/* a site Treasury can help: one of yours with an ability you activate */
+function treasuryTarget(s){return (s.card.def.abilities||[]).some(a=>!a.passive&&!a.infinite)}
 function mkSite(card,owner){return{uid:card.uid,card,owner,followers:0,damage:0,attachments:[],tucked:[],usedTurn:-1}}
 function mkCtx(pi,extra){return Object.assign({pi,me:G.players[pi],opp:G.players[1-pi],oppi:1-pi},extra)}
 
@@ -1328,7 +1333,7 @@ function abilityReady(pi,site,i){
   if(!ab) return false;
   if(ab.passive||G.over||G.turn!==pi||site.owner!==pi||!inPlay(site)||abilBlocked(site)) return false;
   if(site.followers<effNeed(site,ab)||p.actions<ab.actions) return false;
-  if(!ab.infinite&&site.usedTurn===G.turnCount) return false;
+  if(!ab.infinite&&site.usedTurn===G.turnCount&&!(site.extraTurn===G.turnCount&&site.extraN>0)) return false;
   if(ab.can&&!ab.can(mkCtx(pi,{site}))) return false;
   return true;
 }
@@ -1336,7 +1341,7 @@ async function useAbility(pi,site,i){
   if(!abilityReady(pi,site,i)) return false;
   const ab=site.card.def.abilities[i],p=G.players[pi];
   let paid=false;
-  const pay=()=>{if(paid)return;paid=true;p.actions-=ab.actions;if(!ab.infinite)site.usedTurn=G.turnCount;log(`${p.name} activate${s_(p)} ${site.card.def.name}.`)};
+  const pay=()=>{if(paid)return;paid=true;p.actions-=ab.actions;if(!ab.infinite){if(site.usedTurn===G.turnCount&&site.extraTurn===G.turnCount&&site.extraN>0)site.extraN--;site.usedTurn=G.turnCount}log(`${p.name} activate${s_(p)} ${site.card.def.name}.`)};
   await withSrc({site:site.uid,pi},()=>ab.run(mkCtx(pi,{site,pay})));
   if(paid&&!G.over&&hasAtt(site,'sentient')&&inPlay(site)&&!abilBlocked(site)&&site.followers>=effNeed(site,ab)&&(!ab.can||ab.can(mkCtx(pi,{site})))){
     const yes=p.ai?ab.ai(mkCtx(pi,{site}))>0.5:await pickOption(pi,{prompt:`Awakened Grimoire: activate ${site.card.def.name} again for no actions?`,options:[{label:'Activate again',value:true},{label:'No',value:false}]});
@@ -2897,7 +2902,7 @@ function snapshot(pi,full){
     mode:G.mode,turn:G.turn,turnCount:G.turnCount,over:G.over,log:G.log.slice(0,full?80:60),
     players:G.players.map(p=>({i:p.i,name:p.name,level:p.level,actions:p.actions,lof:p.lof||0,lofTurn:p.lofTurn??-1,
       hand:p.hand.map(k=>cardOut(k,!full&&p.i!==pi)),
-      sites:p.sites.map(x=>({uid:x.uid,card:cardOut(x.card),owner:x.owner,followers:x.followers,damage:x.damage,usedTurn:x.usedTurn,
+      sites:p.sites.map(x=>({uid:x.uid,card:cardOut(x.card),owner:x.owner,followers:x.followers,damage:x.damage,usedTurn:x.usedTurn,extraTurn:x.extraTurn??-1,extraN:x.extraN||0,
         attachments:x.attachments.map(a=>cardOut(a)),tucked:x.tucked.map(k=>cardOut(k,!full&&x.owner!==pi))}))})),
     stacks:Object.fromEntries([1,2,3,4].map(l=>[l,full?G.stacks[l].map(k=>cardOut(k)):G.stacks[l].length])),
     discard:G.discard.map(k=>cardOut(k)),
@@ -2923,7 +2928,7 @@ function snapshot(pi,full){
 function stateIn(s,full){
   const players=s.players.map(p=>({i:p.i,name:p.name,ai:false,level:p.level,actions:p.actions,lof:p.lof,lofTurn:p.lofTurn,
     hand:p.hand.map(cardIn),
-    sites:p.sites.map(x=>({uid:x.uid,card:cardIn(x.card),owner:x.owner,followers:x.followers,damage:x.damage,usedTurn:x.usedTurn,
+    sites:p.sites.map(x=>({uid:x.uid,card:cardIn(x.card),owner:x.owner,followers:x.followers,damage:x.damage,usedTurn:x.usedTurn,extraTurn:x.extraTurn??-1,extraN:x.extraN||0,
       attachments:x.attachments.map(cardIn),tucked:x.tucked.map(cardIn)}))}));
   const stacks={};
   for(const l of [1,2,3,4]) stacks[l]=full?s.stacks[l].map(cardIn):Array.from({length:s.stacks[l]},(_,i)=>({uid:-1-i,def:HIDDEN_LV[l]}));
