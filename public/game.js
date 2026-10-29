@@ -1134,7 +1134,7 @@ function drawableLevels(pi){const p=G.players[pi],o=[];for(let l=1;l<=p.level;l+
 function drawCard(pi,l){
   const c=G.stacks[l].pop(); if(!c) return null;
   const p=G.players[pi];
-  p.hand.push(c); sfx('draw'); log(`${p.name} draw${s_(p)} a Level ${ROMAN[l]} card.`);
+  c.got=G.turnCount;p.hand.push(c); sfx('draw'); log(`${p.name} draw${s_(p)} a Level ${ROMAN[l]} card.`);
   if(!G.stacks[l].length){log(`The Level ${ROMAN[l]} stack has run out.`);G.pending.push({t:'stackout'})}
   return c;
 }
@@ -1445,9 +1445,16 @@ function relocatePlan(p){
   {for(const s of staffed){const n=Math.max(0,needOf(s)-plan[s.uid]);if(left>=n){plan[s.uid]+=n;left-=n}}}
   const inc=incomingDamage(p.i),safe=open.filter(s=>!doomed(s,inc));
   const pool=(safe.length?safe:open).filter(s=>!hasAtt(s,'plague')); const tgt=pool.length?pool:(safe.length?safe:open);
+  /* never crowd a site the opponent could burst down next turn: past its crew plus a couple, the rest go
+     elsewhere, even onto a site with Witch's Rot (one Zealot a turn beats losing the whole crowd) */
+  const burst=AIX.burst?burstDamage(p.i):0;
+  const cap=s=>!s.card.def.start&&integ(s)-s.damage<=burst?Math.max(needOf(s),1)+2:Infinity;
+  const ratio=s=>plan[s.uid]/Math.max(1,integ(s)-s.damage+(isFort(s)?3:0));
   while(left>0){
     let best=null,bv=Infinity;
-    for(const s of tgt){const v=plan[s.uid]/Math.max(1,integ(s)-s.damage+(isFort(s)?3:0));if(v<bv){bv=v;best=s}}
+    for(const s of tgt){if(plan[s.uid]>=cap(s))continue;const v=ratio(s);if(v<bv){bv=v;best=s}}
+    if(!best)for(const s of open){if(plan[s.uid]>=cap(s))continue;const v=ratio(s)+(hasAtt(s,'plague')?0.3:0)+(doomed(s,inc)?0.6:0);if(v<bv){bv=v;best=s}}
+    if(!best)for(const s of tgt){const v=ratio(s);if(v<bv){bv=v;best=s}}
     plan[best.uid]++;left--;
   }
   return plan;
@@ -1512,7 +1519,7 @@ function hpTotal(p){return p.sites.reduce((a,s)=>a+Math.max(0,integ(s)-s.damage)
 /* Only upgrade when it feels safe: not while being hammered, not with a crumbling Warpland, and not
    when the opponent's likely damage outweighs our reactions. */
 /* switches for the computer's newer judgement, kept separate so each can be tested on its own */
-const AIX={gate:true,doom:true,fight:true,draw:true,spread:true};
+const AIX={gate:true,doom:true,fight:true,draw:true,spread:true,burst:true,forceShot:true};
 function aiSafeToUpgrade(pi){
   if(!AIX.gate) return true;
   const p=G.players[pi],home=startSite(p);
@@ -1523,6 +1530,9 @@ function aiSafeToUpgrade(pi){
 }
 /* A site is doomed if the opponent can likely destroy it next turn */
 /* (fortified sites don't lose Zealots to damage, but everyone still dies when the site itself falls) */
+/* what the opponent could realistically deal next turn: its ready damage sites plus a burst from hand
+   (a Spark at Hamlet, Heresy or Barrage at Township/City...) */
+function burstDamage(pi){const op=G.players[1-pi];return oppThreat(pi)+(op.hand.length?Math.min(op.level+1,1+op.hand.length):0)}
 function doomed(s,inc){const left=integ(s)-s.damage;return left<=Math.max(1,inc)}
 function atRiskZealots(pi){const inc=incomingDamage(pi);return G.players[pi].sites.reduce((a,s)=>a+(doomed(s,inc)?Math.max(0,s.followers-needOf(s)):0),0)}
 function aiOptions(pi,steady){
@@ -1535,7 +1545,7 @@ function aiOptions(pi,steady){
     const v=ab.ai(mkCtx(pi,{site:s}));
     if(v<=0) return;
     const ag=/damage|kill|steal/i.test(ab.text)&&!/you own/i.test(ab.text);
-    opts.push({label:`ability ${s.card.def.name} #${i+1}`,score:(ab.actions?v/ab.actions:v*1.5)+(ag?fight:0)+j(),aggr:ag,exec:()=>useAbility(pi,s,i)});
+    opts.push({label:`ability ${s.card.def.name} #${i+1}`,score:(ab.actions?v/ab.actions:v*1.5)+(ag?fight+(/^Sacrifice/i.test(ab.text)?0:EV.shoot):0)+j(),aggr:ag,shoot:ag&&!/^Sacrifice/i.test(ab.text),cost:ab.actions||0,val:v,exec:()=>useAbility(pi,s,i)});
   });
   for(const c of p.hand){
     if(!canPlay(pi,c)) continue;
@@ -1574,12 +1584,12 @@ function aiOptions(pi,steady){
 }
 /* Lookahead: try each candidate action on a copy of the game (draw stacks reshuffled,
    the opponent's hand hidden) and keep the one that leaves the best position. */
-const EV={depth:0,K2:6,pot:0.8,aggr:0.3,atk:2.5,stuck:3,f:0.9,fLate:1.0,card:1.1,cardL:0.25,lvl:4.5,doom:0.85,site:1.4,staffed:0.8,tuck:0.4,att:1.2,act:0.9,risk:1.2,K:14,hold:3.2,offRisk:0};
+const EV={depth:0,K2:6,pot:0.8,aggr:0.3,atk:2.5,stuck:3,f:0.9,fLate:1.0,card:1.1,cardL:0.25,lvl:4.5,doom:0.85,site:1.4,staffed:0.8,tuck:0.4,att:1.2,act:0.9,risk:1.2,K:14,hold:1.6,offRisk:0,handSite:1,dev:0,burst:0,shoot:1.1};
 /* one-shot damage events are worth keeping for a site that matters, not spending on spare Zealots */
 const HOLD_EV=d=>d.type==='event'&&/\bdamage\b/i.test(d.text||'')&&/^Do /.test(d.text||'');
 const HIDDEN={id:'hidden',name:'Hidden card',level:1,type:'hidden',cost:99};
 function cloneState(pi){
-  const cc=k=>({uid:k.uid,def:k.def,attachedBy:k.attachedBy});
+  const cc=k=>({uid:k.uid,def:k.def,attachedBy:k.attachedBy,got:k.got});
   const players=G.players.map(p=>({...p,ai:true,hand:p.i===pi?p.hand.map(cc):p.hand.map(k=>({uid:k.uid,def:HIDDEN})),
     sites:p.sites.map(s=>({...s,card:cc(s.card),attachments:s.attachments.map(cc),tucked:s.tucked.map(cc)}))}));
   const stacks={};for(const l of [1,2,3,4])stacks[l]=shuffle(G.stacks[l].map(cc));
@@ -1611,10 +1621,17 @@ function attVal(a,s){
     default: return a.def.fortify?0.6+0.25*s.followers:(HARMFUL.includes(a.def.id)?-EV.att:EV.att*0.6);
   }
 }
+/* keeping a damage event for a real target: worth something, but it fades the longer the card sits
+   in hand and while we're taking hits, and only the best one or two count */
+function holdValue(p){
+  const hit=recentLoss(p.i)>=2||oppThreat(p.i)>=1;
+  const v=p.hand.filter(k=>HOLD_EV(k.def)).map(k=>EV.hold*Math.max(0.15,1-Math.max(0,G.turnCount-(k.got??G.turnCount))/8)*(hit?0.4:1)).sort((a,b)=>b-a);
+  return (v[0]||0)+(v[1]||0)*0.5;
+}
 function evalPos(pi,noPot){
   if(G.over){if(G.over.winner===pi)return 1e6;if(G.over.winner===1-pi)return -1e6;return 0}
   const late=[1,2,3,4].filter(l=>!G.stacks[l].length).length>=2?EV.fLate:0;
-  const incOn=[incomingDamage(1),incomingDamage(0)];
+  const incOn=[incomingDamage(1),incomingDamage(0)],burstOn=[burstDamage(1),burstDamage(0)];
   const side=p=>{
     const inc=p.i===G.turn?incOn[p.i]*0.8:incOn[p.i]*0.3; /* danger mostly matters for the side about to be hit */
     let v=totalF(p)*(EV.f+late)+(p.level-1)*EV.lvl+(p.i===G.turn&&!drawableLevels(p.i).length&&p.level<4?-EV.stuck:0);
@@ -1631,11 +1648,14 @@ function evalPos(pi,noPot){
       v-=EV.risk*s.followers*(s.damage/I)*(isFort(s)?0.6:1)*(p.i===G.turn?1:EV.offRisk);
       /* Zealots piled on a site that will likely fall: the crew its abilities need is fine, the excess is at risk */
       if(AIX.doom&&s.followers&&doomed(s,inc)) v-=EV.doom*Math.max(0,s.followers-needOf(s))*(p.i===G.turn?1:EV.offRisk);
+      /* a crowd on a site the opponent could burst down next turn (Palisade holding 10...) is a big risk too */
+      else if(p.i===G.turn&&s.followers&&!s.card.def.start&&integ(s)-s.damage<=burstOn[p.i]) v-=EV.burst*Math.max(0,s.followers-needOf(s)-1);
     }
+    v+=EV.dev*Math.min(3,p.sites.filter(x=>!x.card.def.start).length);
     return v;
   };
   const me=G.players[pi],op=G.players[1-pi];
-  const hv=[...me.hand].map(k=>EV.card+EV.cardL*k.def.level).sort((a,b)=>b-a).reduce((a,x,i)=>a+(i<6?x:x*0.4),0)+me.hand.filter(k=>HOLD_EV(k.def)).length*EV.hold;
+  const hv=[...me.hand].map(k=>(EV.card+EV.cardL*k.def.level)*(k.def.type==='site'?EV.handSite:1)).sort((a,b)=>b-a).reduce((a,x,i)=>a+(i<6?x:x*0.4),0)+holdValue(me);
   return side(me)-side(op)+hv-op.hand.length*(EV.card+EV.cardL*op.level*0.5)+me.actions*EV.act+(!noPot&&G.turn===pi?EV.pot*attackPotential(pi):0);
 }
 async function simValue(pi,path,depth){
@@ -1645,7 +1665,7 @@ async function simValue(pi,path,depth){
     G=cloneState(pi);
     let bonus=0;
     const ua=AIX.fight&&(recentLoss(pi)>=2||oppThreat(pi)>=1);
-    for(const i of path){const o=aiOptions(pi,true)[i];if(!o){v=-Infinity;return v}await o.exec();await flush();if(o.aggr)bonus+=EV.aggr+(ua?0.5:0);if(G.over)break}
+    for(const i of path){const o=aiOptions(pi,true)[i];if(!o){v=-Infinity;return v}await o.exec();await flush();if(o.aggr)bonus+=EV.aggr+(ua?0.5:0);if(o.shoot)bonus+=EV.shoot;if(G.over)break}
     v=Math.max(evalPos(pi,true)-G.players[pi].actions*EV.act, evalPos(pi))+bonus;
     if(depth>0&&!G.over&&G.turn===pi){
       const nxt=aiOptions(pi,true).map((o,i)=>[o.score,i]).sort((x,y)=>y[0]-x[0]).slice(0,EV.K2).map(x=>x[1]);
@@ -1678,6 +1698,11 @@ async function aiStep(pi){
   if(G.rec&&!G.sim) G.rec.ai.push({turn:G.turnCount,player:G.players[pi].name,mana:G.players[pi].actions,threat:+oppThreat(pi).toFixed(1),endTurnValue:+endV.toFixed(2),
     chose:bi<0||best<=endV+0.05?'end turn':base[bi].label,best:+best.toFixed(2),
     options:idx.map(i=>[base[i].label,+base[i].score.toFixed(2)])});
+  /* a staffed damage site is there to shoot: before the turn ends, or once the Mana left only covers the
+     shots, fire them (best target first) rather than spend that Mana on something else */
+  {const shots=base.filter(o=>o.shoot&&o.val>=0.5);
+   if(shots.length){const need=Math.max(...shots.map(o=>o.cost));const ending=bi<0||best<=endV+0.05;
+     if(AIX.forceShot&&(ending||G.players[pi].actions<=need)&&!(bi>=0&&/^ability /.test(base[bi].label))){const sh=shots.sort((a,b)=>b.score-a.score)[0];await sh.exec();return true}}}
   if(bi<0||best<=endV+0.05) return false;
   await base[bi].exec();
   return true;
