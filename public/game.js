@@ -887,7 +887,7 @@ const CARDS=[
   {id:'ark',name:'Promised Citadel',set:'core',level:4,type:'site',cost:2,integrity:6,count:1,worth:2.5,enterValue:6,
    text:'When Promised Citadel enters play, gain 6 followers on Promised Citadel.',abilities:[],
    onEnter:(c,s)=>{s.followers+=6;sfx('place',4);log('6 followers gather at the Promised Citadel.')}},
-  {id:'doomsday',name:'Dragon\'s Maw',set:'core',level:4,type:'site',cost:1,integrity:5,count:1,worth:4.5,fortified:true,text:'Fortified.',
+  {id:'doomsday',name:'Dragon\'s Maw',set:'core',level:4,type:'site',cost:1,integrity:5,count:1,worth:4.5,
    abilities:[{need:3,actions:2,text:'Do 8 damage to a single site.',run:c=>hit(c,8,'Dragon\'s Maw'),ai:c=>bestOpp(c,8)}]},
   {id:'forcefield',name:'Aegis',set:'core',level:4,type:'site',cost:1,integrity:3,count:1,worth:3.5,fortified:true,text:'Fortified.',
    abilities:[{need:1,actions:0,infinite:true,passive:true,text:'When one of your other sites is damaged, prevent that damage.'}]},
