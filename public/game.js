@@ -2046,10 +2046,19 @@ function syncCardList(){
   el.hidden=!open;
   if(!open){const z=$('zoom');if(z&&z.classList.contains('over-dialog')){z.hidden=true;z.classList.remove('over-dialog')}}
 }
+/* every card in the list previews at the same height: that of the tallest card at this width */
+let CAT_H=0;
+function catHeight(){
+  if(CAT_H)return CAT_H;
+  const box=document.createElement('div');box.className='zoom';box.style.cssText='visibility:hidden;left:-9999px;top:0';
+  box.innerHTML=term(catalogue().map(d=>defFaceHTML(d)).join(''));document.body.appendChild(box);
+  for(const c of box.children){c.style.width='250px';c.style.maxWidth='none';c.style.animation='none';CAT_H=Math.max(CAT_H,c.getBoundingClientRect().height)}
+  box.remove();return CAT_H=Math.ceil(CAT_H);
+}
 function showCatZoom(el){
   const z=$('zoom');const d=DEF[el.dataset.ccard];if(!z||!d)return;
   z.innerHTML=term(defFaceHTML(d))+TWINKLES;z.classList.add('over-dialog');z.hidden=false;
-  const c=z.firstElementChild;if(c){c.style.zoom='';c.style.width='250px';c.style.minHeight='';c.style.maxWidth='none'}
+  const c=z.firstElementChild;if(c){c.style.zoom='';c.style.width='250px';c.style.minHeight=catHeight()+'px';c.style.maxWidth='none'}
   const r=el.getBoundingClientRect();placeZoom(z,{left:r.left,right:r.right,top:r.top+r.height/2});
 }
 function discardViewHTML(){
