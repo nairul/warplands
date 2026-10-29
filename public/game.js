@@ -2217,21 +2217,17 @@ function syncAim(){
 /* ---- Drag a site from your hand onto your row to build it (clicking still works) ---- */
 const DRAG={on:false,uid:null,sx:0,sy:0,ghost:null,ox:0,oy:0,suppress:0};
 function dragZone(){return document.querySelector('#meZone')}
-function dragOver(x,y){const z=dragZone();if(!z)return false;const b=z.getBoundingClientRect();return x>=b.left&&x<=b.right&&y>=b.top&&y<=b.bottom}
+function dragOver(x,y){x=x-DRAG.ox+DRAG.w/2;y=y-DRAG.oy+DRAG.h/2;const z=dragZone();if(!z)return false;const b=z.getBoundingClientRect();return x>=b.left&&x<=b.right&&y>=b.top&&y<=b.bottom}
 function syncDrag(){
   if(!DRAG.on)return;
   const el=document.querySelector(`#handDock [data-play="${DRAG.uid}"]`);if(el)el.classList.add('dragging');
-  const z=dragZone();if(!z)return;z.classList.add('dropok');
-  const row=z.querySelector('.row');
-  if(row&&!row.querySelector('.dropslot')){const ref=row.querySelector('.site');const d=document.createElement('div');d.className='dropslot';d.setAttribute('aria-hidden','true');
-    if(ref){const r=ref.getBoundingClientRect();d.style.width=r.width+'px';d.style.height=r.height+'px'}row.appendChild(d)}
+  const z=dragZone();if(z)z.classList.toggle('dropover',!!DRAG.over);
 }
 function dragEnd(drop){
   const uid=DRAG.uid,g=DRAG.ghost;DRAG.on=false;DRAG.uid=null;DRAG.ghost=null;DRAG.suppress=performance.now()+400;
   document.body.classList.remove('dragsite');
   document.querySelectorAll('.dragging').forEach(e=>e.classList.remove('dragging'));
-  document.querySelectorAll('.dropslot').forEach(e=>e.remove());
-  const z=dragZone();if(z)z.classList.remove('dropok','dropover');
+  const z=dragZone();if(z)z.classList.remove('dropover');DRAG.over=false;
   const el=document.querySelector(`#handDock [data-play="${uid}"]`);
   if(drop&&el){if(g)g.remove();el.click();return}
   /* not dropped on your row: the card slides back to your hand */
@@ -2249,7 +2245,7 @@ function dragMove(e){
     if(Math.hypot(e.clientX-DRAG.sx,e.clientY-DRAG.sy)<8)return;
     const el=document.querySelector(`#handDock [data-play="${DRAG.uid}"]`);if(!el){DRAG.armed=false;return}
     DRAG.on=true;DRAG.armed=false;
-    const b=el.getBoundingClientRect();DRAG.ox=DRAG.sx-b.left;DRAG.oy=DRAG.sy-b.top;
+    const b=el.getBoundingClientRect();DRAG.ox=DRAG.sx-b.left;DRAG.oy=DRAG.sy-b.top;DRAG.w=b.width;DRAG.h=b.height;
     const g=el.cloneNode(true);g.classList.add('dragghost');g.classList.remove('full','playable');g.removeAttribute('data-play');
     Object.assign(g.style,{width:b.width+'px',height:b.height+'px'});document.body.appendChild(g);DRAG.ghost=g;
     document.body.classList.add('dragsite');const zz=$('zoom');if(zz)zz.hidden=true;
@@ -2258,7 +2254,7 @@ function dragMove(e){
   if(!DRAG.on)return;
   const x=e.clientX-DRAG.ox,y=e.clientY-DRAG.oy,over=dragOver(e.clientX,e.clientY);
   DRAG.ghost.style.transform=`translate(${x}px,${y}px) scale(${over?0.92:0.85}) rotate(${over?0:-2}deg)`;
-  const z=dragZone();if(z)z.classList.toggle('dropover',over);
+  DRAG.over=over;const z=dragZone();if(z)z.classList.toggle('dropover',over);
 }
 function dragUp(e){if(DRAG.armed){DRAG.armed=false;return}if(DRAG.on)dragEnd(dragOver(e.clientX,e.clientY))}
 function aimMove(e){AIM.x=e.clientX;AIM.y=e.clientY;if(!AIM.raf)AIM.raf=requestAnimationFrame(()=>{AIM.raf=0;syncAim()})}
