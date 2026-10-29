@@ -13,6 +13,7 @@ Logs older than 8898344 have no `version` field (logging began at 29874ad).
 
 | Commit | Date | What changed |
 |---|---|---|
+| c98a216 | 2026-10-29 | Fires staffed damage sites before ending its turn or spending its last Mana elsewhere. Holds damage events (Spark, Heresy...) less, and less still the longer they sit or while under attack. Never crowds Zealots onto a site the opponent could burst down next turn (e.g. 15 on Palisade); the overflow goes elsewhere, even onto a site with Witch's Rot. |
 | 28acfd0 | 2026-10-28 | Structural damage aims at sites it can set up to kill instead of Warpland. The look-ahead no longer writes off Zealots on damaged enemy sites as already lost (the opponent moves next and can evacuate), so it takes big trades such as sacrificing Siege Engine to destroy a crowded site. |
 | a36cb7f | 2026-10-28 | Staffs sites for their repeatable ability rather than a one-shot "Sacrifice this site" ability (Siege Engine gets 3 Zealots, not 2). One-shot damage events (Spark, Heresy and the like) are kept in hand for real targets instead of chipping Warpland early. |
 | 8898344 | 2026-10-28 | Protects its army: avoids piling Zealots on sites likely to fall and evacuates under threat. Upgrades only when it's safe, fights back when under attack, and doesn't hoard cards. |
