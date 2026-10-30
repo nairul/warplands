@@ -1016,7 +1016,7 @@ function recSnap(pi){
 }
 function recSend(name){
   const r=G.rec;if(!r||r.sent)return;r.sent=true;
-  name=String(name||'').trim().slice(0,40);r.name=name;
+  name=String(name||'').trim().slice(0,40);r.name=name;roastCheck(r,name);
   const o=G.over;
   const body={v:r.v,mode:'ai',playerName:name||undefined,claim:r.claim,version:(typeof window!=='undefined'&&window.__WARPLANDS_VERSION)||VERSION.sha||'unknown',started:r.started,ended:new Date().toISOString(),
     result:{winner:o.winner===-1?'draw':G.players[o.winner].name,type:o.type,reason:o.reason,turns:G.turnCount},
@@ -2155,10 +2155,19 @@ function menuHTML0(){
    A name typed afterwards is attached to that same record. */
 function postName(r){const name=r.pendingName;r.pendingName=null;
   try{fetch('/api/log/name',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({path:r.path,claim:r.claim,name})}).catch(()=>{})}catch(e){}}
+/* a little something for Vincent: once per game, whenever a game record goes out under his name */
+function roastCheck(r,name){if(r&&!r.roasted&&/^\s*vincent\s*$/i.test(name||'')){r.roasted=true;UI.roast=true;if(typeof document!=='undefined')setTimeout(()=>{if(typeof syncRoast==='function')syncRoast()},0)}}
+function syncRoast(){
+  if(typeof document==='undefined')return;
+  let el=$('roast');
+  if(!el){el=document.createElement('div');el.id='roast';el.className='dview';el.hidden=true;document.body.appendChild(el)}
+  if(UI.roast&&el.hidden){el.innerHTML=`<div class="dv-box roast-box" role="alertdialog" aria-label="A message for Vincent"><p class="roast-msg">Imagine choosing Human Rogue for the 2394th time. Lmao you’re so cooked.</p><div class="choices"><button class="btn primary" data-roastok="1">I know…</button></div></div>`}
+  el.hidden=!UI.roast;
+}
 function setLogName(name){
   const r=G&&G.rec;if(!r)return;name=String(name||'').trim().slice(0,40);r.asked=true;if(!name)return;
   try{localStorage.setItem('wl-name',name)}catch(e){}
-  r.thanked=name;if(name===r.name)return;r.name=name;r.pendingName=name;if(r.path)postName(r);
+  r.thanked=name;roastCheck(r,name);if(name===r.name)return;r.name=name;r.pendingName=name;if(r.path)postName(r);
 }
 /* moving on with a name typed but not sent: keep it */
 function typedName(){const i=$('pname');if(i&&i.value.trim()&&G&&G.rec&&!G.rec.asked)setLogName(i.value)}
@@ -2220,6 +2229,7 @@ function render(){
   ov.hidden=!o; {const h=term(o);if(h!==UI.ovHTML){ov.innerHTML=h;UI.ovHTML=h}}
   syncDiscard();
   syncAim();
+  syncRoast();
   syncDrag();
   if(G&&G.over&&G.rec&&!G.rec.sent) recSend(playerName());
   /* no board hover preview while choosing a card from your hand: it would cover the prompt */
@@ -3181,6 +3191,7 @@ if(HAS_DOM){
   document.addEventListener('click',e=>{
     if(e.target.closest('[data-discard]')){UI.dview=!UI.dview;syncDiscard();return}
     if(e.target.closest('[data-dclose]')||e.target.id==='discardView'){UI.dview=false;syncDiscard();return}
+    if(e.target.closest('[data-roastok]')||e.target.id==='roast'){UI.roast=false;syncRoast();return}
     if(e.target.closest('[data-clist]')){UI.clist=true;syncCardList();return}
     if(e.target.closest('[data-clclose]')||e.target.id==='cardList'){UI.clist=false;syncCardList();return}
     if(e.target.closest('#soundBtn')){SFX.on=!SFX.on;try{localStorage.setItem('tb-sound',SFX.on?'on':'off')}catch(err){}if(SFX.on){audioCtx();setTimeout(()=>sfx('place',1),30)}syncSound();return}
