@@ -23,6 +23,7 @@ Logs older than 8898344 have no `version` field (logging began at 29874ad).
 
 | Commit | Date | What changed |
 |---|---|---|
+| 550faea | 2026-10-29 | Bug fix: Garrison's and Altar's sacrifice abilities can't be used without a Zealot on the site to sacrifice (Animated Tools/Academy no longer let them fire for free). |
 | ce74895 | 2026-10-29 | Treasury can be used before the target site has acted, giving that site a second activation this turn. |
 | 2e36be9 | 2026-10-28 | Dragon's Maw is no longer fortified. |
 | 41a4795 | 2026-10-28 | Ballista Tower costs 2 Mana to play (was 1); its abilities still cost 1 Mana each. |
