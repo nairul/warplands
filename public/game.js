@@ -116,6 +116,9 @@ function univBonus(site){const p=G.players[site.owner];return p.sites.some(u=>u!
 const effNeed=(site,ab)=>hasAtt(site,'compnet')?0:Math.max(0,ab.need-univBonus(site));
 /* crew the AI aims for: ignore one-shot "Sacrifice <this site>" abilities when the site has a repeatable one */
 const selfSac=(s,a)=>a.text.startsWith('Sacrifice '+s.card.def.name);
+/* crew for a damage site that has a free repeatable damage ability (Trebuchet's second): worth staffing up to it */
+const DMG_TXT=t=>/damage/i.test(t)&&!/^Sacrifice/i.test(t);
+function staffNeed(s){const ab=(s.card.def.abilities||[]);const free=ab.filter(a=>!a.passive&&!a.actions&&DMG_TXT(a.text)).map(a=>effNeed(s,a));return free.length&&EV.freeStaff?Math.max(needOf(s),Math.min(...free)):needOf(s)}
 function needOf(s){let ab=(s.card.def.abilities||[]);if(ab.some(a=>!selfSac(s,a)))ab=ab.filter(a=>!selfSac(s,a));return ab.length?Math.min(...ab.map(a=>effNeed(s,a))):0}
 
 /* Aegis shields its owner's other sites from opponents' damage */
@@ -124,7 +127,8 @@ function ffProtects(site){return G.players[site.owner].sites.some(f=>f!==site&&f
 function dmgValue(site,n){
   if(ffProtects(site)) return -0.5;
   const left=integ(site)-site.damage;
-  const w=(site.card.def.worth||1)+(site.card.def.attacker?2.5:0);
+  const atkLive=site.card.def.attacker&&(site.card.def.abilities||[]).some(a=>!a.passive&&site.followers>=effNeed(site,a));
+  const w=(site.card.def.worth||1)+(site.card.def.attacker?2.5:0)+(atkLive?EV.killAtk:0);
   if(n>=left) return site.followers+2+w;
   const killed=isFort(site)?0:Math.min(n,site.followers);
   return killed+0.25*n+(n/left)*(Math.max(0,site.followers-killed)*0.5+w*0.5);
@@ -1445,6 +1449,8 @@ function relocatePlan(p){
   for(const s of p.sites) if(canLeave(s)){left+=s.followers;plan[s.uid]=0}
   const staffed=open.filter(s=>minNeed(s)>0&&!hasAtt(s,'plague')&&!hasAtt(s,'sabotage')).sort((a,b)=>(b.card.def.worth||1)-(a.card.def.worth||1));
   {for(const s of staffed){const n=Math.max(0,needOf(s)-plan[s.uid]);if(left>=n){plan[s.uid]+=n;left-=n}}}
+  /* then top damage sites up to their free ability (Trebuchet 3 -> 5) if Zealots are left over */
+  {for(const s of staffed){const n=Math.max(0,staffNeed(s)-plan[s.uid]);if(n&&left>=n+1){plan[s.uid]+=n;left-=n}}}
   const inc=incomingDamage(p.i),safe=open.filter(s=>!doomed(s,inc));
   const pool=(safe.length?safe:open).filter(s=>!hasAtt(s,'plague')); const tgt=pool.length?pool:(safe.length?safe:open);
   /* never crowd a site the opponent could burst down next turn: past its crew plus a couple, the rest go
@@ -1586,7 +1592,7 @@ function aiOptions(pi,steady){
 }
 /* Lookahead: try each candidate action on a copy of the game (draw stacks reshuffled,
    the opponent's hand hidden) and keep the one that leaves the best position. */
-const EV={depth:0,K2:6,pot:0.8,aggr:0.3,atk:2.5,stuck:3,f:0.9,fLate:1.0,card:1.1,cardL:0.25,lvl:4.5,doom:0.85,site:1.4,staffed:0.8,tuck:0.4,att:1.2,act:0.9,risk:1.2,K:14,hold:1.6,offRisk:0,handSite:1,dev:0,burst:0,shoot:1.1};
+const EV={depth:0,K2:6,pot:0.8,aggr:0.3,atk:2.5,stuck:3,f:0.9,fLate:1.0,card:1.1,cardL:0.25,lvl:4.5,doom:0.85,site:1.4,staffed:0.8,tuck:0.4,att:1.2,act:0.9,risk:1.2,K:14,hold:1.6,offRisk:0,handSite:1,dev:0,burst:0,shoot:1.1,bare:0.6,freeStaff:1.5,killAtk:2.5};
 /* one-shot damage events are worth keeping for a site that matters, not spending on spare Zealots */
 const HOLD_EV=d=>d.type==='event'&&/\bdamage\b/i.test(d.text||'')&&/^Do /.test(d.text||'');
 const HIDDEN={id:'hidden',name:'Hidden card',level:1,type:'hidden',cost:99};
@@ -1630,18 +1636,20 @@ function holdValue(p){
   const v=p.hand.filter(k=>HOLD_EV(k.def)).map(k=>EV.hold*Math.max(0.15,1-Math.max(0,G.turnCount-(k.got??G.turnCount))/8)*(hit?0.4:1)).sort((a,b)=>b-a);
   return (v[0]||0)+(v[1]||0)*0.5;
 }
+function levelValue(p){const n=p.sites.filter(x=>!x.card.def.start).length;let v=0;for(let k=1;k<p.level;k++)v+=EV.lvl*(n>=k?1:EV.bare);return v}
 function evalPos(pi,noPot){
   if(G.over){if(G.over.winner===pi)return 1e6;if(G.over.winner===1-pi)return -1e6;return 0}
   const late=[1,2,3,4].filter(l=>!G.stacks[l].length).length>=2?EV.fLate:0;
   const incOn=[incomingDamage(1),incomingDamage(0)],burstOn=[burstDamage(1),burstDamage(0)];
   const side=p=>{
     const inc=p.i===G.turn?incOn[p.i]*0.8:incOn[p.i]*0.3; /* danger mostly matters for the side about to be hit */
-    let v=totalF(p)*(EV.f+late)+(p.level-1)*EV.lvl+(p.i===G.turn&&!drawableLevels(p.i).length&&p.level<4?-EV.stuck:0);
+    let v=totalF(p)*(EV.f+late)+levelValue(p)+(p.i===G.turn&&!drawableLevels(p.i).length&&p.level<4?-EV.stuck:0);
     for(const s of p.sites){
       const I=integ(s),left=I-s.damage,w=s.card.def.worth||1;
       v+=w*EV.site*(left/I);
       const staffed=(s.card.def.abilities||[]).length&&s.followers>=needOf(s)&&!abilBlocked(s);
       if(staffed)v+=EV.staffed*w;
+      if(EV.freeStaff&&staffed&&s.card.def.attacker&&s.followers>=staffNeed(s)&&staffNeed(s)>needOf(s))v+=EV.freeStaff;
       if(s.card.def.attacker)v+=EV.atk*(staffed?1:0.4)*(left/I);
       v+=s.tucked.length*(s.card.def.id==='farm'?fieldsTuckVal(s):EV.tuck);
       if(s.card.def.id==='healerhut')v+=Math.min(2,adjacent(s).reduce((a,x)=>a+x.followers,0)*0.12);
