@@ -578,14 +578,14 @@ const CARDS=[
      run:async c=>{c.pay();marketGain(c)},ai:c=>adjacent(c.site).filter(canGain).length}]},
 
   /* ---------- LEVEL II · CORE SET ---------- */
-  {id:'milbase',name:'Mustering Hall',set:'core',level:2,type:'site',cost:2,integrity:4,count:2,worth:2.5,
-   abilities:[{need:0,actions:1,text:'Sacrifice any number of followers on Mustering Hall. Then do 1 damage for each follower sacrificed, all to a single site.',can:c=>c.site.followers>0,
+  {id:'milbase',name:'Blood Forge',set:'core',level:2,type:'site',cost:2,integrity:4,count:2,worth:2.5,
+   abilities:[{need:0,actions:1,text:'Sacrifice any number of followers on Blood Forge. Then do 1 damage for each follower sacrificed, all to a single site.',can:c=>c.site.followers>0,
      run:async c=>{
        const max=c.site.followers;
-       const k=c.me.ai?mbK(c).k:await pickOption(c.pi,{prompt:`Mustering Hall: sacrifice how many of its ${max} followers?`,options:Array.from({length:max},(_,i)=>({label:String(i+1),value:i+1})),cancellable:true});
+       const k=c.me.ai?mbK(c).k:await pickOption(c.pi,{prompt:`Blood Forge: sacrifice how many of its ${max} followers?`,options:Array.from({length:max},(_,i)=>({label:String(i+1),value:i+1})),cancellable:true});
        if(!k)return;
-       const t=await pickSite(c.pi,{prompt:`Mustering Hall: choose a site to take ${k} damage.`,filter:s=>!c.me.ai||s.owner!==c.pi,aiScore:s=>dmgValue(s,k)});
-       if(!t)return;c.pay();killOn(c.site,k);log(`${c.me.name} sacrifice${s_(c.me)} ${k} follower${k>1?'s':''} at the Mustering Hall.`);await damage(c.pi,t,k)},
+       const t=await pickSite(c.pi,{prompt:`Blood Forge: choose a site to take ${k} damage.`,filter:s=>!c.me.ai||s.owner!==c.pi,aiScore:s=>dmgValue(s,k)});
+       if(!t)return;c.pay();killOn(c.site,k);log(`${c.me.name} sacrifice${s_(c.me)} ${k} follower${k>1?'s':''} at the Blood Forge.`);await damage(c.pi,t,k)},
      ai:c=>c.site.followers?mbK(c).v:-1}]},
   {id:'library',name:'Lorehall',set:'core',level:2,type:'site',cost:1,integrity:3,count:2,worth:2.5,
    abilities:[
