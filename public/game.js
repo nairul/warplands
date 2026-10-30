@@ -395,7 +395,7 @@ const CARDS=[
     {need:3,actions:1,text:'Do 1 damage.',run:c=>hit(c,1,'Trebuchet'),ai:c=>bestOpp(c,1)},
     {need:5,actions:0,text:'Do 1 damage.',run:c=>hit(c,1,'Trebuchet'),ai:c=>bestOpp(c,1)+0.5}]},
   {id:'temple',name:'Altar',level:1,type:'site',cost:1,integrity:3,count:2,worth:1.3,
-   abilities:[{need:1,actions:0,text:'Sacrifice 1 follower on Altar to gain 1 action.',
+   abilities:[{need:1,actions:0,sac:1,text:'Sacrifice 1 follower on Altar to gain 1 action.',
      run:async c=>{c.pay();killOn(c.site,1);c.me.actions++;log(`${c.me.name} sacrifice${s_(c.me)} a follower at the Altar and gain${s_(c.me)} an action.`)},
      ai:c=>totalF(c.me)>=totalF(c.opp)+2&&wantsMore(c)?1.2:-1}]},
   {id:'mission',name:'Shrine',level:1,type:'site',cost:1,integrity:3,count:2,worth:1.5,
@@ -465,7 +465,7 @@ const CARDS=[
   {id:'barracks',name:'Garrison',level:1,type:'site',cost:2,integrity:3,count:2,worth:2,
    abilities:[
     {need:0,actions:1,text:'Gain 2 followers on Garrison.',can:c=>canGain(c.site),run:c=>gainOnOwn(c,2,'Garrison',c.site),ai:c=>2},
-    {need:3,actions:0,text:'Sacrifice 1 follower on Garrison to do 1 damage.',
+    {need:3,actions:0,sac:1,text:'Sacrifice 1 follower on Garrison to do 1 damage.',
      run:async c=>{const t=await pickSite(c.pi,{prompt:'Garrison: choose a site to take 1 damage.',filter:s=>!c.me.ai||s.owner!==c.pi,aiScore:s=>dmgValue(s,1)});
        if(!t)return;c.pay();killOn(c.site,1);await damage(c.pi,t,1)},
      ai:c=>bestOpp(c,1)-1}]},
@@ -1333,6 +1333,8 @@ function abilityReady(pi,site,i){
   if(!ab) return false;
   if(ab.passive||G.over||G.turn!==pi||site.owner!==pi||!inPlay(site)||abilBlocked(site)) return false;
   if(site.followers<effNeed(site,ab)||p.actions<ab.actions) return false;
+  /* an ability whose cost is sacrificing Zealots on this site needs them there, whatever lowers its requirement (Animated Tools, Academy) */
+  if(ab.sac&&site.followers<ab.sac) return false;
   if(!ab.infinite&&site.usedTurn===G.turnCount&&!(site.extraTurn===G.turnCount&&site.extraN>0)) return false;
   if(ab.can&&!ab.can(mkCtx(pi,{site}))) return false;
   return true;
